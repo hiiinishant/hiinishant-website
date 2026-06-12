@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
 import { sendEmail } from "@/lib/mail";
+import { getDataFilePath } from "@/lib/db";
 
 export interface ContactMessage {
   id: string;
@@ -13,7 +13,7 @@ export interface ContactMessage {
   read: boolean;
 }
 
-const DATA_FILE = path.join(process.cwd(), "src/data/contact_messages.json");
+const DATA_FILE = getDataFilePath("contact_messages.json");
 
 function getMessages(): ContactMessage[] {
   if (!fs.existsSync(DATA_FILE)) {

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import fs from "fs";
-import path from "path";
 import { getAllDailyStatusesSorted, type DailyStatus } from "@/data/statusServer";
 import { type FuturePlan } from "@/app/api/future-plans/route";
 import StatusDashboardClient from "./StatusDashboardClient";
+import { getDataFilePath } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Live Status Dashboard",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 function getFuturePlans(): FuturePlan[] {
-  const DATA_FILE = path.join(process.cwd(), "src/data/future_plans.json");
+  const DATA_FILE = getDataFilePath("future_plans.json");
   if (!fs.existsSync(DATA_FILE)) return [];
   try {
     const raw = fs.readFileSync(DATA_FILE, "utf-8");

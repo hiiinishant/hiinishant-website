@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: hiiinishant-website
+    env: node
+    plan: starter # Starter plan is required for persistent disks on Render
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATA_DIR
+        value: /var/data
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_SECURE
+        value: "true"
+      - key: SMTP_USER
+        sync: false # User will fill this in Render Dashboard
+      - key: SMTP_PASS
+        sync: false # User will fill this in Render Dashboard
+      - key: EMAIL_FROM
+        sync: false # User will fill this in Render Dashboard
+      - key: EMAIL_FROM_NAME
+        value: "Nishant's Portfolio"
+      - key: EMAIL_TO
+        sync: false # User will fill this in Render Dashboard
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

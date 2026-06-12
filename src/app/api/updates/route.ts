@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
 import { latestUpdates as initialUpdates, type UpdateItem } from "@/data/updates";
+import { getDataFilePath } from "@/lib/db";
 
-const DATA_FILE = path.join(process.cwd(), "src/data/updates.json");
+const DATA_FILE = getDataFilePath("updates.json");
 
 function getUpdates(): UpdateItem[] {
   if (!fs.existsSync(DATA_FILE)) {

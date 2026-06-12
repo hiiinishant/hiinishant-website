@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
 import { sendEmail } from "@/lib/mail";
+import { getDataFilePath } from "@/lib/db";
 
 export interface NewsletterSubscriber {
   id: string;
@@ -9,7 +9,7 @@ export interface NewsletterSubscriber {
   date: string;
 }
 
-const DATA_FILE = path.join(process.cwd(), "src/data/newsletter_subscribers.json");
+const DATA_FILE = getDataFilePath("newsletter_subscribers.json");
 
 function getSubscribers(): NewsletterSubscriber[] {
   if (!fs.existsSync(DATA_FILE)) {

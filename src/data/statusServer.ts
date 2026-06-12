@@ -1,5 +1,5 @@
 import fs from "fs";
-import path from "path";
+import { getDataFilePath } from "@/lib/db";
 
 export interface DailyStatus {
   id: string;
@@ -9,7 +9,7 @@ export interface DailyStatus {
   updatedAt: string;  // ISO timestamp
 }
 
-const DATA_FILE = path.join(process.cwd(), "src/data/daily_status.json");
+const DATA_FILE = getDataFilePath("daily_status.json");
 
 export function getDailyStatuses(): DailyStatus[] {
   if (!fs.existsSync(DATA_FILE)) {

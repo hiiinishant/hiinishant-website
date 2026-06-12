@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
+import { getDataFilePath } from "@/lib/db";
 
 export interface FuturePlan {
   id: string;
@@ -11,7 +11,7 @@ export interface FuturePlan {
   status: "planned" | "in-progress" | "completed";
 }
 
-const DATA_FILE = path.join(process.cwd(), "src/data/future_plans.json");
+const DATA_FILE = getDataFilePath("future_plans.json");
 
 const initialPlans: FuturePlan[] = [
   {
