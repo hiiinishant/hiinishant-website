@@ -1,0 +1,26 @@
+[
+  {
+    "id": "plan-1",
+    "title": "Launch 2 AM Study Mobile App",
+    "description": "Build and publish a native Android/iOS application supporting offline notes access, flashcards, and study planners.",
+    "targetDate": "Q4 2026",
+    "category": "business",
+    "status": "planned"
+  },
+  {
+    "id": "plan-2",
+    "title": "GATE CSE Full Mock Series",
+    "description": "Publish 10 full-length practice examinations matching the latest GATE system syllabus and time limits.",
+    "targetDate": "Q3 2026",
+    "category": "academic",
+    "status": "in-progress"
+  },
+  {
+    "id": "plan-3",
+    "title": "National Mentorship Program",
+    "description": "Launch weekly live study rooms and direct peer mentorship circles to help 500+ top aspirants coordinate GATE schedules.",
+    "targetDate": "Q3 2026",
+    "category": "community",
+    "status": "in-progress"
+  }
+]
