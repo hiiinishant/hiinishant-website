@@ -44,7 +44,7 @@ interface DailyStatus {
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const ADMIN_PASSWORD = "nishant2am";
+// Admin password is now verified securely on the backend
 
 // ─── Category / Status Configs ───────────────────────────────────────────────
 const updateCategoryConfig: Record<UpdateItem["category"], { label: string; color: string; bg: string; dot: string }> = {
@@ -258,13 +258,21 @@ export default function AdminPage() {
     }
   }, []);
 
+  const getAuthHeaders = () => {
+    const token = sessionStorage.getItem("admin_token");
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    };
+  };
+
   // Fetch Admin Protected Databases
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
     try {
       const [updRes, msgRes] = await Promise.all([
-        fetch("/api/updates"),
-        fetch("/api/contact"),
+        fetch("/api/updates", { headers: getAuthHeaders() }),
+        fetch("/api/contact", { headers: getAuthHeaders() }),
       ]);
       setUpdates(await updRes.json());
       setMessages(await msgRes.json());
@@ -275,9 +283,26 @@ export default function AdminPage() {
     }
   }, []);
 
-  // On Mount: Load public statuses
+  // On Mount: Load public statuses and session
   useEffect(() => {
     fetchPublicLogs();
+
+    const token = sessionStorage.getItem("admin_token");
+    if (token) {
+      fetch("/api/auth/verify", {
+        headers: { "Authorization": `Bearer ${token}` }
+      })
+      .then((res) => {
+        if (res.ok) {
+          setUnlocked(true);
+        } else {
+          sessionStorage.removeItem("admin_token");
+        }
+      })
+      .catch(() => {
+        sessionStorage.removeItem("admin_token");
+      });
+    }
   }, [fetchPublicLogs]);
 
   // When Unlocked: Load CMS
@@ -288,21 +313,33 @@ export default function AdminPage() {
   }, [unlocked, fetchAdminData]);
 
   // Handle Admin Auth
-  const handleLogin = (pw: string) => {
-    if (pw === ADMIN_PASSWORD) {
-      setUnlocked(true);
-      setShowLoginModal(false);
-      setLoginError("");
-      setAdminPasswordInput("");
-      showToast("Console unlocked. Mode: Admin Write Enabled.", "success");
-    } else {
-      setLoginError("Incorrect access credentials.");
+  const handleLogin = async (pw: string) => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        sessionStorage.setItem("admin_token", data.token);
+        setUnlocked(true);
+        setShowLoginModal(false);
+        setLoginError("");
+        setAdminPasswordInput("");
+        showToast("Console unlocked. Mode: Admin Write Enabled.", "success");
+      } else {
+        throw new Error(data.error || "Incorrect access credentials.");
+      }
+    } catch (err: any) {
+      setLoginError(err.message || "Incorrect access credentials.");
       setLoginShaking(true);
       setTimeout(() => setLoginShaking(false), 600);
     }
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem("admin_token");
     setUnlocked(false);
     setActiveTab("overview");
     showToast("Console locked. Mode: Public Read Only.", "success");
@@ -315,7 +352,7 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/updates", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updateForm),
       });
       if (!res.ok) throw new Error("Failed to publish feed update.");
@@ -338,7 +375,7 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/future-plans", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(planForm),
       });
       if (!res.ok) throw new Error("Failed to add roadmap item.");
@@ -363,7 +400,7 @@ export default function AdminPage() {
         try {
           const res = await fetch("/api/updates", {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
           });
           if (!res.ok) throw new Error("Failed to delete update.");
@@ -385,7 +422,7 @@ export default function AdminPage() {
         try {
           const res = await fetch("/api/future-plans", {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
           });
           if (!res.ok) throw new Error("Failed to delete roadmap item.");
@@ -407,7 +444,7 @@ export default function AdminPage() {
         try {
           const res = await fetch("/api/contact", {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
           });
           if (!res.ok) throw new Error("Failed to delete message.");
@@ -425,7 +462,7 @@ export default function AdminPage() {
     try {
       await fetch("/api/contact", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ id }),
       });
       setMessages((prev) => prev.map((m) => m.id === id ? { ...m, read: true } : m));
@@ -439,7 +476,7 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/future-plans", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ id: plan.id, status: next }),
       });
       if (!res.ok) throw new Error("Failed to update status.");
@@ -462,10 +499,7 @@ export default function AdminPage() {
 
       const res = await fetch("/api/status", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-password": ADMIN_PASSWORD,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           date: statusForm.date,
           statusText: statusForm.statusText,
@@ -512,10 +546,7 @@ export default function AdminPage() {
         try {
           const res = await fetch("/api/status", {
             method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-password": ADMIN_PASSWORD,
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
           });
           if (!res.ok) throw new Error("Failed to delete workspace commit.");
