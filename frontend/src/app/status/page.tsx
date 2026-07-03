@@ -1,0 +1,64 @@
+import type { Metadata } from "next";
+import StatusDashboardClient from "./StatusDashboardClient";
+import { apiUrl } from "@/lib/api";
+
+export const revalidate = 10;
+
+export const metadata: Metadata = {
+  title: "Live Status Dashboard",
+  description: "See what Nishant Kumar is building today. Live daily status logs, accomplishments, and roadmap focus.",
+  alternates: {
+    canonical: "/status",
+  },
+};
+
+interface FuturePlan {
+  id: string;
+  title: string;
+  description: string;
+  targetDate: string;
+  category: "academic" | "business" | "community" | "general";
+  status: "planned" | "in-progress" | "completed";
+}
+
+interface DailyStatus {
+  id: string;
+  date: string;
+  statusText: string;
+  tasks: string[];
+  updatedAt: string;
+}
+
+async function getFuturePlans(): Promise<FuturePlan[]> {
+  try {
+    const res = await fetch(apiUrl("/api/future-plans"), { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+async function getDailyStatuses(): Promise<DailyStatus[]> {
+  try {
+    const res = await fetch(apiUrl("/api/status"), { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export default async function StatusPage() {
+  const [futurePlans, initialStatuses] = await Promise.all([
+    getFuturePlans(),
+    getDailyStatuses(),
+  ]);
+
+  return (
+    <StatusDashboardClient
+      initialStatuses={initialStatuses}
+      futurePlans={futurePlans}
+    />
+  );
+}

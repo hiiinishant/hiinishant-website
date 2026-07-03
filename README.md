@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nishant Kumar - Portfolio & Engagement Website
 
-## Getting Started
+Welcome to my portfolio and engagement website! This platform showcases my projects, skills, and professional experience.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Portfolio Showcase**: Display of completed projects and case studies
+- **Skills & Expertise**: Technical skills and professional competencies
+- **Contact & Engagement**: Easy ways to get in touch
+- **Responsive Design**: Mobile-friendly and accessible interface
+- **Interactive Elements**: Engaging user experience with smooth animations
+
+## 🛠️ Tech Stack
+
+- **Frontend**: HTML5, CSS3, JavaScript
+- **Framework**: React / Vue.js (or your choice)
+- **Styling**: Tailwind CSS / Bootstrap
+- **Backend**: Node.js / Express (if applicable)
+- **Database**: MongoDB / PostgreSQL (if applicable)
+- **Deployment**: Vercel / Netlify
+
+## 📁 Project Structure
+
+```
+├── public/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── assets/
+│   └── App.js
+├── README.md
+└── package.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🎯 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
+- Node.js 
+- pnpm
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation
 
-## Learn More
+```bash
+# Clone the repository
+git clone https://github.com/nishant-kumar/portfolio.git
 
-To learn more about Next.js, take a look at the following resources:
+# Navigate to project directory
+cd portfolio
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Install dependencies
+npm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Start development server
+npm start
+```
 
-## Deploy on Vercel
+## 📖 Usage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Visit `http://localhost:3000` to view the website locally.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🌐 Live Demo
+
+[View Live Portfolio](https://nishant-kumar-portfolio.com)
+
+## 📞 Contact & Connect
+
+- **Email**: nishant@example.com
+- **LinkedIn**: [linkedin.com/in/nishant-kumar](https://linkedin.com/in/nishant-kumar)
+- **GitHub**: [github.com/nishant-kumar](https://github.com/nishant-kumar)
+- **Twitter**: [@nishant_dev](https://twitter.com/nishant_dev)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+**Built with ❤️ by Nishant Kumar**
