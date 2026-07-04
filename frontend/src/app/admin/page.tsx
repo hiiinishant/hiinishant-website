@@ -192,7 +192,15 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings";
+type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "manage-resume";
+
+interface ResumeItem {
+  id: string;
+  title: string;
+  fileUrl: string;
+  filePath: string;
+  uploadedAt: string;
+}
 
 export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
@@ -208,6 +216,9 @@ export default function AdminPage() {
   const [statuses, setStatuses] = useState<DailyStatus[]>([]);
   const [blogs, setBlogs] = useState<any[]>([]);
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
+  const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [resumeForm, setResumeForm] = useState({ title: "" });
+  const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [confirm, setConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
@@ -327,6 +338,17 @@ export default function AdminPage() {
     }
   }, []);
 
+  const fetchResumeData = useCallback(async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/resume`, { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch resumes");
+      const data = await res.json();
+      setResumes(Array.isArray(data) ? data : []);
+    } catch {
+      showToast("Failed to load resumes.", "error");
+    }
+  }, []);
+
   const fetchGalleryData = useCallback(async () => {
     setLoading(true);
     try {
@@ -384,8 +406,9 @@ export default function AdminPage() {
       fetchAdminData();
       fetchGalleryData();
       fetchMusicSettings();
+      fetchResumeData();
     }
-  }, [unlocked, fetchAdminData, fetchGalleryData, fetchMusicSettings]);
+  }, [unlocked, fetchAdminData, fetchGalleryData, fetchMusicSettings, fetchResumeData]);
 
   // Handle Admin Auth
   const handleLogin = async (pw: string) => {
@@ -788,6 +811,58 @@ export default function AdminPage() {
     });
   };
 
+  // ── Upload Resume ──
+  const handleResumeUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedResumeFile) { showToast("Please select a PDF file.", "error"); return; }
+    if (!resumeForm.title.trim()) { showToast("Please enter a title.", "error"); return; }
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("resume", selectedResumeFile);
+      formData.append("title", resumeForm.title.trim());
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/resume`, {
+        method: "POST",
+        headers: getAuthOnlyHeaders(),
+        body: formData,
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Upload failed"); }
+      const newResume = await res.json();
+      setResumes((prev) => [newResume, ...prev]);
+      setResumeForm({ title: "" });
+      setSelectedResumeFile(null);
+      const fi = document.getElementById("resume-file-input") as HTMLInputElement;
+      if (fi) fi.value = "";
+      showToast("Resume uploaded successfully!", "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to upload resume.", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Delete Resume ──
+  const deleteResume = (id: string, title: string) => {
+    setConfirm({
+      message: `Delete resume "${title}"? This will remove it from storage.`,
+      onConfirm: async () => {
+        setConfirm(null);
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/resume`, {
+            method: "DELETE",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id }),
+          });
+          if (!res.ok) throw new Error("Failed to delete resume.");
+          setResumes((prev) => prev.filter((r) => r.id !== id));
+          showToast("Resume deleted.", "success");
+        } catch (err: any) {
+          showToast(err.message, "error");
+        }
+      },
+    });
+  };
+
   const handleMusicSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!musicPlaylistUrl.trim()) {
@@ -963,6 +1038,7 @@ export default function AdminPage() {
     { id: "messages",       label: "inboxes",         icon: "✉", badge: unreadCount },
     { id: "gallery-management", label: "gallery_admin",   icon: "📸" },
     { id: "music-settings",     label: "music_corner",    icon: "🎵" },
+    { id: "manage-resume",      label: "resume_mgmt",     icon: "📄" },
   ];
 
   return (
@@ -1969,6 +2045,142 @@ export default function AdminPage() {
                       </Link>
                     </div>
                   </form>
+                </div>
+              )}
+
+              {/* ── RESUME MANAGEMENT ── */}
+              {activeTab === "manage-resume" && (
+                <div className="space-y-8">
+                  <div className="font-mono">
+                    <h2 className="text-lg font-bold text-white mb-1">Resume Management</h2>
+                    <p className="text-[10px] text-brand-400">Upload your latest resume (PDF, DOC, DOCX). Visitors can download it from the /resume page.</p>
+                  </div>
+
+                  {/* Upload Form */}
+                  <form onSubmit={handleResumeUpload} className="space-y-5 glass-strong border border-white/10 rounded-2xl p-6 font-mono text-xs">
+                    <h3 className="text-xs uppercase font-bold text-brand-200 tracking-wider">Upload New Resume</h3>
+
+                    <InputField
+                      label="Resume Title"
+                      name="resumeTitle"
+                      value={resumeForm.title}
+                      onChange={(e) => setResumeForm({ title: e.target.value })}
+                      placeholder="e.g. Nishant Kumar — Resume 2025"
+                      required
+                    />
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-brand-400 flex items-center gap-1">
+                        Resume File <span className="text-accent">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="resume-file-input"
+                          type="file"
+                          accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          onChange={(e) => setSelectedResumeFile(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="resume-file-input"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-white/15 bg-zinc-950/40 hover:border-accent/40 hover:bg-zinc-950/60 cursor-pointer transition-all group"
+                        >
+                          <span className="text-xl">📄</span>
+                          <div className="flex-grow min-w-0">
+                            {selectedResumeFile ? (
+                              <>
+                                <p className="text-xs text-white font-bold truncate">{selectedResumeFile.name}</p>
+                                <p className="text-[9px] text-brand-400">{(selectedResumeFile.size / 1024 / 1024).toFixed(2)} MB — {selectedResumeFile.name.split('.').pop()?.toUpperCase()}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs text-brand-300 group-hover:text-white transition-colors">Click to select file</p>
+                                <p className="text-[9px] text-brand-500">Max 10 MB · PDF, DOC, DOCX</p>
+                              </>
+                            )}
+                          </div>
+                          {selectedResumeFile && (
+                            <span className="text-emerald-400 text-base">✓</span>
+                          )}
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <button
+                        type="submit"
+                        disabled={submitting || !selectedResumeFile || !resumeForm.title.trim()}
+                        className="px-8 py-3.5 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] disabled:opacity-50 cursor-pointer"
+                      >
+                        {submitting ? "Uploading…" : "Upload Resume"}
+                      </button>
+                      {selectedResumeFile && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedResumeFile(null);
+                            setResumeForm({ title: "" });
+                            const fi = document.getElementById("resume-file-input") as HTMLInputElement;
+                            if (fi) fi.value = "";
+                          }}
+                          className="px-5 py-3.5 rounded-xl bg-white/5 border border-white/10 text-xs text-brand-300 hover:text-white transition-all cursor-pointer font-bold uppercase tracking-wider"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </form>
+
+                  {/* Resume List */}
+                  <div className="space-y-4 font-mono">
+                    <h3 className="text-xs uppercase font-bold text-brand-200 tracking-wider">Uploaded Resumes ({resumes.length})</h3>
+
+                    {loading ? (
+                      <div className="text-center py-6 text-brand-400 text-xs">Loading resumes…</div>
+                    ) : resumes.length === 0 ? (
+                      <div className="text-center py-8 text-brand-400 text-xs bg-white/2 rounded-xl border border-white/5">No resumes uploaded yet.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {resumes.map((resume, idx) => (
+                          <div
+                            key={resume.id}
+                            className="flex items-center gap-4 p-4 rounded-xl border border-white/5 bg-white/2 hover:bg-white/4 hover:border-white/10 transition-all group"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+                              <span className="text-lg">📄</span>
+                            </div>
+                            <div className="flex-grow min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                {idx === 0 && (
+                                  <span className="text-[8px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">LATEST</span>
+                                )}
+                                <p className="text-xs font-bold text-white truncate">{resume.title}</p>
+                              </div>
+                              <p className="text-[9px] text-brand-500">
+                                Uploaded: {new Date(resume.uploadedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <a
+                                href={resume.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20 text-accent text-[9px] font-bold hover:bg-accent/20 transition-all uppercase tracking-wider"
+                              >
+                                View ↗
+                              </a>
+                              <button
+                                onClick={() => deleteResume(resume.id, resume.title)}
+                                className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-bold hover:bg-red-500/20 cursor-pointer uppercase tracking-wider"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

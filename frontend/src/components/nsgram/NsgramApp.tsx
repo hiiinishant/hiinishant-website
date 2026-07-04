@@ -163,8 +163,24 @@ export default function NsgramApp() {
       const latestConversations = snapshot.docs
         .map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Omit<Conversation, "id">) }) as Conversation)
         .sort((a, b) => {
-          const aTime = a.lastMessageAt ? new Date(a.lastMessageAt.toDate ? a.lastMessageAt.toDate() : a.lastMessageAt).getTime() : 0;
-          const bTime = b.lastMessageAt ? new Date(b.lastMessageAt.toDate ? b.lastMessageAt.toDate() : b.lastMessageAt).getTime() : 0;
+          const aTime =
+            a.lastMessageAt
+              ? new Date(
+                typeof a.lastMessageAt === "string"
+                  ? a.lastMessageAt
+                  : a.lastMessageAt.toDate()
+              ).getTime()
+              : 0;
+
+          const bTime =
+            b.lastMessageAt
+              ? new Date(
+                typeof b.lastMessageAt === "string"
+                  ? b.lastMessageAt
+                  : b.lastMessageAt.toDate()
+              ).getTime()
+              : 0;
+
           return bTime - aTime;
         });
       setConversations(latestConversations);
@@ -245,7 +261,7 @@ export default function NsgramApp() {
       setAuthLoading(true);
       try {
         const credential = await createUserWithEmailAndPassword(auth, email, password);
-        
+
         // Create user profile via backend API (role defaults to 'user')
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
         await fetch(`${backendUrl}/api/users/profile`, {
@@ -262,7 +278,7 @@ export default function NsgramApp() {
             avatar: authForm.avatar,
           }),
         });
-        
+
         setNotice("Account created successfully.");
         setAuthForm(emptyAuthForm);
         setAuthMode("login");
@@ -278,7 +294,7 @@ export default function NsgramApp() {
     setAuthLoading(true);
     try {
       const credential = await signInWithEmailAndPassword(auth, email, password);
-      
+
       // Update lastLoginAt via backend API
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
       fetch(`${backendUrl}/api/users/profile`, {
@@ -291,7 +307,7 @@ export default function NsgramApp() {
           email: credential.user.email,
         }),
       }).catch(err => console.error('Failed to update lastLoginAt:', err));
-      
+
       setNotice("Signed in successfully.");
     } catch (error) {
       console.error(error);

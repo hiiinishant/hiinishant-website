@@ -22,9 +22,11 @@ export interface UploadResult {
 export interface UploadOptions {
   folder?: string;
   transformation?: string;
-  resourceType?: 'image' | 'video' | 'auto';
+  resourceType?: 'image' | 'video' | 'auto' | 'raw';
   quality?: 'auto' | number;
   fetch_format?: 'auto' | string;
+  publicId?: string;
+  access_mode?: 'public' | 'authenticated';
 }
 
 /**
@@ -35,14 +37,21 @@ export async function uploadBuffer(
   options: UploadOptions = {}
 ): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
+    const isRaw = options.resourceType === 'raw';
+    const params: any = {
+      folder: options.folder || 'hiiinishant',
+      resource_type: options.resourceType || 'image',
+      public_id: options.publicId,
+      access_mode: options.access_mode || 'public',
+    };
+    if (!isRaw) {
+      if (options.transformation) params.transformation = options.transformation;
+      params.quality = options.quality || 'auto';
+      params.fetch_format = options.fetch_format || 'auto';
+    }
+
     const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: options.folder || 'hiiinishant',
-        transformation: options.transformation,
-        resource_type: options.resourceType || 'image',
-        quality: options.quality || 'auto',
-        fetch_format: options.fetch_format || 'auto',
-      },
+      params,
       (error, result) => {
         if (error) {
           reject(error);
@@ -73,15 +82,21 @@ export async function uploadBase64(
   options: UploadOptions = {}
 ): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
+    const isRaw = options.resourceType === 'raw';
+    const params: any = {
+      folder: options.folder || 'hiiinishant',
+      resource_type: options.resourceType || 'image',
+      public_id: options.publicId,
+    };
+    if (!isRaw) {
+      if (options.transformation) params.transformation = options.transformation;
+      params.quality = options.quality || 'auto';
+      params.fetch_format = options.fetch_format || 'auto';
+    }
+
     cloudinary.uploader.upload(
       base64,
-      {
-        folder: options.folder || 'hiiinishant',
-        transformation: options.transformation,
-        resource_type: options.resourceType || 'image',
-        quality: options.quality || 'auto',
-        fetch_format: options.fetch_format || 'auto',
-      },
+      params,
       (error, result) => {
         if (error) {
           reject(error);
@@ -102,17 +117,24 @@ export async function uploadBase64(
 }
 
 /**
- * Delete an image from Cloudinary by public ID
+ * Delete a file/image from Cloudinary by public ID
  */
-export async function deleteImage(publicId: string): Promise<boolean> {
+export async function deleteImage(
+  publicId: string,
+  options: { resourceType?: 'image' | 'video' | 'raw' } = {}
+): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    cloudinary.uploader.destroy(publicId, (error, result) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(result?.result === 'ok');
+    cloudinary.uploader.destroy(
+      publicId,
+      { resource_type: options.resourceType || 'image' },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result?.result === 'ok');
+        }
       }
-    });
+    );
   });
 }
 

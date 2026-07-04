@@ -20,9 +20,16 @@ const newsletter_1 = __importDefault(require("./routes/newsletter"));
 const gallery_1 = __importDefault(require("./routes/gallery"));
 const upload_1 = __importDefault(require("./routes/upload"));
 const users_1 = __importDefault(require("./routes/users"));
+const resume_1 = __importDefault(require("./routes/resume"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: [
+        'http://localhost:3000',
+        process.env.FRONTEND_URL || 'http://localhost:3000',
+    ].filter(Boolean),
+    credentials: true,
+}));
 app.use(express_1.default.json());
 // Mount routes
 app.use('/api/auth', auth_1.default);
@@ -36,6 +43,7 @@ app.use('/api/newsletter', newsletter_1.default);
 app.use('/api/gallery', gallery_1.default);
 app.use('/api/upload', upload_1.default);
 app.use('/api/users', users_1.default);
+app.use('/api/resume', resume_1.default);
 // Start server
 const start = async () => {
     await (0, db_1.connectDB)();
