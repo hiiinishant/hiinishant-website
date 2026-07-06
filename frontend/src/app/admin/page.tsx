@@ -281,10 +281,21 @@ export default function AdminPage() {
     setLoading(true);
     const start = performance.now();
     try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
       const [planRes, statusRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/future-plans`),
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/status`),
+        fetch(`${backendUrl}/api/future-plans`),
+        fetch(`${backendUrl}/api/status`),
       ]);
+
+      // Check if backend is responding
+      if (!planRes.ok || !statusRes.ok) {
+        console.warn("Backend API returned non-OK status, using empty data");
+        setPlans([]);
+        setStatuses([]);
+        setLatency(Math.round(performance.now() - start));
+        return;
+      }
+
       const plansData = await planRes.json();
       const statusesData = await statusRes.json();
       setPlans(Array.isArray(plansData) ? plansData : []);
@@ -292,7 +303,8 @@ export default function AdminPage() {
       const end = performance.now();
       setLatency(Math.round(end - start));
     } catch (e) {
-      showToast("Failed to fetch operational status logs.", "error");
+      console.error("Failed to fetch operational status logs:", e);
+      // Don't show toast for this - it's expected when backend is not running
       setPlans([]);
       setStatuses([]);
     } finally {
@@ -317,11 +329,22 @@ export default function AdminPage() {
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
     try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
       const [updRes, msgRes, blogRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/updates`, { headers: getAuthHeaders() }),
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/contact`, { headers: getAuthHeaders() }),
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/blog`, { headers: getAuthHeaders() }),
+        fetch(`${backendUrl}/api/updates`, { headers: getAuthHeaders() }),
+        fetch(`${backendUrl}/api/contact`, { headers: getAuthHeaders() }),
+        fetch(`${backendUrl}/api/blog`, { headers: getAuthHeaders() }),
       ]);
+
+      // Check if backend is responding
+      if (!updRes.ok || !msgRes.ok || !blogRes.ok) {
+        console.warn("Backend API returned non-OK status for admin data, using empty data");
+        setUpdates([]);
+        setMessages([]);
+        setBlogs([]);
+        return;
+      }
+
       const updatesData = await updRes.json();
       const messagesData = await msgRes.json();
       const blogsData = await blogRes.json();
@@ -329,7 +352,8 @@ export default function AdminPage() {
       setMessages(Array.isArray(messagesData) ? messagesData : []);
       setBlogs(Array.isArray(blogsData) ? blogsData : []);
     } catch (e) {
-      showToast("Failed to load admin databases.", "error");
+      console.error("Failed to load admin databases:", e);
+      // Don't show toast - it's expected when backend is not running
       setUpdates([]);
       setMessages([]);
       setBlogs([]);
@@ -413,11 +437,19 @@ export default function AdminPage() {
   // Handle Admin Auth
   const handleLogin = async (pw: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/auth/login`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const res = await fetch(`${backendUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pw }),
       });
+
+      // Check if response is JSON
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Backend server not responding correctly. Check if backend is running on port 5000.");
+      }
+
       const data = await res.json();
       if (res.ok && data.token) {
         sessionStorage.setItem("admin_token", data.token);

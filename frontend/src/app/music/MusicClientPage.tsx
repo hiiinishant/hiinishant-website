@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import PageHeader from "@/components/layout/PageHeader";
-import { apiUrl } from "@/lib/api";
-import { defaultMusicPlaylist } from "@/data/music";
 import { loadYouTubeApi, fetchVideoTitle, videoThumbnailUrl, type MusicSettings } from "@/lib/youtube";
 
 interface PlaylistTrack {
@@ -39,18 +37,24 @@ function SkipIcon({ direction }: { direction: "prev" | "next" }) {
   );
 }
 
-export default function MusicClientPage() {
+export default function MusicClientPage({
+  initialSettings,
+}: {
+  initialSettings: MusicSettings;
+}) {
   const playerRef = useRef<YT.Player | null>(null);
   const playerContainerId = "youtube-music-player";
 
-  const [settings, setSettings] = useState<MusicSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [settings] = useState<MusicSettings>(initialSettings);
   const [playerReady, setPlayerReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentTitle, setCurrentTitle] = useState("");
   const [tracks, setTracks] = useState<PlaylistTrack[]>([]);
   const [error, setError] = useState("");
+  const [playerLoading, setPlayerLoading] = useState(true);
+
+  const tracksLoadedRef = useRef(false);
 
   const syncCurrentTrack = useCallback((player: YT.Player) => {
     const data = player.getVideoData();
@@ -65,13 +69,37 @@ export default function MusicClientPage() {
     setTracks(videoIds.map((videoId, i) => ({ videoId, title: titles[i] })));
   }, []);
 
+  // Polls getPlaylist() until data is available (YouTube fills it async after CUED)
+  const tryLoadPlaylist = useCallback(
+    (player: YT.Player, attempts = 0) => {
+      if (tracksLoadedRef.current) return;
+      const playlist = player.getPlaylist();
+      if (playlist && playlist.length > 0) {
+        tracksLoadedRef.current = true;
+        console.log("Playlist loaded with", playlist.length, "tracks");
+        loadTrackTitles(playlist);
+      } else if (attempts < 20) {
+        // Retry every 500ms up to 10 seconds
+        setTimeout(() => tryLoadPlaylist(player, attempts + 1), 500);
+      } else {
+        console.warn("Could not load playlist tracks after retries");
+      }
+    },
+    [loadTrackTitles]
+  );
+
   const initPlayer = useCallback(
     async (playlistId: string) => {
+      console.log("Loading YouTube API...");
       await loadYouTubeApi();
+      console.log("YouTube API loaded, initializing player with playlist:", playlistId);
+
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
+
+      tracksLoadedRef.current = false;
 
       playerRef.current = new YT.Player(playerContainerId, {
         height: "100%",
@@ -85,65 +113,52 @@ export default function MusicClientPage() {
           rel: 0,
           fs: 0,
           iv_load_policy: 3,
+          enablejsapi: 1,
+          origin: typeof window !== "undefined" ? window.location.origin : "",
         },
         events: {
           onReady: (event) => {
+            console.log("Player ready");
             setPlayerReady(true);
-            const playlist = event.target.getPlaylist();
-            if (playlist && playlist.length > 0) {
-              loadTrackTitles(playlist);
-            }
             syncCurrentTrack(event.target);
+            // getPlaylist() is often null right on onReady — start polling
+            tryLoadPlaylist(event.target);
           },
           onStateChange: (event) => {
+            console.log("Player state changed:", event.data);
             if (
               event.data === YT.PlayerState.PLAYING ||
               event.data === YT.PlayerState.PAUSED ||
               event.data === YT.PlayerState.CUED
             ) {
               syncCurrentTrack(event.target);
+              // After CUED the playlist is usually available
+              tryLoadPlaylist(event.target);
             }
             if (event.data === YT.PlayerState.ENDED) {
               setPlaying(false);
             }
           },
+          onError: (event) => {
+            console.error("Player error:", event.data);
+            setError("Failed to load playlist. The playlist may be private or unavailable.");
+          },
         },
       });
     },
-    [loadTrackTitles, syncCurrentTrack]
+    [loadTrackTitles, syncCurrentTrack, tryLoadPlaylist]
   );
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch(apiUrl("/api/music"));
-        let data: MusicSettings;
-        if (!res.ok) {
-          data = defaultMusicPlaylist;
-        } else {
-          data = await res.json();
-          if (!data.playlistId) data = defaultMusicPlaylist;
-        }
-        setSettings(data);
-        if (!data.playlistId) {
-          setLoading(false);
-          return;
-        }
-        await initPlayer(data.playlistId);
-      } catch {
-        setError("Could not load the music playlist. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!settings.playlistId) return;
 
-    fetchSettings();
+    initPlayer(settings.playlistId).finally(() => setPlayerLoading(false));
 
     return () => {
       playerRef.current?.destroy();
       playerRef.current = null;
     };
-  }, [initPlayer]);
+  }, [initPlayer, settings.playlistId]);
 
   const togglePlay = () => {
     const player = playerRef.current;
@@ -165,18 +180,7 @@ export default function MusicClientPage() {
     setCurrentIndex(index);
   };
 
-  if (loading) {
-    return (
-      <main className="min-h-screen pt-24 pb-20">
-        <PageHeader label="Music Corner" title="Curated Playlist" description="Loading your music…" />
-        <div className="max-w-4xl mx-auto px-5 text-center text-brand-400 text-sm animate-pulse">
-          Tuning the player…
-        </div>
-      </main>
-    );
-  }
-
-  if (!settings?.playlistId) {
+  if (!settings.playlistId) {
     return (
       <main className="min-h-screen pt-24 pb-20">
         <PageHeader
@@ -228,27 +232,27 @@ export default function MusicClientPage() {
             <div className="lg:col-span-3 relative bg-black aspect-video lg:aspect-auto lg:min-h-[320px]">
               <div id={playerContainerId} className="absolute inset-0 w-full h-full" />
               {!playerReady && (
-                <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 text-brand-400 text-sm">
+                <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 text-brand-400 text-sm animate-pulse">
                   Loading player…
                 </div>
               )}
             </div>
 
             {/* Sidebar: thumbnail, title, controls */}
-            <div className="lg:col-span-2 p-6 sm:p-8 flex flex-col gap-5 border-t lg:border-t-0 lg:border-l border-white/5">
-              <div className="flex gap-4 items-start">
+            <div className="lg:col-span-2 p-5 sm:p-6 lg:p-8 flex flex-col gap-4 sm:gap-5 border-t lg:border-t-0 lg:border-l border-white/5">
+              <div className="flex gap-3 sm:gap-4 items-start">
                 {settings.playlistThumbnail && (
                   <img
                     src={settings.playlistThumbnail}
                     alt={settings.playlistTitle}
-                    className="w-20 h-20 rounded-xl object-cover shrink-0 border border-white/10 shadow-lg"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0 border border-white/10 shadow-lg"
                   />
                 )}
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-widest text-accent font-semibold mb-1">
                     Now Playing
                   </p>
-                  <h2 className="text-base font-bold text-white leading-snug line-clamp-2">
+                  <h2 className="text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">
                     {currentTitle || "Select a track"}
                   </h2>
                   <p className="text-xs text-brand-400 mt-1 line-clamp-2">{settings.playlistTitle}</p>

@@ -126,7 +126,14 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
         <div className="relative pl-6 border-l border-white/5 space-y-12 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {filteredStatuses.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-white/5 rounded-xl font-mono">
-              <p className="text-brand-500 text-xs">NO WORK LOGS MATCH FILTER KEYWORDS.</p>
+              {searchQuery ? (
+                <p className="text-brand-500 text-xs">NO WORK LOGS MATCH FILTER KEYWORDS.</p>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-brand-500 text-xs">NO WORK LOGS RECORDED YET.</p>
+                  <p className="text-brand-600 text-[10px]">Daily status logs will appear here once the backend is configured with Firebase.</p>
+                </div>
+              )}
             </div>
           ) : (
             filteredStatuses.map((status) => (

@@ -6,6 +6,11 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(200).json([]);
+      return;
+    }
+
     const snap = await firestore.collection('dailyStatus').orderBy('date', 'desc').get();
     const statuses = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
     res.status(200).json(statuses);

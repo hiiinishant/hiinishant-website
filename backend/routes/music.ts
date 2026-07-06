@@ -6,13 +6,13 @@ const router = Router();
 
 const DEFAULT_PLAYLIST_URL =
   process.env.MUSIC_PLAYLIST_URL ||
-  "https://www.youtube.com/watch?v=uNboFgKLGDY&list=PLQfqZFVQZ3To";
+  "https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf";
 
 function extractPlaylistId(url: string): string | null {
   if (!url) return null;
-  const listMatch = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  const listMatch = url.match(/[?&]list=([a-zA-Z0-9_-]{10,})/);
   if (listMatch) return listMatch[1];
-  const pathMatch = url.match(/youtube\.com\/playlist\/([a-zA-Z0-9_-]+)/);
+  const pathMatch = url.match(/youtube\.com\/playlist\/([a-zA-Z0-9_-]{10,})/);
   if (pathMatch) return pathMatch[1];
   return null;
 }
@@ -58,6 +58,12 @@ async function buildMusicSettings(playlistUrl: string) {
 
 router.get('/', async (req, res) => {
   try {
+    // If Firestore is not initialized, return default playlist
+    if (!firestore) {
+      res.status(200).json(await buildMusicSettings(DEFAULT_PLAYLIST_URL));
+      return;
+    }
+
     const doc = await firestore.collection('musicSettings').doc('default').get();
     if (doc.exists && doc.data()?.playlistId) {
       const data = doc.data()!;

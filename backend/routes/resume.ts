@@ -17,6 +17,11 @@ const ALLOWED_MIME_TYPES = [
 // GET all resumes — latest first
 router.get('/', async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(200).json([]);
+      return;
+    }
+
     const snap = await firestore
       .collection('resumes')
       .orderBy('uploadedAt', 'desc')

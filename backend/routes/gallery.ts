@@ -10,6 +10,11 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Get all gallery photos
 router.get('/', async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(200).json([]);
+      return;
+    }
+
     const snap = await firestore.collection('gallery').orderBy('date', 'desc').get();
     const photos = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
     res.status(200).json(photos);

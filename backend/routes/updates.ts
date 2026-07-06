@@ -55,6 +55,13 @@ async function fetchYoutubeVideos(): Promise<any[]> {
 
 router.get('/', async (req, res) => {
   try {
+    if (!firestore) {
+      // Return only YouTube videos if Firestore is not configured
+      const youtubeUpdates = await fetchYoutubeVideos();
+      res.status(200).json(youtubeUpdates);
+      return;
+    }
+
     const staticUpdatesSnap = await firestore.collection('updateItems').get();
     const formattedStaticUpdates = staticUpdatesSnap.docs.map((d: any) => {
       const data = d.data();

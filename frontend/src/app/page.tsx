@@ -56,8 +56,8 @@ export default function Home() {
               </div>
 
               {/* Heading */}
-              <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-none animate-slide-up">
-                <span className="block font-caveat text-2xl sm:text-3xl text-accent/85 mb-2 tracking-wide normal-case font-medium">
+              <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-none animate-slide-up">
+                <span className="block font-caveat text-xl sm:text-2xl md:text-3xl text-accent/85 mb-2 tracking-wide normal-case font-medium">
                   Hiii, this is
                 </span>
                 <span className="text-gradient-white">Nishant</span>{" "}
@@ -136,10 +136,10 @@ export default function Home() {
             </div>
 
             {/* Right Visual — sticky on desktop */}
-            <div className="lg:col-span-5 mt-16 lg:mt-8 animate-slide-in-right flex flex-col items-center sticky top-24 self-start">
+            <div className="lg:col-span-5 mt-12 lg:mt-8 animate-slide-in-right flex flex-col items-center sticky top-24 self-start">
 
               {/* Picture Card */}
-              <div className="w-full max-w-[280px] aspect-[4/5] rounded-3xl overflow-hidden glass-strong relative group card-spotlight shadow-2xl border border-white/8">
+              <div className="w-full max-w-[260px] sm:max-w-[280px] aspect-[4/5] rounded-3xl overflow-hidden glass-strong relative group card-spotlight shadow-2xl border border-white/8">
                 {/* Subtle overlay */}
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/50 z-10 pointer-events-none" />
                 <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-blue-500/5 z-10 pointer-events-none" />
@@ -156,20 +156,20 @@ export default function Home() {
               </div>
 
               {/* Text info below card */}
-              <div className="mt-5 w-full max-w-[280px] text-center space-y-2">
+              <div className="mt-4 sm:mt-5 w-full max-w-[280px] text-center space-y-2">
 
                 {/* Name + title */}
                 <div>
-                  <p className="text-white font-bold text-2xl tracking-tight">Nishant Kumar</p>
-                  <p className="text-brand-400 text-base mt-1 font-medium">Founder · 2 AM Study</p>
+                  <p className="text-white font-bold text-xl sm:text-2xl tracking-tight">Nishant Kumar</p>
+                  <p className="text-brand-400 text-sm sm:text-base mt-1 font-medium">Founder · 2 AM Study</p>
                 </div>
 
                 {/* Elegant Quote Block */}
                 <div className="relative pt-1">
-                  <p className="text-lg font-caveat leading-tight font-medium italic relative z-10 px-4 animate-pulse-slow text-gradient-static">
-                    <span className="text-2xl text-accent/40 absolute -top-1 left-1 font-serif animate-float">&ldquo;</span>
+                  <p className="text-base sm:text-lg font-caveat leading-tight font-medium italic relative z-10 px-3 sm:px-4 animate-pulse-slow text-gradient-static">
+                    <span className="text-xl sm:text-2xl text-accent/40 absolute -top-1 left-1 font-serif animate-float">&ldquo;</span>
                     The best ideas come at 2 AM — when the world is asleep and your mind is on fire.
-                    <span className="text-2xl text-accent/40 absolute -bottom-3 right-3 font-serif animate-float" style={{ animationDelay: '1s' }}>&rdquo;</span>
+                    <span className="text-xl sm:text-2xl text-accent/40 absolute -bottom-3 right-3 font-serif animate-float" style={{ animationDelay: '1s' }}>&rdquo;</span>
                   </p>
                 </div>
 
@@ -202,11 +202,11 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-8">
             {/* Card 1: Journey */}
             <Link
               href="/journey"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-violet-500/30 p-8 flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(139,92,246,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-violet-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(139,92,246,0.12)] card-spotlight"
             >
               {/* Card accent gradient glow */}
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
@@ -243,7 +243,7 @@ export default function Home() {
             {/* Card: Gallery */}
             <Link
               href="/gallery"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-sky-500/30 p-8 flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(14,165,233,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-sky-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(14,165,233,0.12)] card-spotlight"
             >
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-sky-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
               <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer pointer-events-none" />
@@ -279,7 +279,7 @@ export default function Home() {
             {/* Card: Music Corner */}
             <Link
               href="/music"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-fuchsia-500/30 p-8 flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(217,70,239,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-fuchsia-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(217,70,239,0.12)] card-spotlight"
             >
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
               <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer pointer-events-none" />
@@ -315,7 +315,7 @@ export default function Home() {
             {/* Card 2: Projects */}
             <Link
               href="/projects"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-amber-500/30 p-8 flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-amber-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.12)] card-spotlight"
             >
               {/* Card accent gradient glow */}
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
@@ -352,7 +352,7 @@ export default function Home() {
             {/* Card 3: Universe */}
             <Link
               href="/universe"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-emerald-500/30 p-8 flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(16,185,129,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-emerald-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(16,185,129,0.12)] card-spotlight"
             >
               {/* Card accent gradient glow */}
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
@@ -389,7 +389,7 @@ export default function Home() {
             {/* Card 4: Updates */}
             <Link
               href="/updates"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-rose-500/30 p-8 flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(244,63,94,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-rose-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(244,63,94,0.12)] card-spotlight"
             >
               {/* Card accent gradient glow */}
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
@@ -425,7 +425,7 @@ export default function Home() {
 
             <Link
               href="/admin"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-indigo-500/30 p-8 flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(99,102,241,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-indigo-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(99,102,241,0.12)] card-spotlight"
             >
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
               <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer pointer-events-none" />
@@ -457,7 +457,7 @@ export default function Home() {
 
             <Link
               href="/resume"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-accent/30 p-8 flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-accent/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.12)] card-spotlight"
             >
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
               <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer pointer-events-none" />

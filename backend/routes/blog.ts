@@ -9,6 +9,11 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.get('/', async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(200).json([]);
+      return;
+    }
+
     const snap = await firestore.collection('blogs').orderBy('date', 'desc').get();
     const blogs = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
     res.status(200).json(blogs);

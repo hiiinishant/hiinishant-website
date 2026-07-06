@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import MusicClientPage from "./MusicClientPage";
+import { defaultMusicPlaylist } from "@/data/music";
+import type { MusicSettings } from "@/lib/youtube";
 
 export const metadata: Metadata = {
   title: "Music Corner",
@@ -10,6 +12,24 @@ export const metadata: Metadata = {
   },
 };
 
-export default function MusicPage() {
-  return <MusicClientPage />;
+async function fetchMusicSettings(): Promise<MusicSettings> {
+  const backendUrl =
+    process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+  try {
+    const res = await fetch(`${backendUrl}/api/music`, {
+      next: { revalidate: 300 }, // cache for 5 minutes
+    });
+    if (!res.ok) return defaultMusicPlaylist;
+    const contentType = res.headers.get("content-type");
+    if (!contentType?.includes("application/json")) return defaultMusicPlaylist;
+    const data: MusicSettings = await res.json();
+    return data.playlistId ? data : defaultMusicPlaylist;
+  } catch {
+    return defaultMusicPlaylist;
+  }
+}
+
+export default async function MusicPage() {
+  const initialSettings = await fetchMusicSettings();
+  return <MusicClientPage initialSettings={initialSettings} />;
 }
