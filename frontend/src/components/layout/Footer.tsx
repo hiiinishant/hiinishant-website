@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Newsletter from "@/components/Newsletter";
 import { socialLinks } from "@/data/site";
 import type { SocialPlatform } from "@/types";
@@ -18,7 +21,18 @@ const platformColor: Record<SocialPlatform, string> = {
   facebook:  "hover:bg-[#1877f2]/15 hover:text-[#1877f2] hover:border-[#1877f2]/30",
   snapchat:  "hover:bg-[#fffc00]/10 hover:text-[#fffc00] hover:border-[#fffc00]/20",
   email:     "hover:bg-accent/15 hover:text-accent hover:border-accent/30",
+  website:   "hover:bg-accent/15 hover:text-accent hover:border-accent/30",
 };
+
+/* Only these platforms appear in the footer */
+const footerPlatforms: SocialPlatform[] = [
+  "youtube",
+  "instagram",
+  "twitter",
+  "linkedin",
+  "facebook",
+  "website",
+];
 
 const socialIconMap: Record<SocialPlatform, React.ReactNode> = {
   twitter: (
@@ -68,12 +82,19 @@ const socialIconMap: Record<SocialPlatform, React.ReactNode> = {
   ),
   snapchat: (
     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-      <path d="M15.943 11.526c-.111-.303-.323-.465-.564-.599a1 1 0 0 0-.123-.064l-.219-.111c-.752-.399-1.339-.902-1.746-1.498a3.4 3.4 0 0 1-.3-.531c-.034-.1-.032-.156-.008-.207a.3.3 0 0 1 .097-.1c.129-.086.262-.173.352-.231.162-.104.289-.187.371-.245.309-.216.525-.446.66-.702a1.4 1.4 0 0 0 .069-1.16c-.205-.538-.713-.872-1.329-.872a1.8 1.8 0 0 0-.487.065c.006-.368-.002-.757-.035-1.139-.116-1.344-.587-2.048-1.077-2.61a4.3 4.3 0 0 0-1.095-.881C9.764.216 8.92 0 7.999 0s-1.76.216-2.505.641c-.412.232-.782.53-1.097.883-.49.562-.96 1.267-1.077 2.61-.033.382-.04.772-.036 1.138a1.8 1.8 0 0 0-.487-.065c-.615 0-1.124.335-1.328.873a1.4 1.4 0 0 0 .067 1.161c.136.256.352.486.66.701.082.058.21.14.371.246l.339.221a.4.4 0 0 1 .109.11c.026.053.027.11-.012.217a3.4 3.4 0 0 1-.295.52c-.398.583-.968 1.077-1.696 1.472-.385.204-.786.34-.955.8-.128.348-.044.743.28 1.075q.18.189.409.31a4.4 4.4 0 0 0 1 .4.7.7 0 0 1 .202.09c.118.104.102.26.259.488q.12.178.296.3c.33.229.701.243 1.095.258.355.014.758.03 1.217.18.19.064.389.186.618.328.55.338 1.305.802 2.566.802 1.262 0 2.02-.466 2.576-.806.227-.14.424-.26.609-.321.46-.152.863-.168 1.218-.181.393-.015.764-.03 1.095-.258a1.14 1.14 0 0 0 .336-.368c.114-.192.11-.327.217-.42a.6.6 0 0 1 .19-.087 4.5 4.5 0 0 0 1.014-.404c.16-.087.306-.2.429-.336l.004-.005c.304-.325.38-.709.256-1.047m-1.121.602c-.684.378-1.139.337-1.493.565-.3.193-.122.61-.34.76-.269.186-1.061-.012-2.085.326-.845.279-1.384 1.082-2.903 1.082s-2.045-.801-2.904-1.084c-1.022-.338-1.816-.14-2.084-.325-.218-.15-.041-.568-.341-.761-.354-.228-.809-.187-1.492-.563-.436-.24-.189-.39-.044-.46 2.478-1.199 2.873-3.05 2.89-3.188.022-.166.045-.297-.138-.466-.177-.164-.962-.65-1.18-.802-.36-.252-.52-.503-.402-.812.082-.214.281-.295.49-.295a1 1 0 0 1 .197.022c.396.086.78.285 1.002.338q.04.01.082.011c.118 0 .16-.06.152-.195-.026-.433-.087-1.277-.019-2.066.094-1.084.444-1.622.859-2.097.2-.229 1.137-1.22 2.93-1.22 1.792 0 2.732.987 2.931 1.215.416.475.766 1.013.859 2.098.068.788.009 1.632-.019 2.065-.01.142.034.195.152.195a.4.4 0 0 0 .082-.01c.222-.054.607-.253 1.002-.338a1 1 0 0 1 .197-.023c.21 0 .409.082.49.295.117.309-.04.56-.401.812-.218.152-1.003.638-1.18.802-.184.169-.16.3-.139.466.018.14.413 1.991 2.89 3.189.147.073.394.222-.041.464"/>
+      <path d="M15.943 11.526c-.111-.303-.323-.465-.564-.599a1 1 0 0 0-.123-.064l-.219-.111c-.752-.399-1.339-.902-1.746-1.498a3.4 3.4 0 0 1-.3-.531c-.034-.1-.032-.156-.008-.207a.3.3 0 0 1 .097-.1c.129-.086.262-.173.352-.231.162-.104.289-.187.371-.245.309-.216.525-.446.66-.702a1.4 1.4 0 0 0 .069-1.16c-.205-.538-.713-.872-1.329-.872a1.8 1.8 0 0 0-.487.065c.006-.368-.002-.757-.035-1.139-.116-1.344-.587-2.048-1.077-2.61a4.3 4.3 0 0 0-1.095-.881C9.764.216 8.92 0 7.999 0s-1.76.216-2.505.641c-.412.232-.782.53-1.097.883-.49.562-.96 1.267-1.077 2.61-.033.382-.04.772-.036 1.138a1.8 1.8 0 0 0-.487-.065c-.615 0-1.124.335-1.328.873a1.4 1.4 0 0 0 .067 1.161c.136.256.352.486.66.701.082.058.21.14.371.246l.339.221a.4.4 0 0 1 .109.11c.026.053.027.11-.012.217a3.4 3.4 0 0 1-.295.52c-.398.583-.968 1.077-1.696 1.472-.385.204-.786.34-.955.8-.128.348-.044.743.28 1.075q.18.189.409.31a4.4 4.4 0 0 0 1 .4.7.7 0 0 1 .202.09c.118.104.102.26.259.488q.12.178.296.3c.33.229.701.243 1.095.258.355.014.758.03 1.217.18.19.064.389.186.618.328.55.338 1.305.802 2.566.802 1.262 0 2.02-.466 2.576-.806.227-.14.424-.26.609-.321.46-.152.863-.168 1.218-.181.393-.015.764-.03 1.095-.258a1.14 1.14 0 0 0 .336-.368c.114-.192.11-.327.217-.42a.6.6 0 0 1 .19-.087 4.5 4.5 0 0 0 1.014-.404c.16-.087.306-.2.429-.336l.004-.005c.304-.325.38-.709.256-1.047"/>
     </svg>
   ),
   email: (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  ),
+  website: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.6 9h16.8M3.6 15h16.8" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3a15.3 15.3 0 014 9 15.3 15.3 0 01-4 9 15.3 15.3 0 01-4-9 15.3 15.3 0 014-9z" />
     </svg>
   ),
 };
@@ -95,7 +116,12 @@ const navSections = [
 ];
 
 export default function Footer() {
+  const pathname = usePathname();
   const year = new Date().getFullYear();
+
+  if (pathname?.startsWith("/nsgram")) {
+    return null;
+  }
 
   return (
     <footer className="relative mt-0 overflow-hidden">
@@ -104,13 +130,11 @@ export default function Footer() {
       {/* Subtle background glow */}
       <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-[300px] rounded-full bg-accent/4 blur-[120px] pointer-events-none -z-10" />
 
-
-
       {/* ─── MAIN FOOTER GRID ─── */}
       <div className="max-w-6xl mx-auto px-5 sm:px-8 pt-14 pb-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 mb-8">
+        <div className="space-y-10 mb-8 lg:grid lg:grid-cols-12 lg:gap-10 lg:space-y-0">
 
-          {/* Brand column */}
+          {/* Brand column — always full width on mobile */}
           <div className="lg:col-span-4">
             <Link href="/" className="inline-flex items-center gap-3 group mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent-light flex items-center justify-center font-bold text-black text-sm transition-transform duration-300 group-hover:scale-110 glow-sm shrink-0">
@@ -131,9 +155,11 @@ export default function Footer() {
               an educational initiative empowering students to learn smarter and achieve more.
             </p>
 
-            {/* Social icons row — platform-coloured on hover */}
+            {/* Social icons row — filtered to footer-only platforms */}
             <div className="flex flex-wrap gap-2">
-              {socialLinks.map((link) => (
+              {socialLinks
+                .filter((link) => footerPlatforms.includes(link.platform))
+                .map((link) => (
                 <a
                   key={link.platform}
                   href={link.href}
@@ -149,49 +175,50 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Pages column */}
-          <div className="lg:col-span-2 lg:col-start-5">
-            <h4 className="text-[11px] font-bold text-brand-300 uppercase tracking-widest mb-5 flex items-center gap-2">
-              <span className="w-4 h-px bg-accent/60 inline-block" />
-              Pages
-            </h4>
-            <ul className="space-y-3">
-              {navPages.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="group flex items-center gap-2 text-sm text-brand-400 hover:text-white transition-colors duration-300"
-                  >
-                    <span className="w-1 h-1 rounded-full bg-accent/40 group-hover:bg-accent transition-colors duration-300 shrink-0" />
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          {/* Pages + Explore — 2 columns on mobile, separate on desktop */}
+          <div className="grid grid-cols-2 gap-6 lg:contents">
+            <div className="lg:col-span-2 lg:col-start-5">
+              <h4 className="text-[11px] font-bold text-brand-300 uppercase tracking-widest mb-5 flex items-center gap-2">
+                <span className="w-4 h-px bg-accent/60 inline-block" />
+                Pages
+              </h4>
+              <ul className="space-y-3">
+                {navPages.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="group flex items-center gap-2 text-sm text-brand-400 hover:text-white transition-colors duration-300"
+                    >
+                      <span className="w-1 h-1 rounded-full bg-accent/40 group-hover:bg-accent transition-colors duration-300 shrink-0" />
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="lg:col-span-2 lg:col-start-7">
+              <h4 className="text-[11px] font-bold text-brand-300 uppercase tracking-widest mb-5 flex items-center gap-2">
+                <span className="w-4 h-px bg-accent/60 inline-block" />
+                Explore
+              </h4>
+              <ul className="space-y-3">
+                {navSections.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="group flex items-center gap-2 text-sm text-brand-400 hover:text-white transition-colors duration-300"
+                    >
+                      <span className="w-1 h-1 rounded-full bg-accent/40 group-hover:bg-accent transition-colors duration-300 shrink-0" />
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
-          {/* Sections column */}
-          <div className="lg:col-span-2 lg:col-start-7">
-            <h4 className="text-[11px] font-bold text-brand-300 uppercase tracking-widest mb-5 flex items-center gap-2">
-              <span className="w-4 h-px bg-accent/60 inline-block" />
-              Explore
-            </h4>
-            <ul className="space-y-3">
-              {navSections.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="group flex items-center gap-2 text-sm text-brand-400 hover:text-white transition-colors duration-300"
-                  >
-                    <span className="w-1 h-1 rounded-full bg-accent/40 group-hover:bg-accent transition-colors duration-300 shrink-0" />
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Newsletter column */}
+          {/* Newsletter — full width on mobile */}
           <div className="lg:col-span-4 lg:col-start-9">
             <h4 className="text-[11px] font-bold text-brand-300 uppercase tracking-widest mb-5 flex items-center gap-2">
               <span className="w-4 h-px bg-accent/60 inline-block" />
@@ -205,7 +232,7 @@ export default function Footer() {
             </p>
             <div className="w-full">
               <Newsletter variant="inline" />
-              <p className="text-[10px] text-brand-600 mt-2 text-center lg:text-left">
+              <p className="text-[10px] text-brand-400 mt-2 text-center lg:text-left">
                 Join 2,000+ students &amp; builders. Unsubscribe anytime.
               </p>
             </div>
@@ -214,13 +241,12 @@ export default function Footer() {
 
         {/* ─── BOTTOM BAR ─── */}
         <div className="relative pt-5">
-          {/* Separator with glow */}
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            {/* Left: copyright */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Copyright */}
             <div className="flex items-center gap-3">
-              <p className="text-xs text-brand-500">
+              <p className="text-xs text-brand-500 text-center sm:text-left">
                 &copy; {year} Nishant Kumar. All rights reserved.
               </p>
               <span className="text-brand-700 hidden sm:inline">·</span>
@@ -229,18 +255,8 @@ export default function Footer() {
               </p>
             </div>
 
-            {/* Centre: live status badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass border border-green-500/20 bg-green-500/5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
-              <span className="text-[10px] font-semibold text-green-400 uppercase tracking-wider">
-                Open to Collabs
-              </span>
-            </div>
 
-            {/* Right: back to top */}
+            {/* Back to top */}
             <a
               href="#"
               className="group flex items-center gap-1.5 text-xs text-brand-500 hover:text-white transition-colors duration-300"

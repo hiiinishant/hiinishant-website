@@ -91,6 +91,13 @@ const platformStyles: Record<SocialPlatform, PlatformStyle> = {
     accentText: "text-[#fffc00]",
     borderHover: "border-[#fffc00]/30",
   },
+  website: {
+    glowClass: "hover:border-[#f59e0b]/50 hover:shadow-[0_0_30px_rgba(245,158,11,0.2)] hover:bg-[#f59e0b]/5",
+    iconColor: "text-[#f59e0b]",
+    badgeBg: "bg-[#f59e0b]/10",
+    accentText: "text-[#f59e0b]",
+    borderHover: "border-[#f59e0b]/30",
+  },
 };
 
 const iconMap: Record<SocialPlatform, React.ReactNode> = {
@@ -147,6 +154,13 @@ const iconMap: Record<SocialPlatform, React.ReactNode> = {
   quora: (
     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
       <path d="M14.016 19.387c-1.396.65-2.923.99-4.502.99-4.887 0-8.874-3.882-8.874-8.625S5.627 3.125 10.514 3.125s8.873 3.882 8.873 8.627c0 2.213-.865 4.23-2.298 5.766l2.36 2.373a.855.855 0 01-.131 1.328.905.905 0 01-1.127-.118l-4.175-4.714zm-3.502.261c3.55 0 6.44-2.812 6.44-6.275s-2.89-6.276-6.44-6.276-6.44 2.813-6.44 6.276 2.89 6.275 6.44 6.275zm2.936-3.864s.345.928-.27 1.545c-.613.618-1.545.271-1.545.271s.755-1.098 1.157-1.428c.403-.33.658-.388.658-.388z" />
+    </svg>
+  ),
+  website: (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.6 9h16.8M3.6 15h16.8" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3a15.3 15.3 0 014 9 15.3 15.3 0 01-4 9 15.3 15.3 0 01-4-9 15.3 15.3 0 014-9z" />
     </svg>
   ),
 };

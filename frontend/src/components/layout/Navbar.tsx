@@ -23,10 +23,18 @@ export default function Navbar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+      if (window.scrollY > 10) setMobileOpen(false);
+    };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Hide navbar on all NSGram pages — they use their own sidebar nav
+  if (pathname?.startsWith("/nsgram")) {
+    return null;
+  }
 
   return (
     <nav

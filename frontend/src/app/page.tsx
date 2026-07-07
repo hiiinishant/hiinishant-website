@@ -1,8 +1,43 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import AuroraBackground from "@/components/AuroraBackground";
 
-
-
+export const metadata: Metadata = {
+  title: "Nishant Kumar — Founder of 2 AM Study | Entrepreneur & Educator",
+  description:
+    "Official website of Nishant Kumar (hiiinishant) — founder of 2 AM Study, student entrepreneur from Chandigarh University, and digital educator empowering 100,000+ students across India.",
+  keywords: [
+    "Nishant Kumar",
+    "nishant",
+    "nishant kumar",
+    "hiiinishant",
+    "2 AM Study founder",
+    "2 am study founder",
+    "founder of 2 AM Study",
+    "Nishant Kumar Chandigarh University",
+    "Chandigarh University entrepreneur",
+    "nishant kumar entrepreneur",
+    "nishant kumar edtech",
+    "nishant kumar educator",
+    "2amstudy",
+    "nishant kumar portfolio",
+    "hi Nishant",
+    "Hii Nishant",
+    "hiii nishant",
+    "hiiinishant.com",
+    "student entrepreneur India",
+    "edtech founder India",
+  ],
+  alternates: {
+    canonical: "https://hiiinishant.com",
+  },
+  openGraph: {
+    title: "Nishant Kumar — Founder of 2 AM Study | hiiinishant",
+    description:
+      "Official website of Nishant Kumar (hiiinishant) — founder of 2 AM Study. Student entrepreneur from Chandigarh University empowering 100,000+ learners.",
+    url: "https://hiiinishant.com",
+  },
+};
 
 export default function Home() {
   return (
@@ -40,10 +75,10 @@ export default function Home() {
         </div>
 
         <div className="max-w-6xl mx-auto px-5 sm:px-8 relative z-10 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
 
             {/* Left Content (Hero + Narrative) */}
-            <div className="lg:col-span-7 space-y-8 text-left">
+            <div className="lg:col-span-7 space-y-8 text-left order-2 lg:order-1">
               {/* Live badge */}
               <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border border-accent/25 bg-accent/5 animate-fade-in backdrop-blur-sm">
                 <span className="relative flex h-2 w-2">
@@ -65,48 +100,34 @@ export default function Home() {
               </h1>
 
               {/* Combined narrative */}
-              <div className="space-y-4 text-brand-300 leading-relaxed text-base max-w-2xl animate-slide-up" style={{ animationDelay: "0.1s" }}>
+              <div className="space-y-4 text-brand-300 leading-relaxed text-sm sm:text-base max-w-2xl animate-slide-up" style={{ animationDelay: "0.1s" }}>
                 <p>
                   I recently completed my B.E. in Computer Science and Engineering and am currently focused on building education-driven products that help students learn more effectively, stay consistent, and achieve their academic and career goals.
                 </p>
-                <p> <span className="text-white font-semibold">I am the founder of 2 AM Study</span> —— an education-first platform built to support students through structured learning resources, practical guidance, and community-driven learning experiences. Within this ecosystem, I am actively developing 2 AM Study GATE CSE and 2 AM Study Store, designed to provide focused exam preparation support and high-value educational resources.
+                <p>
+                  I am the founder of <span className="text-white font-semibold">2 AM Study</span> —— an education-first platform built to support students through structured learning resources, practical guidance, and community-driven learning experiences. Within this ecosystem, I am actively developing 2 AM Study GATE CSE and 2 AM Study Store, designed to provide focused exam preparation support and high-value educational resources.
                 </p>
                 <p>
-                  Alongside this, I run  <span className="text-accent font-semibold">  Hiii Nishant </span> — a personal vlog platform where I document my journey as a student, creator, and builder. Through this channel, I share insights from college life, study routines, productivity systems, travel experiences, and the real behind-the-scenes process of building 2 AM Study from the ground up.
+                  Alongside this, I run <span className="text-accent font-semibold">Hiii Nishant</span> — a personal vlog platform where I document my journey as a student, creator, and builder. Through this channel, I share insights from college life, study routines, productivity systems, travel experiences, and the real behind-the-scenes process of building 2 AM Study from the ground up.
                 </p>
                 <p>
                   I believe in learning in public, building consistently, and documenting both progress and failures as an essential part of the journey.
                 </p>
-                <p>
-                  Current Initiatives:
-                </p>
-                <p>
-                  • 2 AM Study
-                </p>
-                <p>
-                  • 2 AM Study GATE CSE
-                </p>
-                <p>
-                  • 2 AM Study Store
-                </p>
-                <p>
-                  • Hiii Nishant (Vlogs & Student Journey)
-                </p>
-                <p>
+                <p className="text-white/90 font-medium">
                   Creating for students. Learning continuously. Creating with purpose.
                 </p>
-              </div>
 
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 animate-slide-up" style={{ animationDelay: "0.18s" }}>
-                {["Edtech", "Community Building", "Content Creation", "Brand Strategy", "GATE CSE"].map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3.5 py-1.5 rounded-xl glass text-xs text-brand-200 font-medium border border-white/5 hover:border-accent/30 hover:text-white transition-all duration-300 cursor-default"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                {/* Current Initiatives — vertical column */}
+                <div className="pt-2">
+                  <p className="text-xs text-brand-500 uppercase tracking-widest font-semibold mb-2.5">Current Initiatives</p>
+                  <div className="flex flex-col gap-2 w-fit">
+                    {["2 AM Study", "2 AM Study GATE CSE", "2 AM Study Store", "Hiii Nishant (Vlogs & Student Journey)"].map((init) => (
+                      <span key={init} className="px-4 py-2 rounded-xl bg-white/4 border border-white/8 text-xs text-brand-200 font-medium w-fit">
+                        {init}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* CTAs */}
@@ -136,10 +157,10 @@ export default function Home() {
             </div>
 
             {/* Right Visual — sticky on desktop */}
-            <div className="lg:col-span-5 mt-12 lg:mt-8 animate-slide-in-right flex flex-col items-center sticky top-24 self-start">
+            <div className="lg:col-span-5 mt-0 lg:mt-8 animate-slide-in-right flex flex-col items-center mx-auto order-1 lg:order-2 lg:sticky lg:top-24 lg:self-start">
 
               {/* Picture Card */}
-              <div className="w-full max-w-[260px] sm:max-w-[280px] aspect-[4/5] rounded-3xl overflow-hidden glass-strong relative group card-spotlight shadow-2xl border border-white/8">
+              <div className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[280px] aspect-[4/5] rounded-3xl overflow-hidden glass-strong relative group card-spotlight shadow-2xl border border-white/8 mx-auto">
                 {/* Subtle overlay */}
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/50 z-10 pointer-events-none" />
                 <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-blue-500/5 z-10 pointer-events-none" />
@@ -425,7 +446,7 @@ export default function Home() {
 
             <Link
               href="/admin"
-              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-indigo-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(99,102,241,0.12)] card-spotlight"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-indigo-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(99,102,241,0.12)] card-spotlight flex"
             >
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
               <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer pointer-events-none" />
@@ -441,7 +462,7 @@ export default function Home() {
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3 group-hover:text-indigo-400 transition-colors">
-                  Nishant's Live Updates
+                  Nishant&apos;s Live Updates
                 </h3>
                 <p className="text-sm text-brand-400 leading-relaxed max-w-sm">
                   Manage updates, plans, and view analytics in a sleek, password‑protected CMS.

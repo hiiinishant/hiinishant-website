@@ -9,7 +9,8 @@ export type SocialPlatform =
   | "github"
   | "medium"
   | "facebook"
-  | "snapchat";
+  | "snapchat"
+  | "website";
 
 export interface SocialLink {
   platform: SocialPlatform;

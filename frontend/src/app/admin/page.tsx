@@ -211,21 +211,39 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
-  const [plans, setPlans] = useState<FuturePlan[]>([]);
+  const [plans, setPlans] = useState<FuturePlan[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("cached_plans");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
   const [messages, setMessages] = useState<ContactMessage[]>([]);
-  const [statuses, setStatuses] = useState<DailyStatus[]>([]);
+  const [statuses, setStatuses] = useState<DailyStatus[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("cached_statuses");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
   const [blogs, setBlogs] = useState<any[]>([]);
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [resumeForm, setResumeForm] = useState({ title: "" });
   const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !localStorage.getItem("cached_statuses");
+    }
+    return true;
+  });
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [confirm, setConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [latency, setLatency] = useState<number | null>(null);
+  const [showAllLogs, setShowAllLogs] = useState(false);
 
   const showToast = (message: string, type: "success" | "error") => setToast({ message, type });
 
@@ -278,38 +296,47 @@ export default function AdminPage() {
 
   // Fetch Public Logs (With Latency Ping)
   const fetchPublicLogs = useCallback(async () => {
-    setLoading(true);
     const start = performance.now();
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-      const [planRes, statusRes] = await Promise.all([
-        fetch(`${backendUrl}/api/future-plans`),
-        fetch(`${backendUrl}/api/status`),
-      ]);
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
-      // Check if backend is responding
-      if (!planRes.ok || !statusRes.ok) {
-        console.warn("Backend API returned non-OK status, using empty data");
-        setPlans([]);
-        setStatuses([]);
+    // 1. Fetch statuses first for fast, non-blocking render of the timeline logs
+    const statusPromise = fetch(`${backendUrl}/api/status`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Status API returned non-OK status");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setStatuses(data);
+          localStorage.setItem("cached_statuses", JSON.stringify(data));
+        } else {
+          setStatuses([]);
+        }
         setLatency(Math.round(performance.now() - start));
-        return;
-      }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch status logs:", err);
+        // Retain cache if offline
+      })
+      .finally(() => {
+        setLoading(false); // Stop loading animation immediately when timeline data arrives!
+      });
 
-      const plansData = await planRes.json();
-      const statusesData = await statusRes.json();
-      setPlans(Array.isArray(plansData) ? plansData : []);
-      setStatuses(Array.isArray(statusesData) ? statusesData : []);
-      const end = performance.now();
-      setLatency(Math.round(end - start));
-    } catch (e) {
-      console.error("Failed to fetch operational status logs:", e);
-      // Don't show toast for this - it's expected when backend is not running
-      setPlans([]);
-      setStatuses([]);
-    } finally {
-      setLoading(false);
-    }
+    // 2. Fetch future plans in parallel but don't hold up status display loading state
+    const plansPromise = fetch(`${backendUrl}/api/future-plans`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Plans API returned non-OK status");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setPlans(data);
+          localStorage.setItem("cached_plans", JSON.stringify(data));
+        } else {
+          setPlans([]);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch future plans:", err);
+      });
+
+    await Promise.allSettled([statusPromise, plansPromise]);
   }, []);
 
   const getAuthHeaders = () => {
@@ -1031,11 +1058,29 @@ export default function AdminPage() {
   };
 
   const filteredStatuses = statuses.filter((s) => {
-    const query = searchQuery.toLowerCase();
-    const matchesText = (s.statusText || '').toLowerCase().includes(query);
-    const matchesTasks = (s.tasks || []).some((t) => (t || '').toLowerCase().includes(query));
-    const matchesDate = (s.date || '').toLowerCase().includes(query);
-    return matchesText || matchesTasks || matchesDate;
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+
+    // Split search query by whitespace to match separate words (multi-term matching)
+    const terms = query.split(/\s+/).filter(Boolean);
+
+    // All terms in the query must match at least one field (AND search)
+    return terms.every((term) => {
+      const matchesText = (s.statusText || '').toLowerCase().includes(term);
+      const matchesTasks = (s.tasks || []).some((t) => (t || '').toLowerCase().includes(term));
+      const formattedDate = formatDate(s.date).toLowerCase();
+
+      const monthNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+      const dateParts = s.date.split("-");
+      const monthIndex = dateParts[1] ? parseInt(dateParts[1], 10) - 1 : -1;
+      const fullMonthName = monthIndex >= 0 && monthIndex < 12 ? monthNames[monthIndex] : "";
+
+      const matchesDate = 
+        (s.date || '').toLowerCase().includes(term) || 
+        formattedDate.includes(term) || 
+        (fullMonthName && fullMonthName.includes(term));
+      return matchesText || matchesTasks || matchesDate;
+    });
   });
 
   const activeStatus = statuses[0];
@@ -1084,42 +1129,35 @@ export default function AdminPage() {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none -z-20 opacity-30" />
 
       {/* TOP HEADER CONTROLS */}
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-accent/15 border border-accent/25 flex items-center justify-center font-bold text-accent text-sm font-mono transition-transform hover:scale-105">
-              NK
+      {unlocked && (
+        <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-white/5">
+          <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-accent/15 border border-accent/25 flex items-center justify-center font-bold text-accent text-sm font-mono transition-transform hover:scale-105">
+                NK
+              </div>
+              <div>
+                <h1 className="text-xs font-bold text-white leading-none font-mono">Nishant OS Console</h1>
+                <p className="text-[9px] text-brand-500 leading-none mt-1 font-mono uppercase tracking-wider">
+                  SYSTEM ADMIN: WRITE_ACCESS_GRANTED
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xs font-bold text-white leading-none font-mono">Nishant OS Console</h1>
-              <p className="text-[9px] text-brand-500 leading-none mt-1 font-mono uppercase tracking-wider">
-                {unlocked ? "SYSTEM ADMIN: WRITE_ACCESS_GRANTED" : "SYSTEM VISITOR: READ_ONLY_FEED"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 font-mono text-[9px]">
-            <div className="flex items-center gap-2 text-brand-400 bg-white/3 border border-white/5 px-2.5 py-1.5 rounded-lg">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              API_LATENCY: {latency ? `${latency}ms` : "checking..."}
-            </div>
-            {unlocked ? (
+            <div className="flex items-center gap-4 font-mono text-[9px]">
+              <div className="flex items-center gap-2 text-brand-400 bg-white/3 border border-white/5 px-2.5 py-1.5 rounded-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                API_LATENCY: {latency ? `${latency}ms` : "checking..."}
+              </div>
               <button
                 onClick={handleLogout}
                 className="text-red-400 hover:bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg transition-all cursor-pointer font-bold uppercase tracking-wider"
               >
                 Lock Console ⎋
               </button>
-            ) : (
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="text-accent hover:bg-accent/10 border border-accent/25 px-3 py-1.5 rounded-lg transition-all cursor-pointer font-bold uppercase tracking-wider shadow-sm shadow-accent/5"
-              >
-                Unlock CMS ⚙
-              </button>
-            )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* MAIN LAYOUT */}
       <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 relative">
@@ -1127,88 +1165,103 @@ export default function AdminPage() {
         {/* PUBLIC CONSOLE READ-ONLY FEED */}
         {!unlocked && (
           <div className="max-w-2xl mx-auto py-8 space-y-10 animate-fade-in relative z-10">
-            {/* Header & Subtitle */}
-            <div className="flex items-center justify-between border-b border-white/5 pb-6">
-              <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">Workspace Pulse</h2>
-                <p className="text-xs text-brand-400 mt-1 font-mono">Nishant Kumar's live operations logs and activity feed.</p>
+            {/* Top Controls Row */}
+            <div className="flex items-center gap-2 sm:gap-4 border-b border-white/5 pb-6">
+              {/* Date Search Input — grows to fill available space */}
+              <div className="relative flex-1 font-mono">
+                <input
+                  type="text"
+                  placeholder="Filter logs by date..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-zinc-900/80 border border-white/20 rounded-xl px-4 py-2.5 pl-9 text-[11px] text-white placeholder-zinc-400 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 focus:bg-zinc-900 transition-all"
+                />
+                <span className="absolute left-3 top-2.5 text-[10px] text-brand-300 select-none">
+                  📅
+                </span>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-2.5 text-[9px] font-mono text-brand-400 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded cursor-pointer"
+                  >
+                    clear
+                  </button>
+                )}
               </div>
-            </div>
 
-            {/* Filter Input */}
-            <div className="relative font-mono">
-              <input
-                type="text"
-                placeholder="search_accomplishments --filter=logs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-950/40 border border-white/5 rounded-xl px-4 py-3.5 text-xs text-white placeholder-brand-600 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 focus:bg-zinc-950/60 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono text-brand-400 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-1 rounded"
-                >
-                  reset
-                </button>
-              )}
+              {/* Admin Login Button — fixed width, always visible */}
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="shrink-0 px-3 sm:px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 hover:border-white/25 text-[10px] font-bold text-brand-300 hover:text-white transition-all font-mono uppercase tracking-wider cursor-pointer whitespace-nowrap"
+              >
+                <span className="hidden sm:inline">Admin Login</span>
+                <span className="sm:hidden">🔐 Admin</span>
+              </button>
             </div>
 
             {/* Timeline logs */}
             <div className="relative pl-6 border-l border-white/5 space-y-12">
-              {filteredStatuses.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-12 font-mono">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent mx-auto mb-3" />
+                  <p className="text-brand-400 text-xs tracking-widest animate-pulse">PLEASE WAIT, LOADING WORK LOGS...</p>
+                </div>
+              ) : filteredStatuses.length === 0 ? (
                 <div className="text-center py-12 border border-dashed border-white/5 rounded-xl font-mono">
-                  <p className="text-brand-500 text-xs">NO WORK LOGS MATCH FILTER KEYWORDS.</p>
+                  <p className="text-brand-500 text-xs">NO WORK LOGS RECORDED.</p>
                 </div>
               ) : (
-                filteredStatuses.map((status) => (
-                  <div key={status.id} className="relative group space-y-3">
-                    {/* Timeline Dot */}
-                    <div className="absolute -left-[29px] top-1.5 w-2 h-2 rounded-full bg-background flex items-center justify-center">
-                      <div className={`w-1.5 h-1.5 rounded-full ${getDotColor(status.statusText)}`} />
-                    </div>
-
-                    {/* Date Header */}
-                    <div className="flex items-center justify-between text-[10px] font-mono font-bold tracking-wider uppercase text-brand-400">
-                      <span>{formatDate(status.date)}</span>
-                      <span className="text-[9px] text-brand-600 normal-case font-normal font-mono">
-                        {new Date(status.updatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} IST
-                      </span>
-                    </div>
-
-                    {/* Focus / Activity */}
-                    <div className="text-[13px] font-semibold text-white tracking-tight leading-snug">
-                      {status.statusText}
-                    </div>
-
-                    {/* Task Details */}
-                    {status.tasks.length > 0 && (
-                      <div className="space-y-1.5 pl-0.5 mt-2">
-                        {status.tasks.map((task, idx) => {
-                          const isLast = idx === status.tasks.length - 1;
-                          return (
-                            <div key={idx} className="flex items-start gap-2 text-xs font-mono text-brand-300">
-                              <span className="text-brand-600 select-none">{isLast ? "└─" : "├─"}</span>
-                              {getTaskPrefix(task)}
-                              <span className="leading-relaxed">{task}</span>
-                            </div>
-                          );
-                        })}
+                <>
+                  {filteredStatuses.slice(0, showAllLogs ? filteredStatuses.length : 5).map((status) => (
+                    <div key={status.id} className="relative group space-y-3">
+                      {/* Timeline Dot */}
+                      <div className="absolute -left-[29px] top-1.5 w-2 h-2 rounded-full bg-background flex items-center justify-center">
+                        <div className={`w-1.5 h-1.5 rounded-full ${getDotColor(status.statusText)}`} />
                       </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
 
-            {/* Quick Access Admin CMS Unlock */}
-            <div className="border-t border-white/5 pt-8 text-center">
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2.5 rounded-xl bg-white/3 hover:bg-white/5 border border-white/5 hover:border-white/10 text-[10px] font-bold text-brand-400 hover:text-white transition-all font-mono uppercase tracking-wider cursor-pointer"
-              >
-                Access CMS Console ⚙
-              </button>
+                      {/* Date Header */}
+                      <div className="flex items-center justify-between text-[10px] font-mono font-bold tracking-wider uppercase text-brand-400">
+                        <span>{formatDate(status.date)}</span>
+                        <span className="text-[9px] text-brand-300 normal-case font-medium font-mono tracking-wide">
+                          {new Date(status.updatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} IST
+                        </span>
+                      </div>
+
+                      {/* Focus / Activity */}
+                      <div className="text-[13px] font-semibold text-white tracking-tight leading-snug">
+                        {status.statusText}
+                      </div>
+
+                      {/* Task Details */}
+                      {status.tasks.length > 0 && (
+                        <div className="space-y-1.5 pl-0.5 mt-2">
+                          {status.tasks.map((task, idx) => {
+                            const isLast = idx === status.tasks.length - 1;
+                            return (
+                              <div key={idx} className="flex items-start gap-2 text-xs font-mono text-brand-300">
+                                <span className="text-brand-600 select-none">{isLast ? "└─" : "├─"}</span>
+                                {getTaskPrefix(task)}
+                                <span className="leading-relaxed">{task}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {!showAllLogs && filteredStatuses.length > 5 && (
+                    <div className="text-center pt-4">
+                      <button
+                        onClick={() => setShowAllLogs(true)}
+                        className="px-6 py-2.5 rounded-xl border border-white/5 hover:border-white/10 bg-white/3 hover:bg-white/5 text-[10px] font-bold text-brand-400 hover:text-white transition-all font-mono uppercase tracking-wider cursor-pointer"
+                      >
+                        View More Logs
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
@@ -2241,7 +2294,7 @@ export default function AdminPage() {
                 </svg>
               </div>
 
-              <h3 className="text-base font-extrabold text-white text-center mb-1 font-mono uppercase tracking-wider">Unlock CMS Console</h3>
+              <h3 className="text-base font-extrabold text-white text-center mb-1 font-mono uppercase tracking-wider">Admin Login</h3>
               <p className="text-[9px] text-brand-400 text-center mb-6 font-mono">Enter system password to enable operational handlers.</p>
 
               <form onSubmit={(e) => { e.preventDefault(); handleLogin(adminPasswordInput); }} className="space-y-4 font-mono text-xs">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import { isConfigured } from "@/lib/firebase";
 import type { GalleryPhoto } from "@/types";
@@ -109,6 +109,21 @@ export default function GalleryClientPage() {
     setLightboxIndex(null);
   }, []);
 
+  const touchStartXRef = useRef<number | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (Math.abs(deltaX) < 40) return; // too small, ignore
+    if (deltaX < 0) handleNext(); // swipe left → next
+    else handlePrev();             // swipe right → prev
+  }, [handleNext, handlePrev]);
+
   // Keyboard navigation
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -166,7 +181,7 @@ export default function GalleryClientPage() {
         {/* Filters and Search Panel */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           {/* Categories Tab list */}
-          <div className="flex gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none font-mono">
+          <div className="flex gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-hide font-mono">
             {CATEGORIES.map((cat) => {
               const active = selectedCategory === cat;
               return (
@@ -298,6 +313,8 @@ export default function GalleryClientPage() {
         <div
           className="fixed inset-0 z-50 bg-black/96 backdrop-blur-md"
           onClick={handleClose}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Fixed top bar – close + counter */}
           <div className="fixed top-0 left-0 right-0 z-20 flex justify-between items-center px-4 md:px-8 py-4 max-w-6xl mx-auto font-mono text-white text-xs">

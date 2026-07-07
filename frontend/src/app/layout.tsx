@@ -3,6 +3,7 @@ import { Inter, Caveat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import PageWrapper from "@/components/layout/PageWrapper";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import SpotlightCursorLoader from "@/components/SpotlightCursorLoader";
 
@@ -21,53 +22,91 @@ const caveat = Caveat({
 export const metadata: Metadata = {
   metadataBase: new URL("https://hiiinishant.com"),
   title: {
-    default: "Nishant Kumar — Founder of 2 AM Study",
+    default: "Nishant Kumar — Founder of 2 AM Study | Entrepreneur & Educator",
     template: "%s | Nishant Kumar",
   },
   description:
-    "Nishant Kumar is the founder of 2 AM Study — a platform empowering students with high-quality educational resources. Entrepreneur, educator, and builder.",
+    "Nishant Kumar is the founder of 2 AM Study — a leading edtech platform empowering 100,000+ students with quality education. Entrepreneur, educator, and digital creator from Chandigarh University. Known as hiiinishant.",
   keywords: [
+    // Primary identity
     "Nishant Kumar",
-    "2 AM Study",
-    "founder",
-    "education",
-    "edtech",
+    "nishant",
+    "nishant kumar",
     "hiiinishant",
-    "entrepreneur",
+    "Hiii Nishant",
+    // Education & brand
+    "2 AM Study",
+    "2amstudy",
+    "2 am study founder",
+    "2 AM Study Nishant Kumar",
+    "founder of 2 AM Study",
+    // University
+    "Nishant Kumar Chandigarh University",
+    "Chandigarh University student",
+    "Chandigarh University entrepreneur",
+    // Role descriptors
+    "Nishant Kumar entrepreneur",
+    "Nishant Kumar educator",
+    "Nishant Kumar edtech",
+    "Nishant Kumar digital creator",
+    "Nishant Kumar YouTuber",
+    "Nishant Kumar blogger",
+    // Platform
+    "hiiinishant.com",
+    "nishant kumar portfolio",
+    "nishant kumar website",
+    "nishant kumar instagram",
+    "nishant kumar youtube",
+    // Generic
+    "edtech founder India",
+    "student entrepreneur India",
+    "education platform India",
+    "online study platform",
   ],
-  authors: [{ name: "Nishant Kumar" }],
+  authors: [{ name: "Nishant Kumar", url: "https://hiiinishant.com" }],
   creator: "Nishant Kumar",
+  publisher: "Nishant Kumar",
+  category: "Education, Entrepreneurship",
   openGraph: {
     type: "website",
-    locale: "en_US",
+    locale: "en_IN",
     url: "https://hiiinishant.com",
-    siteName: "Nishant Kumar",
-    title: "Nishant Kumar — Founder of 2 AM Study",
+    siteName: "Nishant Kumar — hiiinishant",
+    title: "Nishant Kumar — Founder of 2 AM Study | Entrepreneur & Educator",
     description:
-      "Entrepreneur, educator, and builder. Empowering the next generation of learners through 2 AM Study.",
+      "Nishant Kumar (hiiinishant) is the founder of 2 AM Study — empowering 100,000+ students with quality education. Student entrepreneur from Chandigarh University.",
     images: [
       {
         url: "/profilee.jpg",
-        width: 800,
-        height: 800,
+        width: 1200,
+        height: 630,
         alt: "Nishant Kumar — Founder of 2 AM Study",
+        type: "image/jpeg",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
+    site: "@hiiinishant",
     title: "Nishant Kumar — Founder of 2 AM Study",
     description:
-      "Entrepreneur, educator, and builder. Empowering the next generation of learners through 2 AM Study.",
+      "Founder of 2 AM Study · Student entrepreneur from Chandigarh University · Empowering 100,000+ students.",
     creator: "@hiiinishant",
     images: ["/profilee.jpg"],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
   alternates: {
-    canonical: "/",
+    canonical: "https://hiiinishant.com",
   },
 };
 
@@ -76,30 +115,101 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    "name": "Nishant Kumar",
-    "url": "https://hiiinishant.com",
-    "sameAs": [
-      "https://twitter.com/hiii_nishant",
-      "https://linkedin.com/in/hiiinishant",
-      "https://instagram.com/hiiinishant",
-      "https://youtube.com/@hiiinishant",
-      "https://github.com/hiiinishant",
-      "https://medium.com/@hiiinishant",
-      "https://quora.com/profile/Hiii-Nishant",
-      "https://facebook.com/hiiinishant",
-      "https://snapchat.com/add/hiiinishant"
-    ],
-    "jobTitle": "Founder",
-    "worksFor": {
-      "@type": "Organization",
-      "name": "2 AM Study",
-      "url": "https://2amstudy.com"
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "@id": "https://hiiinishant.com/#person",
+      "name": "Nishant Kumar",
+      "alternateName": ["hiiinishant", "Hiii Nishant", "nishant kumar"],
+      "url": "https://hiiinishant.com",
+      "image": {
+        "@type": "ImageObject",
+        "url": "https://hiiinishant.com/profilee.jpg",
+        "width": 800,
+        "height": 800,
+      },
+      "description": "Nishant Kumar is the founder of 2 AM Study — a leading edtech platform empowering 100,000+ students. Student entrepreneur from Chandigarh University, digital creator, and educator.",
+      "jobTitle": "Founder & CEO",
+      "worksFor": {
+        "@type": "Organization",
+        "@id": "https://2amstudy.com/#org",
+        "name": "2 AM Study",
+        "url": "https://2amstudy.com",
+      },
+      "alumniOf": {
+        "@type": "CollegeOrUniversity",
+        "name": "Chandigarh University",
+        "url": "https://www.cuchd.in",
+      },
+      "knowsAbout": [
+        "Education Technology",
+        "Entrepreneurship",
+        "Digital Content Creation",
+        "Student Community Building",
+        "Online Learning Platforms",
+        "EdTech",
+        "YouTube Content",
+        "Blogging",
+      ],
+      "nationality": {
+        "@type": "Country",
+        "name": "India",
+      },
+      "sameAs": [
+        "https://twitter.com/hiii_nishant",
+        "https://linkedin.com/in/hiiinishant",
+        "https://instagram.com/hiiinishant",
+        "https://youtube.com/@hiiinishant",
+        "https://facebook.com/hiiinishant",
+        "https://github.com/hiiinishant",
+        "https://2amstudy.com",
+      ],
     },
-    "description": "Entrepreneur, educator, and builder. Empowering 100,000+ students through 2 AM Study."
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": "https://2amstudy.com/#org",
+      "name": "2 AM Study",
+      "alternateName": "2amstudy",
+      "url": "https://2amstudy.com",
+      "founder": {
+        "@type": "Person",
+        "@id": "https://hiiinishant.com/#person",
+        "name": "Nishant Kumar",
+      },
+      "description": "2 AM Study is an edtech platform founded by Nishant Kumar, providing quality educational resources to 100,000+ students across India.",
+      "foundingDate": "2021",
+      "areaServed": "IN",
+      "knowsAbout": ["Education", "Online Learning", "Student Resources"],
+      "sameAs": [
+        "https://2amstudy.com",
+        "https://instagram.com/2amstudy",
+        "https://youtube.com/@2amstudy",
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": "https://hiiinishant.com/#website",
+      "url": "https://hiiinishant.com",
+      "name": "Nishant Kumar — hiiinishant",
+      "description": "Official website of Nishant Kumar, founder of 2 AM Study.",
+      "publisher": {
+        "@type": "Person",
+        "@id": "https://hiiinishant.com/#person",
+        "name": "Nishant Kumar",
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://hiiinishant.com/blog?q={search_term_string}",
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ];
 
   return (
     <html lang="en" className={`${inter.variable} ${caveat.variable} h-full antialiased`} suppressHydrationWarning>
@@ -115,7 +225,7 @@ export default function RootLayout({
         <ThemeProvider>
           <SpotlightCursorLoader />
           <Navbar />
-          <main className="flex-grow pt-16 lg:pt-20">{children}</main>
+          <PageWrapper>{children}</PageWrapper>
           <Footer />
         </ThemeProvider>
       </body>

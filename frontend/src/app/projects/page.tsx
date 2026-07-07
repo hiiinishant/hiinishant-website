@@ -3,11 +3,23 @@ import ProjectsSection from "@/components/sections/ProjectsSection";
 import WindCanvas from "@/components/WindCanvas";
 
 export const metadata: Metadata = {
-  title: "Startups",
+  title: "Startups & Projects — Nishant Kumar | 2 AM Study Founder",
   description:
-    "Explore the ventures, platforms, and initiatives built by Nishant Kumar — from 2 AM Study to the Student Store and GATE CSE prep.",
-  alternates: {
-    canonical: "/projects",
+    "Explore ventures and platforms built by Nishant Kumar (hiiinishant) — including 2 AM Study, student tools, and edtech initiatives. Founder, builder, and entrepreneur from Chandigarh University.",
+  keywords: [
+    "Nishant Kumar projects",
+    "2 AM Study startup",
+    "nishant kumar ventures",
+    "hiiinishant startups",
+    "edtech startup India",
+    "Chandigarh University startup",
+    "student startup India",
+  ],
+  alternates: { canonical: "/projects" },
+  openGraph: {
+    title: "Startups & Projects by Nishant Kumar — hiiinishant",
+    description: "Ventures and platforms built by Nishant Kumar, founder of 2 AM Study.",
+    url: "https://hiiinishant.com/projects",
   },
 };
 

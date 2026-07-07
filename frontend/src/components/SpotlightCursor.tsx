@@ -1,11 +1,24 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function SpotlightCursor() {
-  const spotlightRef = useRef<HTMLDivElement>(null);
+  const spotlightRef = useRef<HTMLDivElement | null>(null);
+  const [isTouch, setIsTouch] = useState(true);
 
   useEffect(() => {
+    // Only show spotlight on devices that have a fine pointer (mouse/trackpad)
+    const mq = window.matchMedia("(pointer: fine)");
+    setIsTouch(!mq.matches);
+
+    const onChange = (e: MediaQueryListEvent) => setIsTouch(!e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (isTouch) return;
+
     const el = spotlightRef.current;
     if (!el) return;
 
@@ -36,7 +49,9 @@ export default function SpotlightCursor() {
       window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [isTouch]);
+
+  if (isTouch) return null;
 
   return (
     <div

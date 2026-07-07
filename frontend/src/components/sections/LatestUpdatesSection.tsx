@@ -513,7 +513,7 @@ export default function LatestUpdatesSection({ initialUpdates }: { initialUpdate
                   className="absolute top-1.5 bottom-1.5 bg-accent rounded-xl transition-all duration-300 ease-out shadow-[0_0_20px_rgba(245,158,11,0.3)] pointer-events-none"
                   style={{
                     width: `${tabStyle.width}px`,
-                    transform: `translateX(${tabStyle.left - 6}px)`,
+                    left: `${tabStyle.left}px`,
                   }}
                 />
               )}

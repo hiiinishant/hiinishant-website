@@ -168,6 +168,22 @@ const platformConfig: Record<
     followers: "2K+",
     metricLabel: "followers",
   },
+  website: {
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.6 9h16.8M3.6 15h16.8" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3a15.3 15.3 0 014 9 15.3 15.3 0 01-4 9 15.3 15.3 0 01-4-9 15.3 15.3 0 014-9z" />
+      </svg>
+    ),
+    colorClass: "bg-[#f59e0b]/10 border border-[#f59e0b]/20 text-[#f59e0b]",
+    hoverBorderClass: "hover:border-[#f59e0b]/40",
+    hoverShadowClass: "hover:shadow-[0_0_30px_rgba(245,158,11,0.15)]",
+    badgeBg: "bg-[#f59e0b]",
+    borderClass: "border-white/5",
+    followers: "Active",
+    metricLabel: "status",
+  },
 };
 
 export default function SocialSection() {

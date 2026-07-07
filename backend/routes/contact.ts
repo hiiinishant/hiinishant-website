@@ -60,8 +60,13 @@ router.post('/', async (req, res) => {
     // Always save to Firestore first
     await firestore.collection('contactMessages').add(messageData);
 
-    // Attempt email notification
-    let emailSent = false;
+    // Respond to user IMMEDIATELY — don't block on email sending
+    res.status(201).json({
+      success: true,
+      message: 'Message sent successfully.',
+    });
+
+    // Send admin notification email in background (non-blocking)
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
     const emailTo = process.env.EMAIL_TO || 'hiiinishant@gmail.com';
@@ -137,29 +142,22 @@ router.post('/', async (req, res) => {
 
       const plainText = `New Contact Form Submission\n\nSubmitted: ${formattedDate}\n\nName: ${messageData.name}\nEmail: ${messageData.email}${messageData.phone ? '\nPhone: ' + messageData.phone : ''}\nSubject: ${messageData.subject}\n\nMessage:\n${messageData.message}`;
 
-      try {
-        await transporter.sendMail({
-          from: `"${emailFromName}" <${smtpUser}>`,
-          to: emailTo,
-          replyTo: messageData.email,
-          subject: `📬 New Message: ${messageData.subject} — from ${messageData.name}`,
-          html: htmlBody,
-          text: plainText,
-        });
-        emailSent = true;
-      } catch (emailErr) {
+      transporter.sendMail({
+        from: `"${emailFromName}" <${smtpUser}>`,
+        to: emailTo,
+        replyTo: messageData.email,
+        subject: `📬 New Message: ${messageData.subject} — from ${messageData.name}`,
+        html: htmlBody,
+        text: plainText,
+      }).then(() => {
+        console.log('[Contact] Admin notification email sent OK');
+      }).catch((emailErr: any) => {
         console.error('[Contact] Email notification failed:', emailErr);
-        // Email failed but Firestore save succeeded — we continue
-      }
+      });
     } else {
       console.warn('[Contact] SMTP credentials not configured — skipping email notification.');
     }
 
-    res.status(201).json({
-      success: true,
-      message: 'Message sent successfully.',
-      emailSent,
-    });
   } catch (error: any) {
     console.error('[Contact] Failed to process submission:', error);
     res.status(500).json({ error: 'Failed to send message.' });

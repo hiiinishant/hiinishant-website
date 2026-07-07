@@ -89,41 +89,18 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
 
       <div className="max-w-2xl mx-auto px-5 relative z-10">
         
-        {/* Header */}
-        <div className="flex items-center justify-between mb-12 animate-fade-in">
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Workspace Pulse</h1>
-            <p className="text-xs text-brand-400 mt-1 font-mono">Nishant Kumar's live operations logs and activity feed.</p>
-          </div>
+        {/* Simple Top Bar with Admin Login Button */}
+        <div className="flex justify-end mb-8 animate-fade-in">
           <Link 
             href="/admin" 
-            className="text-[10px] text-brand-500 hover:text-white border border-white/5 bg-white/2 hover:bg-white/5 px-3 py-1.5 rounded-lg transition-all font-mono uppercase tracking-wider"
+            className="text-[10px] text-brand-500 hover:text-white border border-white/5 bg-white/2 hover:bg-white/5 px-3.5 py-2 rounded-xl transition-all font-mono uppercase tracking-widest hover:border-accent/20"
           >
-            Manage ⚙
+            Admin Login
           </Link>
         </div>
 
-        {/* Filter Input */}
-        <div className="relative mb-12 animate-fade-in font-mono" style={{ animationDelay: "0.05s" }}>
-          <input
-            type="text"
-            placeholder="search_accomplishments --filter=logs..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-zinc-950/40 border border-white/5 rounded-xl px-4 py-3.5 text-xs text-white placeholder-brand-600 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 focus:bg-zinc-950/60 transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-brand-400 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-1 rounded"
-            >
-              reset
-            </button>
-          )}
-        </div>
-
         {/* Timeline list */}
-        <div className="relative pl-6 border-l border-white/5 space-y-12 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <div className="relative pl-6 border-l border-white/5 space-y-12 animate-fade-in">
           {filteredStatuses.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-white/5 rounded-xl font-mono">
               {searchQuery ? (

@@ -88,4 +88,11 @@ export const socialLinks: SocialLink[] = [
     href: "mailto:hiiinishant@gmail.com",
     description: "For partnerships & inquiries",
   },
+  {
+    platform: "website",
+    label: "2 AM Study",
+    handle: "2amstudy.com",
+    href: "https://2amstudy.com",
+    description: "Official educational platform",
+  },
 ];

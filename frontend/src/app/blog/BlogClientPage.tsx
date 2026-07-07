@@ -230,15 +230,6 @@ export default function BlogClientPage({ posts }: Props) {
                   </div>
                 </>
               )}
-
-              {/* If no featured, show all posts in grid */}
-              {!featured && filtered.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {filtered.map((post) => (
-                    <BlogCard key={post.slug} post={post} />
-                  ))}
-                </div>
-              )}
             </>
           )}
         </div>
