@@ -18,6 +18,7 @@ export type UserProfile = {
   bio: string;
   avatar: AvatarType;
   role: "admin" | "user";
+  isActivated?: boolean;
   createdAt?: any;
 };
 
@@ -69,11 +70,13 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
     });
 
     const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
-      const latestUsers = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        uid: docSnap.id,
-        ...(docSnap.data() as Omit<UserProfile, "id" | "uid">),
-      })) as UserProfile[];
+      const latestUsers = snapshot.docs
+        .map((docSnap) => ({
+          id: docSnap.id,
+          uid: docSnap.id,
+          ...(docSnap.data() as Omit<UserProfile, "id" | "uid">),
+        }))
+        .filter((user) => user.isActivated === true) as UserProfile[];
       setUsers(latestUsers);
     });
 

@@ -9,7 +9,7 @@ const router = Router();
  */
 router.post('/profile', async (req, res) => {
   try {
-    const { uid, displayName, email, username, bio, avatar, role } = req.body;
+    const { uid, displayName, email, username, bio, avatar, role, isActivated } = req.body;
 
     if (!uid || !email) {
       res.status(400).json({ error: "UID and email are required." });
@@ -35,12 +35,17 @@ router.post('/profile', async (req, res) => {
     if (bio !== undefined) profileData.bio = bio;
     if (avatar !== undefined) profileData.avatar = avatar;
     if (role !== undefined) profileData.role = role;
+    if (isActivated !== undefined) profileData.isActivated = isActivated;
 
     // If user doesn't exist, set createdAt
     if (!userDoc.exists) {
       profileData.createdAt = now;
       // Default role for new users
       if (!role) profileData.role = 'user';
+      // Default activation status is false for new signups
+      if (profileData.isActivated === undefined) {
+        profileData.isActivated = false;
+      }
     }
 
     // Use setDoc with merge: true to avoid overwriting existing data

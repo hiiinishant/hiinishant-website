@@ -12,8 +12,10 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // If not loading, and there's no active user or profile, and we are not on the login/signup index page (/nsgram)
-    if (!loading && (!authUser || !profile) && pathname !== "/nsgram") {
+    // If not loading, and there's no active verified user or activated profile, and we are not on the login/signup index page (/nsgram)
+    const isVerified = authUser && authUser.emailVerified;
+    const isProfileActivated = profile && profile.isActivated;
+    if (!loading && (!authUser || !isVerified || !profile || !isProfileActivated) && pathname !== "/nsgram") {
       router.replace("/nsgram");
     }
   }, [authUser, profile, loading, pathname, router]);
@@ -38,7 +40,10 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (!authUser || !profile) {
+  const isVerified = authUser && authUser.emailVerified;
+  const isProfileActivated = profile && profile.isActivated;
+
+  if (!authUser || !isVerified || !profile || !isProfileActivated) {
     return <section className="min-h-screen bg-slate-950" />;
   }
 
