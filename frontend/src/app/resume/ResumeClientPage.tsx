@@ -84,7 +84,7 @@ export default function ResumeClientPage() {
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-brand-900 shadow-md">
                   <img
-                    src="/profilee.jpg"
+                    src="/profile.jpg"
                     alt="Nishant Kumar"
                     className="w-full h-full object-cover object-top"
                   />
@@ -131,10 +131,10 @@ export default function ResumeClientPage() {
                   <p className="text-brand-200 font-medium">
                     {latestResume?.uploadedAt
                       ? new Date(latestResume.uploadedAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
                       : "—"}
                   </p>
                 </div>

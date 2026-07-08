@@ -166,7 +166,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-blue-500/5 z-10 pointer-events-none" />
                 {/* Profile photo — fills the whole card */}
                 <img
-                  src="/profilee.jpg"
+                  src="/profile.jpg"
                   alt="Nishant Kumar — Founder of 2 AM Study"
                   width={280}
                   height={350}

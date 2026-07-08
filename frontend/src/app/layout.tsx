@@ -77,7 +77,7 @@ export const metadata: Metadata = {
       "Nishant Kumar (hiiinishant) is the founder of 2 AM Study — empowering 100,000+ students with quality education. Student entrepreneur from Chandigarh University.",
     images: [
       {
-        url: "/profilee.jpg",
+        url: "/profile.jpg",
         width: 1200,
         height: 630,
         alt: "Nishant Kumar — Founder of 2 AM Study",
@@ -92,7 +92,7 @@ export const metadata: Metadata = {
     description:
       "Founder of 2 AM Study · Student entrepreneur from Chandigarh University · Empowering 100,000+ students.",
     creator: "@hiiinishant",
-    images: ["/profilee.jpg"],
+    images: ["/profile.jpg"],
   },
   robots: {
     index: true,
@@ -125,7 +125,7 @@ export default function RootLayout({
       "url": "https://hiiinishant.com",
       "image": {
         "@type": "ImageObject",
-        "url": "https://hiiinishant.com/profilee.jpg",
+        "url": "https://hiiinishant.com/profile.jpg",
         "width": 800,
         "height": 800,
       },
@@ -215,7 +215,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${caveat.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Preload the hero image so it loads as early as possible (improves LCP) */}
-        <link rel="preload" href="/profilee.jpg" as="image" />
+        <link rel="preload" href="/profile.jpg" as="image" />
       </head>
       <body className="min-h-full flex flex-col selection:bg-accent/30 selection:text-accent-light">
         <script
