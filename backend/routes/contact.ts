@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import nodemailer from 'nodemailer';
 import { firestore } from '../lib/firebaseAdmin';
 import { requireAuth } from '../middleware/auth';
+import { sendEmail } from '../lib/mail';
 
 const router = Router();
 
@@ -67,96 +67,82 @@ router.post('/', async (req, res) => {
     });
 
     // Send admin notification email in background (non-blocking)
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
     const emailTo = process.env.EMAIL_TO || 'hiiinishant@gmail.com';
-    const emailFromName = process.env.EMAIL_FROM_NAME || "Nishant's Portfolio";
 
-    if (smtpUser && smtpPass) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '465', 10),
-        secure: process.env.SMTP_SECURE !== 'false',
-        auth: { user: smtpUser, pass: smtpPass }
-      });
+    const phoneRow = messageData.phone
+      ? `<tr>
+           <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Phone</td>
+           <td style="padding:10px 16px;font-size:14px;color:#e2e8f0">${messageData.phone}</td>
+         </tr>`
+      : '';
 
-      const phoneRow = messageData.phone
-        ? `<tr>
-             <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Phone</td>
-             <td style="padding:10px 16px;font-size:14px;color:#e2e8f0">${messageData.phone}</td>
-           </tr>`
-        : '';
+    const htmlBody = `
+      <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#0f172a;border-radius:16px;overflow:hidden;border:1px solid #1e293b">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a78bfa 100%);padding:32px 24px;text-align:center">
+          <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px">📬 New Contact Form Submission</h1>
+          <p style="margin:8px 0 0;font-size:12px;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:1.5px">${process.env.EMAIL_FROM_NAME || "Nishant's Portfolio"}</p>
+        </div>
 
-      const htmlBody = `
-        <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#0f172a;border-radius:16px;overflow:hidden;border:1px solid #1e293b">
-          <!-- Header -->
-          <div style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a78bfa 100%);padding:32px 24px;text-align:center">
-            <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px">📬 New Contact Form Submission</h1>
-            <p style="margin:8px 0 0;font-size:12px;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:1.5px">${emailFromName}</p>
+        <!-- Body -->
+        <div style="padding:28px 24px">
+          <!-- Submission time -->
+          <div style="background:#1e293b;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center">
+            <span style="font-size:12px;color:#64748b">🕐 Submitted on</span>
+            <span style="font-size:13px;color:#f59e0b;font-weight:600;margin-left:8px">${formattedDate}</span>
           </div>
 
-          <!-- Body -->
-          <div style="padding:28px 24px">
-            <!-- Submission time -->
-            <div style="background:#1e293b;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center">
-              <span style="font-size:12px;color:#64748b">🕐 Submitted on</span>
-              <span style="font-size:13px;color:#f59e0b;font-weight:600;margin-left:8px">${formattedDate}</span>
-            </div>
+          <!-- Details table -->
+          <table style="width:100%;border-collapse:collapse;background:#1e293b;border-radius:10px;overflow:hidden">
+            <tr style="border-bottom:1px solid #334155">
+              <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Name</td>
+              <td style="padding:10px 16px;font-size:14px;color:#e2e8f0;font-weight:600">${messageData.name}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #334155">
+              <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Email</td>
+              <td style="padding:10px 16px;font-size:14px"><a href="mailto:${messageData.email}" style="color:#818cf8;text-decoration:none">${messageData.email}</a></td>
+            </tr>
+            ${phoneRow}
+            <tr style="border-bottom:1px solid #334155">
+              <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Subject</td>
+              <td style="padding:10px 16px;font-size:14px;color:#e2e8f0">${messageData.subject}</td>
+            </tr>
+          </table>
 
-            <!-- Details table -->
-            <table style="width:100%;border-collapse:collapse;background:#1e293b;border-radius:10px;overflow:hidden">
-              <tr style="border-bottom:1px solid #334155">
-                <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Name</td>
-                <td style="padding:10px 16px;font-size:14px;color:#e2e8f0;font-weight:600">${messageData.name}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #334155">
-                <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Email</td>
-                <td style="padding:10px 16px;font-size:14px"><a href="mailto:${messageData.email}" style="color:#818cf8;text-decoration:none">${messageData.email}</a></td>
-              </tr>
-              ${phoneRow}
-              <tr style="border-bottom:1px solid #334155">
-                <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Subject</td>
-                <td style="padding:10px 16px;font-size:14px;color:#e2e8f0">${messageData.subject}</td>
-              </tr>
-            </table>
-
-            <!-- Message -->
-            <div style="margin-top:20px">
-              <p style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px">Message</p>
-              <div style="background:#1e293b;border-left:4px solid #6366f1;border-radius:0 10px 10px 0;padding:16px 20px">
-                <p style="margin:0;font-size:14px;color:#cbd5e1;line-height:1.7;white-space:pre-wrap">${messageData.message}</p>
-              </div>
-            </div>
-
-            <!-- Reply CTA -->
-            <div style="text-align:center;margin-top:28px">
-              <a href="mailto:${messageData.email}?subject=Re: ${messageData.subject}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">Reply to ${messageData.name} →</a>
+          <!-- Message -->
+          <div style="margin-top:20px">
+            <p style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px">Message</p>
+            <div style="background:#1e293b;border-left:4px solid #6366f1;border-radius:0 10px 10px 0;padding:16px 20px">
+              <p style="margin:0;font-size:14px;color:#cbd5e1;line-height:1.7;white-space:pre-wrap">${messageData.message}</p>
             </div>
           </div>
 
-          <!-- Footer -->
-          <div style="background:#0b1120;padding:16px 24px;text-align:center;border-top:1px solid #1e293b">
-            <p style="margin:0;font-size:11px;color:#475569">This email was generated from your portfolio contact form.</p>
+          <!-- Reply CTA -->
+          <div style="text-align:center;margin-top:28px">
+            <a href="mailto:${messageData.email}?subject=Re: ${messageData.subject}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">Reply to ${messageData.name} →</a>
           </div>
-        </div>`;
+        </div>
 
-      const plainText = `New Contact Form Submission\n\nSubmitted: ${formattedDate}\n\nName: ${messageData.name}\nEmail: ${messageData.email}${messageData.phone ? '\nPhone: ' + messageData.phone : ''}\nSubject: ${messageData.subject}\n\nMessage:\n${messageData.message}`;
+        <!-- Footer -->
+        <div style="background:#0b1120;padding:16px 24px;text-align:center;border-top:1px solid #1e293b">
+          <p style="margin:0;font-size:11px;color:#475569">This email was generated from your portfolio contact form.</p>
+        </div>
+      </div>`;
 
-      transporter.sendMail({
-        from: `"${emailFromName}" <${smtpUser}>`,
-        to: emailTo,
-        replyTo: messageData.email,
-        subject: `📬 New Message: ${messageData.subject} — from ${messageData.name}`,
-        html: htmlBody,
-        text: plainText,
-      }).then(() => {
-        console.log('[Contact] Admin notification email sent OK');
-      }).catch((emailErr: any) => {
-        console.error('[Contact] Email notification failed:', emailErr);
-      });
-    } else {
-      console.warn('[Contact] SMTP credentials not configured — skipping email notification.');
-    }
+    const plainText = `New Contact Form Submission\n\nSubmitted: ${formattedDate}\n\nName: ${messageData.name}\nEmail: ${messageData.email}${messageData.phone ? '\nPhone: ' + messageData.phone : ''}\nSubject: ${messageData.subject}\n\nMessage:\n${messageData.message}`;
+
+    sendEmail({
+      to: emailTo,
+      replyTo: messageData.email,
+      subject: `📬 New Message: ${messageData.subject} — from ${messageData.name}`,
+      html: htmlBody,
+      text: plainText,
+    }).then(() => {
+      console.log('[Contact] Admin notification email sent OK');
+    }).catch((emailErr: any) => {
+      console.error('[Contact] Email notification failed:', emailErr);
+    });
+
 
   } catch (error: any) {
     console.error('[Contact] Failed to process submission:', error);
