@@ -16,9 +16,11 @@ function decodeEntities(str: string): string {
 async function fetchYoutubeVideos(): Promise<any[]> {
   const channelId = "UCTztpZiVXOoug9bgMC8FxsQ";
   const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=" + channelId;
+  
+  // 1. Try fetching directly first
   try {
     const res = await fetch(feedUrl);
-    if (!res.ok) throw new Error("Failed to fetch youtube feed");
+    if (!res.ok) throw new Error("Failed to fetch youtube feed directly (status: " + res.status + ")");
     const xml = await res.text();
 
     const entries: any[] = [];
@@ -47,10 +49,57 @@ async function fetchYoutubeVideos(): Promise<any[]> {
         });
       }
     }
-    return entries;
-  } catch (e) {
-    return [];
+    if (entries.length > 0) {
+      return entries;
+    }
+  } catch (e: any) {
+    console.warn("⚠️ Direct YouTube feed fetch failed, trying rss2json proxy... Error:", e.message || e);
   }
+
+  // 2. Fallback: try rss2json.com JSON endpoint
+  try {
+    const jsonFeedUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+    const res = await fetch(jsonFeedUrl);
+    if (!res.ok) throw new Error("Failed to fetch youtube feed via rss2json (status: " + res.status + ")");
+    const data = await res.json() as any;
+    
+    if (data.status === "ok" && Array.isArray(data.items)) {
+      const entries: any[] = [];
+      for (const item of data.items) {
+        const guid = item.guid || "";
+        const videoId = guid.includes("yt:video:") 
+          ? guid.split("yt:video:")[1] 
+          : (item.link?.split("v=")?.[1] || item.link?.split("/shorts/")?.[1] || "").split("&")[0];
+        
+        if (videoId) {
+          const title = item.title || "YouTube Video";
+          const published = item.pubDate ? item.pubDate.split(" ")[0] : new Date().toISOString().split("T")[0];
+          const thumbnail = item.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+          
+          entries.push({
+            id: "yt-" + videoId,
+            category: "video",
+            title: title,
+            description: "Check out my latest vlog on YouTube!",
+            date: published,
+            href: item.link || "https://www.youtube.com/watch?v=" + videoId,
+            thumbnail: thumbnail,
+            badge: title.toLowerCase().includes("short") ? "Short" : "Vlog",
+            meta: "New video",
+            isNew: false
+          });
+        }
+      }
+      if (entries.length > 0) {
+        console.log("✅ Successfully retrieved YouTube videos using rss2json proxy.");
+        return entries;
+      }
+    }
+  } catch (e: any) {
+    console.error("❌ Fallback YouTube feed fetch failed:", e.message || e);
+  }
+
+  return [];
 }
 
 router.get('/', async (req, res) => {
