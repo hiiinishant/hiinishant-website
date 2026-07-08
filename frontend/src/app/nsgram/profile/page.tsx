@@ -13,6 +13,7 @@ export default function NsgramProfilePage() {
   const [avatar, setAvatar] = useState<AvatarType>(profile?.avatar || "boy");
   const [isUpdating, setIsUpdating] = useState(false);
   const [notice, setNotice] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
   // Sync state if profile loads asynchronously
   React.useEffect(() => {
@@ -61,6 +62,10 @@ export default function NsgramProfilePage() {
       }
 
       setNotice("Profile updated successfully!");
+      setTimeout(() => {
+        setIsEditing(false);
+        setNotice("");
+      }, 1000);
     } catch (err) {
       console.error("Failed to update profile:", err);
       setNotice("Failed to update profile. Please try again.");
@@ -71,9 +76,57 @@ export default function NsgramProfilePage() {
 
   if (!profile) return null;
 
+  if (!isEditing) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
+        {/* Profile Overview Card */}
+        <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-slate-900/50 p-6 sm:p-8 shadow-xl backdrop-blur">
+          {/* Subtle glow */}
+          <div className="pointer-events-none absolute -right-24 -top-24 w-80 h-80 rounded-full bg-amber-400/5 blur-[80px]" />
+          
+          <div className="flex flex-col items-center sm:items-start sm:flex-row gap-6 relative z-10">
+            {/* Avatar badge */}
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[32px] bg-white/5 border border-white/10 flex items-center justify-center text-5xl shadow-inner select-none shrink-0">
+              {profile.avatar === "girl" ? "👧" : "👦"}
+            </div>
+            
+            <div className="flex-1 text-center sm:text-left space-y-3 min-w-0">
+              <div>
+                <span className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                  {profile.role === "admin" ? "Admin" : "Community Member"}
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-wide mt-1.5 truncate">
+                  {profile.displayName}
+                </h1>
+                <p className="text-sm text-brand-400">@{profile.username}</p>
+              </div>
+
+              {profile.bio ? (
+                <div className="rounded-2xl border border-white/5 bg-white/5 p-4 italic text-sm text-brand-300 leading-relaxed">
+                  &ldquo;{profile.bio}&rdquo;
+                </div>
+              ) : (
+                <p className="text-xs text-brand-500 italic">No bio written yet.</p>
+              )}
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-5 py-2.5 text-xs font-bold transition-all duration-300 shadow-md shadow-amber-400/10"
+                >
+                  Edit Profile Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
-      {/* Profile Overview Card */}
+      {/* Profile Edit Card */}
       <section className="rounded-3xl border border-white/10 bg-slate-900/50 p-6 sm:p-8 shadow-xl backdrop-blur">
         <h1 className="text-2xl font-bold text-white tracking-wide">Edit Profile</h1>
         <p className="text-sm text-brand-400 mt-1">Manage your identity and avatar settings across Nsgram.</p>
@@ -159,13 +212,28 @@ export default function NsgramProfilePage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={isUpdating}
-            className="w-full rounded-2xl bg-amber-400 hover:bg-amber-300 disabled:bg-amber-400/50 text-slate-950 font-bold py-3 text-sm tracking-wide uppercase transition duration-300"
-          >
-            {isUpdating ? "Saving changes..." : "Save Profile Settings"}
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setDisplayName(profile.displayName);
+                setBio(profile.bio);
+                setAvatar(profile.avatar);
+                setNotice("");
+                setIsEditing(false);
+              }}
+              className="flex-1 rounded-2xl border border-white/10 hover:border-white/20 bg-white/5 text-white font-bold py-3 text-sm tracking-wide uppercase transition duration-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isUpdating}
+              className="flex-1 rounded-2xl bg-amber-400 hover:bg-amber-300 disabled:bg-amber-400/50 text-slate-950 font-bold py-3 text-sm tracking-wide uppercase transition duration-300 shadow-md shadow-amber-400/10"
+            >
+              {isUpdating ? "Saving..." : "Save Settings"}
+            </button>
+          </div>
         </form>
 
         {notice && (

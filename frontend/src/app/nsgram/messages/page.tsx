@@ -9,6 +9,7 @@ import React, {
   type FormEvent,
 } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   collection,
   getDocs,
@@ -464,36 +465,42 @@ export default function NsgramMessagesPage() {
                   </svg>
                 </button>
 
-                {/* Avatar + status */}
-                <div className="relative shrink-0">
-                  <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg select-none">
-                    {selectedChatUser.avatar === "girl" ? "👧" : "👦"}
-                  </div>
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
-                      chatUserStatus ? "bg-green-400" : "bg-brand-600"
-                    }`}
-                  />
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white leading-tight truncate">
-                    {selectedChatUser.displayName}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-brand-500">
-                      @{selectedChatUser.username}
-                    </span>
-                    <span className="text-brand-700">·</span>
+                {/* Avatar + name clickable container */}
+                <Link
+                  href={`/nsgram/profile/${selectedChatUser.id}`}
+                  className="flex items-center gap-3 min-w-0 hover:opacity-85 transition-opacity group"
+                >
+                  {/* Avatar + status */}
+                  <div className="relative shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg select-none group-hover:border-amber-400/40 transition-colors">
+                      {selectedChatUser.avatar === "girl" ? "👧" : "👦"}
+                    </div>
                     <span
-                      className={`text-[10px] font-semibold ${
-                        chatUserStatus ? "text-green-400" : "text-brand-600"
+                      className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
+                        chatUserStatus ? "bg-green-400" : "bg-brand-600"
                       }`}
-                    >
-                      {chatUserStatus ? "Online" : "Offline"}
-                    </span>
+                    />
                   </div>
-                </div>
+
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white leading-tight truncate group-hover:text-amber-300 transition-colors">
+                      {selectedChatUser.displayName}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] text-brand-500">
+                        @{selectedChatUser.username}
+                      </span>
+                      <span className="text-brand-700">·</span>
+                      <span
+                        className={`text-[10px] font-semibold ${
+                          chatUserStatus ? "text-green-400" : "text-brand-600"
+                        }`}
+                      >
+                        {chatUserStatus ? "Online" : "Offline"}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
               </div>
 
               {/* Real-time badge */}

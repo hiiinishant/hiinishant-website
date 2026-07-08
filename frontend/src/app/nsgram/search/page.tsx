@@ -95,7 +95,7 @@ export default function NsgramSearchPage() {
         {visibleUsers.map((user) => (
           <div
             key={user.id}
-            onClick={() => startChat(user)}
+            onClick={() => router.push(`/nsgram/profile/${user.id}`)}
             className="rounded-3xl border border-white/10 bg-slate-900/30 p-4 sm:p-5 flex items-center justify-between gap-4 hover:border-amber-400/40 hover:bg-slate-900/50 hover:cursor-pointer transition-all duration-300 group"
           >
             <div className="flex items-center gap-3 min-w-0">
