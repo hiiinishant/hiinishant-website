@@ -120,18 +120,21 @@ export function useVoiceCall(
     (targetId: string) => {
       if (pcRef.current) return pcRef.current;
 
-      console.log("Creating RTCPeerConnection to", targetId);
       const pc = new RTCPeerConnection({
         iceServers: [
-          {
-            urls: "stun:stun.l.google.com:19302",
-          },
+          // Multiple STUN servers for faster ICE gathering fallback
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+          { urls: "stun:stun2.l.google.com:19302" },
+          { urls: "stun:stun.cloudflare.com:3478" },
         ],
+        // Pre-gather ICE candidates before the offer/answer exchange
+        // so they are ready to send immediately when negotiation starts
+        iceCandidatePoolSize: 5,
       });
 
       pc.onicecandidate = (event) => {
         if (event.candidate && socket && profile) {
-          console.log("Sending ICE candidate to", targetId);
           socket.emit("webrtc-ice", {
             senderId: profile.id,
             targetId,
@@ -141,7 +144,6 @@ export function useVoiceCall(
       };
 
       pc.ontrack = (event) => {
-        console.log("Received remote track:", event.streams[0]);
         if (event.streams && event.streams[0]) {
           remoteStreamRef.current = event.streams[0];
           setRemoteStream(event.streams[0]);
@@ -150,7 +152,6 @@ export function useVoiceCall(
       };
 
       pc.onconnectionstatechange = () => {
-        console.log("Peer connection state changed:", pc.connectionState);
         if (pc.connectionState === "connecting") {
           setConnectionStatus("Connecting...");
         } else if (pc.connectionState === "connected") {
@@ -183,28 +184,26 @@ export function useVoiceCall(
     if (!incomingCallInfo || !socket || !profile) return;
     if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
 
-    console.log("Accepting call from", incomingCallInfo.callerId);
     activePartnerIdRef.current = incomingCallInfo.callerId;
     setCallState("in-call");
     setConnectionStatus("Connecting...");
+
+    // Signal acceptance IMMEDIATELY before waiting for media — lets caller start offer without delay
+    socket.emit("call-accepted", {
+      callerId: incomingCallInfo.callerId,
+      calleeId: profile.id,
+    });
 
     try {
       const constraints = {
         audio: true,
         video: callType === "video" ? { facingMode: "user" } : false,
       };
-      // Get mic + camera access
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
       setLocalStream(stream);
 
-      // Notify caller that we accepted
-      socket.emit("call-accepted", {
-        callerId: incomingCallInfo.callerId,
-        calleeId: profile.id,
-      });
-
-      // Create WebRTC peer connection
+      // Create WebRTC peer connection (tracks will be added from localStreamRef)
       createPeerConnection(incomingCallInfo.callerId);
 
       // Start call duration timer
@@ -230,6 +229,7 @@ export function useVoiceCall(
     setCallType(type);
     setCallState("calling");
     setIsCameraOn(type === "video");
+    setConnectionStatus("Calling...");
     activePartnerIdRef.current = selectedChatUser.id;
 
     try {
@@ -237,19 +237,8 @@ export function useVoiceCall(
         audio: true,
         video: type === "video" ? { facingMode: "user" } : false,
       };
-      // Get mic + camera stream
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      localStreamRef.current = stream;
-      setLocalStream(stream);
 
-      console.log(`Calling user (${type}):`, selectedChatUser.displayName);
-      setConnectionStatus("Calling...");
-
-      // Transition to Ringing... after a brief moment
-      ringTimeoutRef.current = setTimeout(() => {
-        setConnectionStatus("Ringing...");
-      }, 1500);
-
+      // Emit call signal IMMEDIATELY — don't wait for media so signaling starts right away
       socket.emit("call-user", {
         callerId: profile.id,
         calleeId: selectedChatUser.id,
@@ -259,9 +248,15 @@ export function useVoiceCall(
         callType: type,
       });
 
-      // Set timeout for calling (30 seconds limit)
+      // Get media in parallel with signaling
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+
+      setConnectionStatus("Ringing...");
+
+      // Set timeout for no-answer (30 seconds)
       callTimeoutRef.current = setTimeout(() => {
-        console.log("Call timeout — no response");
         setCallErrorMessage("No answer from user.");
         endCall();
       }, 30000);

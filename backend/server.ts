@@ -66,6 +66,9 @@ const io = new Server(httpServer, {
 // Map to track online users: userId -> socketId
 const onlineUsers = new Map<string, string>();
 
+// Cache conversation participants to avoid Firestore reads on every join-room
+const convoParticipantsCache = new Map<string, string[]>();
+
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
@@ -90,21 +93,25 @@ io.on('connection', (socket) => {
     callback(isOnline);
   });
 
-  // Join direct conversation room (secure check)
+  // Join direct conversation room (uses in-memory cache, falls back to Firestore once)
   socket.on('join-room', async (data: { conversationId: string; userId: string }) => {
     const { conversationId, userId } = data;
     if (!conversationId || !userId || !firestore) return;
 
     try {
-      const convoDoc = await firestore.collection('conversations').doc(conversationId).get();
-      if (convoDoc.exists) {
-        const participants: string[] = convoDoc.data()?.participants || [];
-        if (participants.includes(userId)) {
-          socket.join(conversationId);
-          console.log(`Socket ${socket.id} joined room ${conversationId}`);
-        } else {
-          console.warn(`Auth mismatch: User ${userId} tried to join convo ${conversationId}`);
-        }
+      // Check cache first (avoids Firestore read on every room join)
+      let participants = convoParticipantsCache.get(conversationId);
+      if (!participants) {
+        const convoDoc = await firestore.collection('conversations').doc(conversationId).get();
+        if (!convoDoc.exists) return;
+        participants = convoDoc.data()?.participants || [];
+        convoParticipantsCache.set(conversationId, participants);
+      }
+
+      if (participants.includes(userId)) {
+        socket.join(conversationId);
+      } else {
+        console.warn(`Auth mismatch: User ${userId} tried to join convo ${conversationId}`);
       }
     } catch (err) {
       console.error('Error joining socket room:', err);
@@ -185,46 +192,106 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Send message
-  socket.on('send-message', async (data: { conversationId: string; text: string; senderId: string; recipientId: string }) => {
-    const { conversationId, text, senderId } = data;
-    if (!conversationId || !text || !senderId || !firestore) return;
+  // Send message (supports optional replyTo and audioUrl for voice notes)
+  socket.on('send-message', async (data: { 
+    conversationId: string; 
+    text: string; 
+    senderId: string; 
+    recipientId: string;
+    replyTo?: { id: string; text: string; senderId: string; senderName: string };
+    audioUrl?: string;
+    tempId?: string; // optimistic UI placeholder id from client
+  }) => {
+    const { conversationId, text, senderId, replyTo, audioUrl, tempId } = data;
+    if (!conversationId || !senderId || !firestore) return;
 
     try {
       const timestamp = new Date();
-      const messageData = {
+      const messageData: any = {
         senderId,
-        text,
+        text: audioUrl ? "🎤 Voice note" : text,
         createdAt: timestamp.toISOString(),
         read: false,
         reactions: {},
       };
 
-      // Store in firestore collection conversations/{convoId}/messages
+      if (replyTo) messageData.replyTo = replyTo;
+      if (audioUrl) messageData.audioUrl = audioUrl;
+
       const convoRef = firestore.collection('conversations').doc(conversationId);
-      const msgRef = await convoRef.collection('messages').add(messageData);
 
-      // Update parent conversation doc (lastMessageRead: false so recipient sees unread dot)
-      await convoRef.set({
-        lastMessage: text,
-        lastMessageAt: timestamp.toISOString(),
-        lastMessageBy: senderId,
-        lastMessageRead: false,
-      }, { merge: true });
+      // Run message write and conversation metadata update in parallel for speed
+      const [msgRef] = await Promise.all([
+        convoRef.collection('messages').add(messageData),
+        convoRef.set({
+          lastMessage: audioUrl ? "🎤 Voice note" : text,
+          lastMessageAt: timestamp.toISOString(),
+          lastMessageBy: senderId,
+          lastMessageRead: false,
+        }, { merge: true }),
+      ]);
 
-      // Emit message directly back to sender (bypasses room-join requirement)
+      // Emit confirmation back to sender — includes tempId so client can swap optimistic placeholder
       socket.emit('message-sent', {
         id: msgRef.id,
+        tempId: tempId ?? null,
         ...messageData,
       });
 
-      // Emit to everyone else in the room (recipient if online)
+      // Broadcast to all other sockets in the room (e.g. recipient)
       socket.to(conversationId).emit('receive-message', {
         id: msgRef.id,
         ...messageData,
       });
     } catch (err) {
       console.error('Error handling socket message:', err);
+    }
+  });
+
+  // React to message (e.g. ❤️, 😂, 👍)
+  socket.on('react-message', async (data: {
+    conversationId: string;
+    messageId: string;
+    userId: string;
+    reaction: string;
+  }) => {
+    const { conversationId, messageId, userId, reaction } = data;
+    if (!conversationId || !messageId || !userId || !reaction || !firestore) return;
+
+    try {
+      const msgRef = firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(messageId);
+
+      const msgDoc = await msgRef.get();
+      if (!msgDoc.exists) return;
+
+      const currentReactions = msgDoc.data()?.reactions || {};
+      
+      // Toggle logic: if user clicks same emoji, remove it; else set/change it.
+      if (currentReactions[userId] === reaction) {
+        delete currentReactions[userId];
+      } else {
+        currentReactions[userId] = reaction;
+      }
+
+      await msgRef.update({ reactions: currentReactions });
+
+      // Broadcast reaction change to all sockets in the conversation room
+      io.to(conversationId).emit('message-reacted', {
+        messageId,
+        reactions: currentReactions,
+      });
+
+      // Also send directly back to the react-initiator's socket
+      socket.emit('message-reacted', {
+        messageId,
+        reactions: currentReactions,
+      });
+    } catch (err) {
+      console.error('Error reacting to message:', err);
     }
   });
 

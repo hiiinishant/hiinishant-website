@@ -32,6 +32,9 @@ type Message = {
   text: string;
   createdAt?: Timestamp | string | null;
   read?: boolean;
+  replyTo?: { id: string; text: string; senderId: string; senderName: string };
+  reactions?: Record<string, string>; // userId -> emoji
+  audioUrl?: string;
 };
 
 type Conversation = {
@@ -101,6 +104,105 @@ function sortByRecent(list: Conversation[]): Conversation[] {
     const bT = toDate(b.lastMessageAt)?.getTime() ?? 0;
     return bT - aT;
   });
+}
+
+// ─── Voice Note Player Component ──────────────────────────────────────────────
+function VoiceNotePlayer({ audioUrl }: { audioUrl: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+
+    const onLoadedMetadata = () => {
+      setDuration(audio.duration || 0);
+    };
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("ended", onEnded);
+
+    if (audio.readyState >= 1) {
+      setDuration(audio.duration);
+    }
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [audioUrl]);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(() => {});
+      setIsPlaying(true);
+    }
+  };
+
+  const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setCurrentTime(val);
+    if (audioRef.current) {
+      audioRef.current.currentTime = val;
+    }
+  };
+
+  const formatTime = (secs: number) => {
+    if (isNaN(secs) || !isFinite(secs)) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <div className="flex items-center gap-3 py-1 px-1.5 min-w-[200px] select-none text-inherit">
+      <button
+        onClick={togglePlay}
+        type="button"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-slate-950 hover:scale-105 active:scale-95 transition"
+      >
+        {isPlaying ? (
+          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+          </svg>
+        ) : (
+          <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
+      </button>
+      <div className="flex-1 flex flex-col gap-0.5">
+        <input
+          type="range"
+          min={0}
+          max={duration || 100}
+          value={currentTime}
+          onChange={handleScrub}
+          className="w-full accent-slate-950 bg-white/20 h-1 rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between text-[8px] opacity-60">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Empty-state illustration ─────────────────────────────────────────────────
@@ -232,9 +334,18 @@ export default function NsgramMessagesPage() {
   const [isTyping, setIsTyping] = useState(false); // is the chat partner typing?
   // Track which conversations have unread messages (optimistic, driven by conversation doc fields)
   const [readConvoIds, setReadConvoIds] = useState<Set<string>>(new Set());
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // debounce for typing-stop
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordStreamRef = useRef<MediaStream | null>(null);
 
   // ── Sync convoId from URL ──────────────────────────────────────────────────
   useEffect(() => {
@@ -358,18 +469,46 @@ export default function NsgramMessagesPage() {
   useEffect(() => {
     if (!socket) return;
 
-    // Server emits this directly to the sender's socket after saving
-    // — bypasses room-join so the sender always sees their message
-    const onMessageSent = (msg: Message) => {
-      setMessages((prev) =>
-        prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
-      );
+    // Server emits this back to sender after Firestore save.
+    // If a temp message exists (optimistic UI), replace it with the real one.
+    // Otherwise just append (handles edge cases like page reload mid-send).
+    const onMessageSent = (msg: Message & { tempId?: string }) => {
+      setMessages((prev) => {
+        // Find the temp placeholder by tempId if provided
+        const tempIdx = msg.tempId ? prev.findIndex((m) => m.id === msg.tempId) : -1;
+        if (tempIdx !== -1) {
+          // Swap the temp placeholder with the real confirmed message
+          const updated = [...prev];
+          updated[tempIdx] = { ...msg };
+          return updated;
+        }
+        // No temp placeholder (e.g. browser refresh) — only append if not already present
+        return prev.some((m) => m.id === msg.id) ? prev : [...prev, msg];
+      });
     };
 
     socket.on("message-sent", onMessageSent);
 
     return () => {
       socket.off("message-sent", onMessageSent);
+    };
+  }, [socket]);
+
+  // ── Socket.IO: message-reacted — updates reactions on messages ─────────────
+  useEffect(() => {
+    if (!socket) return;
+
+    const onMessageReacted = (data: { messageId: string; reactions: Record<string, string> }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === data.messageId ? { ...m, reactions: data.reactions } : m
+        )
+      );
+    };
+
+    socket.on("message-reacted", onMessageReacted);
+    return () => {
+      socket.off("message-reacted", onMessageReacted);
     };
   }, [socket]);
 
@@ -485,6 +624,95 @@ export default function NsgramMessagesPage() {
     }, 2000);
   }, [socket, selectedConversationId, profile?.id]);
 
+  // ── Scroll to Message highlight helper ─────────────────────────────────────
+  const scrollToMessage = useCallback((msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("bg-amber-400/20 border-amber-400/30");
+      setTimeout(() => {
+        el.classList.remove("bg-amber-400/20 border-amber-400/30");
+      }, 1500);
+    }
+  }, []);
+
+  // ── Audio Recording Handlers ───────────────────────────────────────────────
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        if (recordStreamRef.current) {
+          recordStreamRef.current.getTracks().forEach((track) => track.stop());
+          recordStreamRef.current = null;
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Failed to access microphone for recording:", err);
+      alert("Microphone access is required to record voice notes.");
+    }
+  };
+
+  const stopRecording = (shouldSend: boolean) => {
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") return;
+
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+
+    mediaRecorderRef.current.onstop = () => {
+      if (recordStreamRef.current) {
+        recordStreamRef.current.getTracks().forEach((track) => track.stop());
+        recordStreamRef.current = null;
+      }
+
+      if (shouldSend && audioChunksRef.current.length > 0) {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const base64Audio = reader.result as string;
+          if (socket && profile && selectedConversation) {
+            socket.emit("send-message", {
+              conversationId: selectedConversation.id,
+              text: "🎤 Voice note",
+              audioUrl: base64Audio,
+              senderId: profile.id,
+              recipientId: selectedChatUser?.id ?? "",
+            });
+          }
+        };
+      }
+    };
+
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+  };
+
+  const cancelRecording = () => {
+    stopRecording(false);
+  };
+
   // ── Send message ───────────────────────────────────────────────────────────
   const handleSendMessage = useCallback(
     async (e: FormEvent) => {
@@ -495,15 +723,43 @@ export default function NsgramMessagesPage() {
       // Stop typing indicator immediately on send
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socket.emit("typing-stop", { conversationId: selectedConversation.id, userId: profile.id });
-      socket.emit("send-message", {
+
+      const replyPayload = replyingToMessage
+        ? {
+            id: replyingToMessage.id,
+            text: replyingToMessage.text,
+            senderId: replyingToMessage.senderId,
+            senderName:
+              users.find((u) => u.id === replyingToMessage.senderId)?.displayName || "User",
+          }
+        : undefined;
+
+      // ── OPTIMISTIC UI: show message immediately without waiting for server ──
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMsg: Message = {
+        id: tempId,
+        senderId: profile.id,
+        text,
+        createdAt: new Date().toISOString(),
+        read: false,
+        ...(replyPayload ? { replyTo: replyPayload } : {}),
+      };
+      setMessages((prev) => [...prev, optimisticMsg]);
+      setMessageText("");
+      if (replyingToMessage) setReplyingToMessage(null);
+
+      const payload: any = {
         conversationId: selectedConversation.id,
         text,
         senderId: profile.id,
         recipientId: selectedChatUser?.id ?? "",
-      });
-      setMessageText("");
+        tempId, // pass tempId so we can swap it when server confirms
+      };
+      if (replyPayload) payload.replyTo = replyPayload;
+
+      socket.emit("send-message", payload);
     },
-    [profile, selectedConversation, socket, messageText, selectedChatUser]
+    [profile, selectedConversation, socket, messageText, selectedChatUser, replyingToMessage, users]
   );
 
   const openConvo = useCallback(
@@ -687,7 +943,7 @@ export default function NsgramMessagesPage() {
                   onClick={() => voiceCall.initiateCall("voice")}
                   disabled={!chatUserStatus || voiceCall.callState !== "idle"}
                   title={chatUserStatus ? "Start Voice Call" : "User is offline"}
-                  className="flex items-center justify-center w-8 h-8 rounded-xl border border-white/10 bg-white/5 hover:bg-amber-400/10 hover:border-amber-400/20 text-brand-400 hover:text-amber-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:border-white/10 disabled:hover:text-brand-400 transition-all duration-200"
+                  className="flex items-center justify-center w-8 h-8 rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-400 hover:bg-amber-400/25 hover:text-amber-300 disabled:opacity-30 disabled:border-white/10 disabled:bg-white/5 disabled:text-brand-500 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -704,7 +960,7 @@ export default function NsgramMessagesPage() {
                   onClick={() => voiceCall.initiateCall("video")}
                   disabled={!chatUserStatus || voiceCall.callState !== "idle"}
                   title={chatUserStatus ? "Start Video Call" : "User is offline"}
-                  className="flex items-center justify-center w-8 h-8 rounded-xl border border-white/10 bg-white/5 hover:bg-amber-400/10 hover:border-amber-400/20 text-brand-400 hover:text-amber-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:border-white/10 disabled:hover:text-brand-400 transition-all duration-200"
+                  className="flex items-center justify-center w-8 h-8 rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-400 hover:bg-amber-400/25 hover:text-amber-300 disabled:opacity-30 disabled:border-white/10 disabled:bg-white/5 disabled:text-brand-500 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -747,18 +1003,93 @@ export default function NsgramMessagesPage() {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex flex-col gap-1 max-w-[75%] sm:max-w-[60%] ${
+                    id={`msg-${msg.id}`}
+                    className={`flex flex-col gap-1 max-w-[75%] sm:max-w-[60%] relative group border border-transparent rounded-2xl p-0.5 transition-all duration-300 ${
                       isMine ? "ml-auto items-end" : "mr-auto items-start"
                     }`}
                   >
+                    {/* Hover controls (quick reactions + quote replies) */}
                     <div
-                      className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm ${
+                      className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition duration-150 z-30 ${
+                        isMine ? "right-full mr-3 flex-row-reverse" : "left-full ml-3 flex-row"
+                      }`}
+                    >
+                      {/* Reply/Quote Trigger */}
+                      <button
+                        onClick={() => setReplyingToMessage(msg)}
+                        type="button"
+                        title="Reply"
+                        className="flex items-center justify-center w-6 h-6 rounded-full bg-white/5 border border-white/10 text-brand-400 hover:text-white hover:bg-white/15 transition shadow-sm"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                      </button>
+
+                      {/* Reactions Picker */}
+                      <div className="flex items-center gap-0.5 rounded-full bg-slate-900 border border-white/10 px-1 py-0.5 shadow-lg select-none">
+                        {["❤️", "😂", "👍", "🔥", "😮", "😢"].map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => {
+                              if (socket && profile && selectedConversation) {
+                                socket.emit("react-message", {
+                                  conversationId: selectedConversation.id,
+                                  messageId: msg.id,
+                                  userId: profile.id,
+                                  reaction: emoji,
+                                });
+                              }
+                            }}
+                            className="hover:scale-125 transition text-xs px-0.5"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Replies quoted header preview bubble */}
+                    {msg.replyTo && (
+                      <div
+                        onClick={() => scrollToMessage(msg.replyTo!.id)}
+                        className={`mb-0.5 text-[10px] px-3 py-1 rounded-xl bg-white/5 border border-white/5 opacity-60 text-white truncate max-w-full italic cursor-pointer select-none hover:opacity-100 transition-opacity ${
+                          isMine ? "text-right" : "text-left"
+                        }`}
+                      >
+                        <span className="font-bold block text-[8px] text-amber-300">
+                          {msg.replyTo.senderId === profile.id ? "Replying to yourself" : `Replying to ${msg.replyTo.senderName}`}
+                        </span>
+                        {msg.replyTo.text}
+                      </div>
+                    )}
+
+                    <div
+                      className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm relative ${
                         isMine
                           ? "bg-amber-400 text-slate-950 font-medium rounded-br-md"
                           : "bg-white/8 text-white border border-white/8 rounded-bl-md"
                       }`}
                     >
-                      {msg.text}
+                      {msg.audioUrl ? (
+                        <VoiceNotePlayer audioUrl={msg.audioUrl} />
+                      ) : (
+                        msg.text
+                      )}
+
+                      {/* Message reactions badge */}
+                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        <div className={`absolute -bottom-2.5 flex items-center gap-0.5 rounded-full bg-slate-900 border border-white/10 px-1.5 py-0.5 text-[9px] shadow-md z-10 select-none ${
+                          isMine ? "right-2" : "left-2"
+                        }`}>
+                          {Array.from(new Set(Object.values(msg.reactions))).join(" ")}
+                          {Object.keys(msg.reactions).length > 1 && (
+                            <span className="text-[8px] text-brand-400 ml-0.5 font-bold">
+                              {Object.keys(msg.reactions).length}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {msg.createdAt && (
                       <span className="text-[9px] text-brand-600 px-1">
@@ -780,31 +1111,96 @@ export default function NsgramMessagesPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message input */}
-            <form
-              onSubmit={handleSendMessage}
-              className="flex items-center gap-2 px-4 py-3 border-t border-white/8 shrink-0"
-            >
-              <input
-                ref={inputRef}
-                value={messageText}
-                onChange={(e) => {
-                  setMessageText(e.target.value);
-                  handleTyping();
-                }}
-                placeholder={`Message ${selectedChatUser.displayName}…`}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-brand-600 outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all duration-200"
-              />
-              <button
-                type="submit"
-                disabled={!messageText.trim()}
-                className="flex items-center justify-center w-10 h-10 rounded-2xl bg-amber-400 hover:bg-amber-300 disabled:bg-white/10 disabled:text-brand-600 text-slate-950 transition-all duration-200 shrink-0"
+            {/* Quoted message reply preview banner */}
+            {replyingToMessage && (
+              <div className="flex items-center justify-between px-4 py-2 border-t border-white/8 bg-white/3 select-none shrink-0">
+                <div className="flex flex-col text-[11px] leading-snug truncate">
+                  <span className="font-bold text-amber-300">
+                    Replying to {replyingToMessage.senderId === profile.id ? "yourself" : users.find(u => u.id === replyingToMessage.senderId)?.displayName || "User"}
+                  </span>
+                  <span className="text-brand-400 truncate mt-0.5">{replyingToMessage.text}</span>
+                </div>
+                <button
+                  onClick={() => setReplyingToMessage(null)}
+                  className="flex items-center justify-center w-5 h-5 rounded-full hover:bg-white/10 text-brand-400 hover:text-white transition"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Message input / Voice note recording layout */}
+            {isRecording ? (
+              <div className="flex items-center justify-between gap-4 px-4 py-3 border-t border-white/8 shrink-0 bg-slate-950 select-none animate-pulse">
+                <div className="flex items-center gap-2 text-xs font-semibold text-rose-400">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                  <span>Recording...</span>
+                  <span className="font-mono text-sm ml-1 text-rose-300">
+                    {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, "0")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={cancelRecording}
+                    className="px-3 py-1.5 rounded-xl border border-white/10 hover:border-rose-500/30 hover:bg-rose-500/10 text-brand-400 hover:text-rose-300 text-xs font-bold transition duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => stopRecording(true)}
+                    className="px-4 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold shadow-md transition duration-200"
+                  >
+                    Send Voice Note
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form
+                onSubmit={handleSendMessage}
+                className="flex items-center gap-2 px-4 py-3 border-t border-white/8 shrink-0"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </form>
+                {/* Voice Note Record Trigger Button */}
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  title="Record Voice Note"
+                  className="flex items-center justify-center w-10 h-10 rounded-2xl border border-white/10 bg-white/5 hover:bg-rose-500/10 hover:border-rose-500/20 text-brand-400 hover:text-rose-400 transition-all duration-200 shrink-0"
+                >
+                  <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                    />
+                  </svg>
+                </button>
+
+                <input
+                  ref={inputRef}
+                  value={messageText}
+                  onChange={(e) => {
+                    setMessageText(e.target.value);
+                    handleTyping();
+                  }}
+                  placeholder={`Message ${selectedChatUser.displayName}…`}
+                  className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-brand-600 outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all duration-200"
+                />
+                <button
+                  type="submit"
+                  disabled={!messageText.trim()}
+                  className="flex items-center justify-center w-10 h-10 rounded-2xl bg-amber-400 hover:bg-amber-300 disabled:bg-white/10 disabled:text-brand-600 text-slate-950 transition-all duration-200 shrink-0"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </button>
+              </form>
+            )}
           </>
         ) : (
           /* No chat selected — desktop placeholder */
