@@ -47,6 +47,8 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
     return <section className="min-h-screen bg-slate-950" />;
   }
 
+  const isMessagesPage = pathname === "/nsgram/messages";
+
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col md:flex-row">
       {/* Sidebar Navigation */}
@@ -55,9 +57,9 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Fixed top header — only shows on homepage */}
       {pathname === "/nsgram/home" && <NsgramHeader />}
 
-      {/* Main Content Area — pt-14 clears the fixed header only on homepage */}
-      <main className={`flex-1 md:pl-64 ${pathname === "/nsgram/home" ? "pt-14" : "pt-0"} pb-20 md:pb-0 min-h-screen transition-all duration-300`}>
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      {/* Main Content Area */}
+      <main className={`flex-1 md:pl-64 ${pathname === "/nsgram/home" ? "pt-14" : "pt-0"} ${isMessagesPage ? "pb-16 md:pb-0" : "pb-20 md:pb-0"} min-h-screen transition-all duration-300`}>
+        <div className={isMessagesPage ? "w-full h-full" : "max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8"}>
           {children}
         </div>
       </main>
