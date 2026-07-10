@@ -320,7 +320,7 @@ function ConvoCard({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function NsgramMessagesPage() {
-  const { profile, users, socket } = useNsgramAuth();
+  const { profile, users, socket, socketConnected } = useNsgramAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -338,6 +338,7 @@ export default function NsgramMessagesPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [activeMenuMessageId, setActiveMenuMessageId] = useState<string | null>(null);
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -422,20 +423,24 @@ export default function NsgramMessagesPage() {
     const unsub = onSnapshot(
       q,
       (snap) => {
+        setFirestoreError(null);
         const dbMsgs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message));
         setMessages((prev) => {
-          // Keep temp/optimistic messages that are still pending
-          const tempMsgs = prev.filter((m) => m.id.startsWith("temp-"));
-          const unconfirmedTempMsgs = tempMsgs.filter((temp) => {
-            return !dbMsgs.some(
-              (dbM) => dbM.senderId === temp.senderId && dbM.text === temp.text
-            );
-          });
-          return [...dbMsgs, ...unconfirmedTempMsgs];
+          // Keep only temp/optimistic messages whose tempId has NOT yet been confirmed
+          // by Firestore (i.e. no dbMsg references this tempId). This is unambiguous
+          // regardless of message text or sender — fixes voice notes and multi-send dedup.
+          const confirmedTempIds = new Set(
+            dbMsgs.map((m) => (m as any).tempId).filter(Boolean)
+          );
+          const pendingTempMsgs = prev.filter(
+            (m) => m.id.startsWith("temp-") && !confirmedTempIds.has(m.id)
+          );
+          return [...dbMsgs, ...pendingTempMsgs];
         });
       },
       (err) => {
         console.error("Error listening to messages:", err);
+        setFirestoreError(err.message);
       }
     );
 
@@ -844,12 +849,27 @@ export default function NsgramMessagesPage() {
         reader.onloadend = () => {
           const base64Audio = reader.result as string;
           if (socket && profile && selectedConversation) {
+            // ── OPTIMISTIC UI for voice notes ───────────────────────────────
+            // Show the voice note immediately for the sender before the server confirms.
+            // The tempId lets onSnapshot dedup correctly replace this placeholder.
+            const tempId = `temp-${Date.now()}`;
+            const optimisticVoiceMsg: Message = {
+              id: tempId,
+              senderId: profile.id,
+              text: "🎤 Voice note",
+              audioUrl: base64Audio,
+              createdAt: new Date().toISOString(),
+              read: false,
+            };
+            setMessages((prev) => [...prev, optimisticVoiceMsg]);
+
             socket.emit("send-message", {
               conversationId: selectedConversation.id,
               text: "🎤 Voice note",
               audioUrl: base64Audio,
               senderId: profile.id,
               recipientId: selectedChatUser?.id ?? "",
+              tempId, // server echoes this back in message-sent so onSnapshot can swap it
             });
           }
         };
@@ -1130,6 +1150,28 @@ export default function NsgramMessagesPage() {
                 </span>
               </div>
             </div>
+
+            {/* Connection Diagnostics Banner */}
+            {!socketConnected && (
+              <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-[11px] font-medium px-4 py-2 flex items-center justify-between shrink-0 select-none animate-pulse">
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+                  <span>Offline / Connecting to chat server... (Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"})</span>
+                </span>
+              </div>
+            )}
+            {firestoreError && (
+              <div className="bg-rose-500/15 border-b border-rose-500/25 text-rose-300 text-[11px] px-4 py-2 flex items-center justify-between shrink-0 select-none">
+                <span>⚠️ Firestore error: {firestoreError}</span>
+                <button
+                  type="button"
+                  onClick={() => setFirestoreError(null)}
+                  className="text-[10px] font-bold uppercase hover:underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
 
             {/* Messages area */}
             <div

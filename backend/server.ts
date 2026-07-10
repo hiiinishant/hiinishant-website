@@ -69,14 +69,31 @@ const onlineUsers = new Map<string, string>();
 // Cache conversation participants to avoid Firestore reads on every join-room
 const convoParticipantsCache = new Map<string, string[]>();
 
+// ── Bug 3 fix: 5-second grace period before marking a user as offline ─────────
+// Map of pending offline timers: userId -> NodeJS.Timeout
+// When a socket drops and quickly reconnects (WebSocket→polling fallback, mobile
+// network blips, Render cold-start), the timer is cancelled in 'register' so the
+// user never appears offline. The timer only fires if they truly disconnect.
+const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
-  // Register online status
+  // ── Register online status ────────────────────────────────────────────────
   socket.on('register', (userId: string) => {
     if (!userId) return;
+
+    // Cancel any pending offline timer — this user reconnected in time
+    const existingTimer = disconnectTimers.get(userId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      disconnectTimers.delete(userId);
+      console.log(`Cancelled pending offline timer for ${userId} (reconnected)`);
+    }
+
     onlineUsers.set(userId, socket.id);
     console.log(`User registered online: ${userId} (${socket.id})`);
+
     // Clear lastSeen in Firestore — user is now online
     if (firestore) {
       firestore.collection('users').doc(userId).set(
@@ -87,19 +104,19 @@ io.on('connection', (socket) => {
     io.emit('user-status', { userId, status: 'online', lastSeen: null });
   });
 
-  // Query specific user's status
+  // ── Query specific user's online status ──────────────────────────────────
   socket.on('check-online-status', (targetUserId: string, callback: (isOnline: boolean) => void) => {
     const isOnline = onlineUsers.has(targetUserId);
     callback(isOnline);
   });
 
-  // Join direct conversation room (uses in-memory cache, falls back to Firestore once)
+  // ── Join direct conversation room ─────────────────────────────────────────
+  // Uses in-memory participant cache; falls back to Firestore only on first join.
   socket.on('join-room', async (data: { conversationId: string; userId: string }) => {
     const { conversationId, userId } = data;
     if (!conversationId || !userId || !firestore) return;
 
     try {
-      // Check cache first (avoids Firestore read on every room join)
       let participants = convoParticipantsCache.get(conversationId);
       if (!participants) {
         const convoDoc = await firestore.collection('conversations').doc(conversationId).get();
@@ -118,13 +135,13 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Leave direct conversation room
+  // ── Leave direct conversation room ────────────────────────────────────────
   socket.on('leave-room', (data: { conversationId: string }) => {
     socket.leave(data.conversationId);
     console.log(`Socket ${socket.id} left room ${data.conversationId}`);
   });
 
-  // Typing indicator — relay inside conversation room (no DB write needed)
+  // ── Typing indicator — relay inside conversation room (no DB write) ───────
   socket.on('typing-start', (data: { conversationId: string; userId: string }) => {
     const { conversationId, userId } = data;
     if (!conversationId || !userId) return;
@@ -137,15 +154,13 @@ io.on('connection', (socket) => {
     socket.to(conversationId).emit('user-typing', { conversationId, userId, isTyping: false });
   });
 
-  // ── WebRTC Voice Call Signaling ──
+  // ── WebRTC Voice Call Signaling ───────────────────────────────────────────
   socket.on('call-user', (data: { callerId: string; calleeId: string; callerName: string; callerAvatar: string; conversationId: string }) => {
     const { callerId, calleeId, callerName, callerAvatar, conversationId } = data;
     const calleeSocketId = onlineUsers.get(calleeId);
     if (calleeSocketId) {
-      // Relay incoming call to callee
       io.to(calleeSocketId).emit('incoming-call', { callerId, callerName, callerAvatar, conversationId });
     } else {
-      // If callee is offline
       socket.emit('call-declined', { reason: 'offline' });
     }
   });
@@ -192,7 +207,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Send message (supports optional replyTo and audioUrl for voice notes)
+  // ── Send message ──────────────────────────────────────────────────────────
+  // Supports text messages, replies (replyTo), and voice notes (audioUrl).
+  // Bug 1 & 2 fix: tempId is stored in Firestore so the frontend onSnapshot
+  // dedup can match it and replace the optimistic placeholder without duplication.
   socket.on('send-message', async (data: {
     conversationId: string;
     text: string;
@@ -200,17 +218,17 @@ io.on('connection', (socket) => {
     recipientId: string;
     replyTo?: { id: string; text: string; senderId: string; senderName: string };
     audioUrl?: string;
-    tempId?: string; // optimistic UI placeholder id from client
+    tempId?: string;
   }) => {
     const { conversationId, text, senderId, replyTo, audioUrl, tempId } = data;
-    console.log('Received send-message from socket:', data);
+    console.log('Received send-message from socket:', { conversationId, senderId, tempId });
     if (!conversationId || !senderId || !firestore) return;
 
     try {
       const timestamp = new Date();
       const messageData: any = {
         senderId,
-        text: audioUrl ? "🎤 Voice note" : text,
+        text: audioUrl ? '🎤 Voice note' : text,
         createdAt: timestamp.toISOString(),
         read: false,
         reactions: {},
@@ -218,14 +236,16 @@ io.on('connection', (socket) => {
 
       if (replyTo) messageData.replyTo = replyTo;
       if (audioUrl) messageData.audioUrl = audioUrl;
+      // Store tempId in the Firestore document so client onSnapshot can match it
+      if (tempId) messageData.tempId = tempId;
 
       const convoRef = firestore.collection('conversations').doc(conversationId);
 
-      // Run message write and conversation metadata update in parallel for speed
+      // Parallel write: message document + conversation metadata
       const [msgRef] = await Promise.all([
         convoRef.collection('messages').add(messageData),
         convoRef.set({
-          lastMessage: audioUrl ? "🎤 Voice note" : text,
+          lastMessage: audioUrl ? '🎤 Voice note' : text,
           lastMessageAt: timestamp.toISOString(),
           lastMessageBy: senderId,
           lastMessageRead: false,
@@ -234,28 +254,24 @@ io.on('connection', (socket) => {
 
       console.log('Message saved to Firestore with ID:', msgRef.id);
 
-      // Emit confirmation back to sender — includes tempId so client can swap optimistic placeholder
-      const confirmationPayload = {
+      // Confirm to sender — includes tempId so client swaps the optimistic placeholder
+      socket.emit('message-sent', {
         id: msgRef.id,
         tempId: tempId ?? null,
         ...messageData,
-      };
-      console.log('Emitting message-sent confirmation to sender:', confirmationPayload);
-      socket.emit('message-sent', confirmationPayload);
+      });
 
-      // Broadcast to all other sockets in the room (e.g. recipient)
-      const broadcastPayload = {
+      // Broadcast to recipient (and any other participants in the room)
+      socket.to(conversationId).emit('receive-message', {
         id: msgRef.id,
         ...messageData,
-      };
-      console.log('Broadcasting receive-message to room:', conversationId, broadcastPayload);
-      socket.to(conversationId).emit('receive-message', broadcastPayload);
+      });
     } catch (err) {
       console.error('Error handling socket message:', err);
     }
   });
 
-  // React to message (e.g. ❤️, 😂, 👍)
+  // ── React to message ──────────────────────────────────────────────────────
   socket.on('react-message', async (data: {
     conversationId: string;
     messageId: string;
@@ -276,8 +292,8 @@ io.on('connection', (socket) => {
       if (!msgDoc.exists) return;
 
       const currentReactions = msgDoc.data()?.reactions || {};
-      
-      // Toggle logic: if user clicks same emoji, remove it; else set/change it.
+
+      // Toggle: same emoji again = remove it; different/new = set it
       if (currentReactions[userId] === reaction) {
         delete currentReactions[userId];
       } else {
@@ -286,23 +302,14 @@ io.on('connection', (socket) => {
 
       await msgRef.update({ reactions: currentReactions });
 
-      // Broadcast reaction change to all sockets in the conversation room
-      io.to(conversationId).emit('message-reacted', {
-        messageId,
-        reactions: currentReactions,
-      });
-
-      // Also send directly back to the react-initiator's socket
-      socket.emit('message-reacted', {
-        messageId,
-        reactions: currentReactions,
-      });
+      // Broadcast to entire conversation room (includes sender)
+      io.to(conversationId).emit('message-reacted', { messageId, reactions: currentReactions });
     } catch (err) {
       console.error('Error reacting to message:', err);
     }
   });
 
-  // MARK AS READ — recipient notifies backend that they've opened a conversation
+  // ── Mark as read ──────────────────────────────────────────────────────────
   socket.on('mark-as-read', async (payload: { conversationId: string; userId: string }) => {
     const { conversationId, userId } = payload;
     if (!conversationId || !userId || !firestore) return;
@@ -311,27 +318,27 @@ io.on('connection', (socket) => {
         .collection('conversations')
         .doc(conversationId)
         .collection('messages');
-      // Batch update all messages where sender is NOT the current user and read === false
+
       const snapshot = await messagesRef
         .where('senderId', '!=', userId)
         .where('read', '==', false)
         .get();
+
+      if (snapshot.empty) return;
+
       const batch = firestore.batch();
       snapshot.docs.forEach((doc) => {
         batch.update(doc.ref, { read: true });
       });
       await batch.commit();
 
-      // Stamp conversation doc as read so inbox unread dots clear
-      if (snapshot.docs.length > 0) {
-        await firestore
-          .collection('conversations')
-          .doc(conversationId)
-          .set({ lastMessageRead: true }, { merge: true });
-      }
+      await firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .set({ lastMessageRead: true }, { merge: true });
 
-      // Notify the original sender (if online) that their messages are now read
-      const senderId = snapshot.docs.length ? snapshot.docs[0].data().senderId : null;
+      // Notify the sender that their messages have been read
+      const senderId = snapshot.docs[0].data().senderId;
       if (senderId && onlineUsers.has(senderId)) {
         const senderSocketId = onlineUsers.get(senderId);
         io.to(senderSocketId as string).emit('messages-read', { conversationId });
@@ -341,24 +348,41 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Disconnect ────────────────────────────────────────────────────────────
+  // Bug 3 fix: 5-second grace period. If the user's socket drops but they
+  // reconnect within 5 seconds (transport switch, network blip, Render cold-start),
+  // the offline event is cancelled. The timer fires only on a genuine disconnect.
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);
+
+    let disconnectedUserId: string | null = null;
     for (const [userId, socketId] of onlineUsers.entries()) {
       if (socketId === socket.id) {
-        onlineUsers.delete(userId);
-        const lastSeen = new Date().toISOString();
-        console.log(`User went offline: ${userId} at ${lastSeen}`);
-        // Persist lastSeen to Firestore so other users can query it later
-        if (firestore) {
-          firestore.collection('users').doc(userId).set(
-            { lastSeen },
-            { merge: true }
-          ).catch(() => {});
-        }
-        io.emit('user-status', { userId, status: 'offline', lastSeen });
+        disconnectedUserId = userId;
         break;
       }
     }
+
+    if (!disconnectedUserId) return;
+
+    const userId = disconnectedUserId;
+    // Remove immediately so status-check calls return offline during grace period
+    onlineUsers.delete(userId);
+
+    const timer = setTimeout(() => {
+      disconnectTimers.delete(userId);
+      const lastSeen = new Date().toISOString();
+      console.log(`User went offline: ${userId} at ${lastSeen}`);
+      if (firestore) {
+        firestore.collection('users').doc(userId).set(
+          { lastSeen },
+          { merge: true }
+        ).catch(() => {});
+      }
+      io.emit('user-status', { userId, status: 'offline', lastSeen });
+    }, 5000);
+
+    disconnectTimers.set(userId, timer);
   });
 });
 

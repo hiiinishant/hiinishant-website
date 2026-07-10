@@ -29,6 +29,7 @@ type NsgramAuthContextType = {
   loading: boolean;
   logout: () => Promise<void>;
   socket: any | null;
+  socketConnected: boolean;
 };
 
 const NsgramAuthContext = createContext<NsgramAuthContextType | undefined>(undefined);
@@ -39,6 +40,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState<any>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -95,6 +97,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
       if (socket) {
         socket.disconnect();
         setSocket(null);
+        setSocketConnected(false);
       }
       return;
     }
@@ -113,25 +116,30 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
     socketClient.on("connect", () => {
       console.log("Socket.IO client connected:", socketClient.id);
       socketClient.emit("register", profileId);
+      setSocketConnected(true);
     });
 
     socketClient.on("connect_error", (error) => {
       console.error("Socket.IO connection error:", error);
+      setSocketConnected(false);
     });
 
     socketClient.on("disconnect", (reason) => {
       console.log("Socket.IO client disconnected:", reason);
+      setSocketConnected(false);
     });
 
     socketClient.on("reconnect", () => {
       console.log("Socket.IO client reconnected:", socketClient.id);
       socketClient.emit("register", profileId);
+      setSocketConnected(true);
     });
 
     setSocket(socketClient);
 
     return () => {
       socketClient.disconnect();
+      setSocketConnected(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileId]);
@@ -140,6 +148,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
     if (socket) {
       socket.disconnect();
       setSocket(null);
+      setSocketConnected(false);
     }
     if (!auth) return;
     await signOut(auth);
@@ -147,7 +156,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <NsgramAuthContext.Provider value={{ authUser, profile, users, loading, logout, socket }}>
+    <NsgramAuthContext.Provider value={{ authUser, profile, users, loading, logout, socket, socketConnected }}>
       {children}
     </NsgramAuthContext.Provider>
   );
