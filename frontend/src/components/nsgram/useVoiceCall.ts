@@ -39,10 +39,73 @@ export function useVoiceCall(
   const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activePartnerIdRef = useRef<string | null>(null);
   const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ringAudioCtxRef = useRef<AudioContext | null>(null);
+  const ringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Ring tone helpers (Web Audio API — no external file needed) ─────────────
+  const stopRinging = useCallback(() => {
+    if (ringIntervalRef.current) {
+      clearInterval(ringIntervalRef.current);
+      ringIntervalRef.current = null;
+    }
+    if (ringAudioCtxRef.current) {
+      ringAudioCtxRef.current.close().catch(() => {});
+      ringAudioCtxRef.current = null;
+    }
+  }, []);
+
+  const startRinging = useCallback((type: "incoming" | "outgoing") => {
+    // Stop any previous ring first
+    if (ringIntervalRef.current) {
+      clearInterval(ringIntervalRef.current);
+      ringIntervalRef.current = null;
+    }
+    if (ringAudioCtxRef.current) {
+      ringAudioCtxRef.current.close().catch(() => {});
+      ringAudioCtxRef.current = null;
+    }
+
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      ringAudioCtxRef.current = ctx;
+
+      const playBeep = (freq: number, duration: number, delay: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + delay + 0.02);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + delay + duration - 0.05);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + duration);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + duration);
+      };
+
+      const playRingCycle = () => {
+        if (type === "incoming") {
+          // Classic phone double-ring: beep-beep ... pause
+          playBeep(880, 0.4, 0);
+          playBeep(880, 0.4, 0.5);
+        } else {
+          // Outgoing dial tone: single lower tone
+          playBeep(480, 0.6, 0);
+        }
+      };
+
+      playRingCycle();
+      ringIntervalRef.current = setInterval(playRingCycle, 2000);
+    } catch {
+      // AudioContext not supported — silently skip
+    }
+  }, []);
+
 
   // Clean up WebRTC peer connection and streams
   const cleanupCall = useCallback(() => {
-    console.log("Cleaning up voice/video call...");
+    stopRinging();
     if (callDurationIntervalRef.current) {
       clearInterval(callDurationIntervalRef.current);
       callDurationIntervalRef.current = null;
@@ -90,7 +153,7 @@ export function useVoiceCall(
       socket.emit("call-ended", { targetId: activePartnerIdRef.current });
     }
     cleanupCall();
-  }, [cleanupCall, socket]);
+  }, [cleanupCall, stopRinging]);
 
   // Decline Call handler
   const declineCall = useCallback(() => {
@@ -98,7 +161,7 @@ export function useVoiceCall(
       socket.emit("call-declined", { callerId: incomingCallInfo.callerId, reason: "declined" });
     }
     cleanupCall();
-  }, [incomingCallInfo, socket, cleanupCall]);
+  }, [incomingCallInfo, socket, cleanupCall, stopRinging]);
 
   // Play remote stream audio (always useful as fallback/audio routing)
   const playRemoteAudio = (stream: MediaStream) => {
@@ -232,6 +295,9 @@ export function useVoiceCall(
     setConnectionStatus("Calling...");
     activePartnerIdRef.current = selectedChatUser.id;
 
+    // Start outgoing ring sound immediately for User A (caller feedback)
+    startRinging("outgoing");
+
     try {
       const constraints = {
         audio: true,
@@ -265,7 +331,7 @@ export function useVoiceCall(
       setCallErrorMessage("Camera or Microphone permission denied.");
       cleanupCall();
     }
-  }, [selectedChatUser, socket, profile, selectedConversationId, endCall, cleanupCall]);
+  }, [selectedChatUser, socket, profile, selectedConversationId, endCall, cleanupCall, startRinging]);
 
   // Toggle audio track enable/disable (Mute)
   const toggleMute = useCallback(() => {
@@ -293,7 +359,6 @@ export function useVoiceCall(
 
     // 1. Incoming Call
     const onIncomingCall = (data: IncomingCallInfo) => {
-      console.log("Incoming call payload:", data);
       if (callState !== "idle") {
         // We are busy
         socket.emit("call-declined", { callerId: data.callerId, reason: "busy" });
@@ -304,18 +369,20 @@ export function useVoiceCall(
       setIsCameraOn(data.callType === "video");
       setCallState("incoming");
 
+      // 🔔 Start ringing for User B
+      startRinging("incoming");
+
       // Auto-decline if callee doesn't answer in 30 seconds
       callTimeoutRef.current = setTimeout(() => {
-        console.log("Incoming call timeout — declined");
         socket.emit("call-declined", { callerId: data.callerId, reason: "timeout" });
-        cleanupCall();
+        cleanupCall(); // also calls stopRinging
       }, 30000);
     };
 
     // 2. Call Accepted
     const onCallAccepted = async (data: { calleeId: string }) => {
-      console.log("Call accepted by", data.calleeId);
       if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+      stopRinging(); // User A: stop outgoing ring tone when answered
       setCallState("in-call");
       setConnectionStatus("Connecting...");
 
@@ -428,7 +495,7 @@ export function useVoiceCall(
       socket.off("webrtc-answer", onWebRtcAnswer);
       socket.off("webrtc-ice", onWebRtcIce);
     };
-  }, [socket, profile, callState, callType, createPeerConnection, cleanupCall]);
+  }, [socket, profile, callState, callType, createPeerConnection, cleanupCall, startRinging, stopRinging]);
 
   // Handle errors showing up for a few seconds then clearing
   useEffect(() => {

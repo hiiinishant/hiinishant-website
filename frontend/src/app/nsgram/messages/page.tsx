@@ -557,6 +557,8 @@ export default function NsgramMessagesPage() {
 
   useEffect(() => {
     if (!socket || !selectedChatUser?.id) return;
+
+    // Always re-check status when switching conversations (fixes stale offline display)
     socket.emit(
       "check-online-status",
       selectedChatUser.id,
@@ -565,34 +567,43 @@ export default function NsgramMessagesPage() {
           ...prev,
           [selectedChatUser.id]: isOnline,
         }));
+
+        // If offline, fetch lastSeen from Firestore
+        if (!isOnline && db) {
+          import("firebase/firestore").then(({ doc, getDoc }) => {
+            getDoc(doc(db, "users", selectedChatUser.id))
+              .then((snap) => {
+                const ls = snap.data()?.lastSeen ?? null;
+                setLastSeenMap((prev) => ({ ...prev, [selectedChatUser.id]: ls }));
+              })
+              .catch(() => {});
+          });
+        }
       }
     );
-    // If they are offline, read lastSeen from their Firestore user doc
-    if (!onlineStatusMap[selectedChatUser.id] && db) {
-      import("firebase/firestore").then(({ doc, getDoc }) => {
-        getDoc(doc(db, "users", selectedChatUser.id))
-          .then((snap) => {
-            const ls = snap.data()?.lastSeen ?? null;
-            setLastSeenMap((prev) => ({ ...prev, [selectedChatUser.id]: ls }));
-          })
-          .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, selectedChatUser?.id]);
+
+  // ── Auto-scroll messages ────────────────────────────────────────────────────
+  // Always scroll to bottom when conversation first loads (messages array changes from empty).
+  // After that, only auto-scroll if user is already near the bottom (not scrolled up to read history).
+  const prevMsgCountRef = useRef(0);
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const isInitialLoad = prevMsgCountRef.current === 0 && messages.length > 0;
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+
+    if (isInitialLoad || isNearBottom) {
+      // Use instant scroll on initial load, smooth on new messages
+      messagesEndRef.current?.scrollIntoView({
+        behavior: isInitialLoad ? "instant" : "smooth",
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket, selectedChatUser]);
 
-  // ── Auto-scroll messages (only if user is near bottom) ─────────────────────
-  useEffect(() => {
-    if (!messagesContainerRef.current) return;
-
-    const container = messagesContainerRef.current;
-    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-
-    // Only auto-scroll if user is already near the bottom (within 100px)
-    // This allows users to scroll up to read history without being forced down
-    if (isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    prevMsgCountRef.current = messages.length;
   }, [messages]);
 
   // ── Typing indicator: listen for partner's typing events ──────────────────
@@ -731,7 +742,6 @@ export default function NsgramMessagesPage() {
       if (!profile || !selectedConversation || !socket) return;
       const text = messageText.trim();
       if (!text) return;
-      console.log("Sending message:", text);
       // Stop typing indicator immediately on send
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socket.emit("typing-stop", { conversationId: selectedConversation.id, userId: profile.id });
@@ -756,7 +766,6 @@ export default function NsgramMessagesPage() {
         read: false,
         ...(replyPayload ? { replyTo: replyPayload } : {}),
       };
-      console.log("Adding optimistic message to state:", optimisticMsg);
       setMessages((prev) => [...prev, optimisticMsg]);
       setMessageText("");
       if (replyingToMessage) setReplyingToMessage(null);
@@ -804,7 +813,8 @@ export default function NsgramMessagesPage() {
 
   return (
     <div
-      className={`flex gap-0 lg:gap-4 ${panelHeight} -mx-4 -my-6 sm:-mx-6 lg:-mx-8 overflow-hidden`}
+      className="flex gap-0 lg:gap-4 -mx-4 -my-6 sm:-mx-6 lg:-mx-8 overflow-hidden"
+      style={{ height: "calc(100dvh - 56px)" }}
     >
       {/* ── Inbox Panel ───────────────────────────────────────────────────── */}
       <div
