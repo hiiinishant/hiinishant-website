@@ -15,12 +15,14 @@ export default function NsgramProfilePage() {
   const [notice, setNotice] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
-  // Sync state if profile loads asynchronously
+  // Sync state once when profile first loads
+  const loadedRef = React.useRef(false);
   React.useEffect(() => {
-    if (profile) {
+    if (profile && !loadedRef.current) {
       setDisplayName(profile.displayName);
       setBio(profile.bio);
       setAvatar(profile.avatar);
+      loadedRef.current = true;
     }
   }, [profile]);
 

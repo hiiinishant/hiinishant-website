@@ -354,6 +354,33 @@ export default function NsgramMessagesPage() {
     if (id) setSelectedConversationId(id);
   }, [searchParams]);
 
+  // ── Scroll Lock: Prevent entire page scroll on mobile to avoid keyboard shifts ──
+  useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyHeight = document.body.style.height;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.height = "100%";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.height = originalBodyHeight;
+    };
+  }, []);
+
+  const handleInputFocus = useCallback(() => {
+    // Force reset browser window viewport scroll shift
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 150);
+  }, []);
+
+
   // ── Firestore: real-time conversation list ─────────────────────────────────
   useEffect(() => {
     if (!db || !profile?.id) {
@@ -583,6 +610,23 @@ export default function NsgramMessagesPage() {
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, selectedChatUser?.id]);
+
+  // ── Socket.IO: query status for all inbox conversations on load ────────────────
+  useEffect(() => {
+    if (!socket || conversations.length === 0 || !profile?.id) return;
+
+    conversations.forEach((convo) => {
+      const otherId = convo.participants.find((p) => p !== profile.id);
+      if (otherId) {
+        socket.emit("check-online-status", otherId, (isOnline: boolean) => {
+          setOnlineStatusMap((prev) => ({
+            ...prev,
+            [otherId]: isOnline,
+          }));
+        });
+      }
+    });
+  }, [socket, conversations, profile?.id]);
 
   // ── Auto-scroll messages ────────────────────────────────────────────────────
   // Always scroll to bottom when conversation first loads (messages array changes from empty).
@@ -1211,6 +1255,7 @@ export default function NsgramMessagesPage() {
                     setMessageText(e.target.value);
                     handleTyping();
                   }}
+                  onFocus={handleInputFocus}
                   placeholder={`Message ${selectedChatUser.displayName}…`}
                   className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-brand-600 outline-none focus:border-amber-400/50 focus:bg-white/8 transition-all duration-200"
                 />
