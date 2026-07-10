@@ -87,9 +87,11 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
+  const profileId = profile?.id;
+
   // Connect socket.io client when profile is available
   useEffect(() => {
-    if (!profile) {
+    if (!profileId) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -110,7 +112,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
 
     socketClient.on("connect", () => {
       console.log("Socket.IO client connected:", socketClient.id);
-      socketClient.emit("register", profile.id);
+      socketClient.emit("register", profileId);
     });
 
     socketClient.on("connect_error", (error) => {
@@ -123,7 +125,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
 
     socketClient.on("reconnect", () => {
       console.log("Socket.IO client reconnected:", socketClient.id);
-      socketClient.emit("register", profile.id);
+      socketClient.emit("register", profileId);
     });
 
     setSocket(socketClient);
@@ -131,7 +133,8 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
     return () => {
       socketClient.disconnect();
     };
-  }, [profile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileId]);
 
   const logout = async () => {
     if (socket) {

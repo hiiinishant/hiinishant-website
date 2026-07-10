@@ -337,6 +337,7 @@ export default function NsgramMessagesPage() {
   const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [activeMenuMessageId, setActiveMenuMessageId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -406,7 +407,7 @@ export default function NsgramMessagesPage() {
     return () => unsub();
   }, [profile?.id]);
 
-  // ── Firestore: load historical messages on room change ─────────────────────
+  // ── Firestore: load historical messages and listen to updates in real-time ──
   useEffect(() => {
     if (!db || !selectedConversationId) {
       setMessages([]);
@@ -418,13 +419,27 @@ export default function NsgramMessagesPage() {
       orderBy("createdAt", "asc")
     );
 
-    getDocs(q)
-      .then((snap) =>
-        setMessages(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message))
-        )
-      )
-      .catch(() => {});
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const dbMsgs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message));
+        setMessages((prev) => {
+          // Keep temp/optimistic messages that are still pending
+          const tempMsgs = prev.filter((m) => m.id.startsWith("temp-"));
+          const unconfirmedTempMsgs = tempMsgs.filter((temp) => {
+            return !dbMsgs.some(
+              (dbM) => dbM.senderId === temp.senderId && dbM.text === temp.text
+            );
+          });
+          return [...dbMsgs, ...unconfirmedTempMsgs];
+        });
+      },
+      (err) => {
+        console.error("Error listening to messages:", err);
+      }
+    );
+
+    return () => unsub();
   }, [selectedConversationId]);
 
   // ── markAsRead: emit socket event + optimistically flip local messages ─────
@@ -1117,7 +1132,11 @@ export default function NsgramMessagesPage() {
             </div>
 
             {/* Messages area */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            <div
+              ref={messagesContainerRef}
+              onClick={() => setActiveMenuMessageId(null)}
+              className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+            >
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center py-10 select-none">
                   <span className="text-3xl mb-2">👋</span>
@@ -1141,19 +1160,31 @@ export default function NsgramMessagesPage() {
                   <div
                     key={msg.id}
                     id={`msg-${msg.id}`}
-                    className={`flex flex-col gap-1 max-w-[75%] sm:max-w-[60%] relative group border border-transparent rounded-2xl p-0.5 transition-all duration-300 ${
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMenuMessageId((prev) => (prev === msg.id ? null : msg.id));
+                    }}
+                    className={`flex flex-col gap-1 max-w-[75%] sm:max-w-[60%] relative group border border-transparent rounded-2xl p-0.5 transition-all duration-300 cursor-pointer ${
                       isMine ? "ml-auto items-end" : "mr-auto items-start"
                     }`}
                   >
                     {/* Hover controls (quick reactions + quote replies) */}
                     <div
-                      className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition duration-150 z-30 ${
+                      onClick={(e) => e.stopPropagation()}
+                      className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1.5 transition duration-150 z-30 ${
                         isMine ? "right-full mr-3 flex-row-reverse" : "left-full ml-3 flex-row"
+                      } ${
+                        activeMenuMessageId === msg.id
+                          ? "opacity-100 pointer-events-auto"
+                          : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
                       }`}
                     >
                       {/* Reply/Quote Trigger */}
                       <button
-                        onClick={() => setReplyingToMessage(msg)}
+                        onClick={() => {
+                          setReplyingToMessage(msg);
+                          setActiveMenuMessageId(null);
+                        }}
                         type="button"
                         title="Reply"
                         className="flex items-center justify-center w-6 h-6 rounded-full bg-white/5 border border-white/10 text-brand-400 hover:text-white hover:bg-white/15 transition shadow-sm"
@@ -1176,6 +1207,7 @@ export default function NsgramMessagesPage() {
                                   userId: profile.id,
                                   reaction: emoji,
                                 });
+                                setActiveMenuMessageId(null);
                               }
                             }}
                             className="hover:scale-125 transition text-xs px-0.5"
