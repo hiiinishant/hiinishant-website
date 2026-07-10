@@ -74,7 +74,14 @@ io.on('connection', (socket) => {
     if (!userId) return;
     onlineUsers.set(userId, socket.id);
     console.log(`User registered online: ${userId} (${socket.id})`);
-    io.emit('user-status', { userId, status: 'online' });
+    // Clear lastSeen in Firestore — user is now online
+    if (firestore) {
+      firestore.collection('users').doc(userId).set(
+        { lastSeen: null },
+        { merge: true }
+      ).catch(() => {});
+    }
+    io.emit('user-status', { userId, status: 'online', lastSeen: null });
   });
 
   // Query specific user's status
@@ -110,6 +117,74 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} left room ${data.conversationId}`);
   });
 
+  // Typing indicator — relay inside conversation room (no DB write needed)
+  socket.on('typing-start', (data: { conversationId: string; userId: string }) => {
+    const { conversationId, userId } = data;
+    if (!conversationId || !userId) return;
+    socket.to(conversationId).emit('user-typing', { conversationId, userId, isTyping: true });
+  });
+
+  socket.on('typing-stop', (data: { conversationId: string; userId: string }) => {
+    const { conversationId, userId } = data;
+    if (!conversationId || !userId) return;
+    socket.to(conversationId).emit('user-typing', { conversationId, userId, isTyping: false });
+  });
+
+  // ── WebRTC Voice Call Signaling ──
+  socket.on('call-user', (data: { callerId: string; calleeId: string; callerName: string; callerAvatar: string; conversationId: string }) => {
+    const { callerId, calleeId, callerName, callerAvatar, conversationId } = data;
+    const calleeSocketId = onlineUsers.get(calleeId);
+    if (calleeSocketId) {
+      // Relay incoming call to callee
+      io.to(calleeSocketId).emit('incoming-call', { callerId, callerName, callerAvatar, conversationId });
+    } else {
+      // If callee is offline
+      socket.emit('call-declined', { reason: 'offline' });
+    }
+  });
+
+  socket.on('call-accepted', (data: { callerId: string; calleeId: string }) => {
+    const callerSocketId = onlineUsers.get(data.callerId);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit('call-accepted', { calleeId: data.calleeId });
+    }
+  });
+
+  socket.on('call-declined', (data: { callerId: string; reason?: string }) => {
+    const callerSocketId = onlineUsers.get(data.callerId);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit('call-declined', { reason: data.reason });
+    }
+  });
+
+  socket.on('call-ended', (data: { targetId: string }) => {
+    const targetSocketId = onlineUsers.get(data.targetId);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('call-ended');
+    }
+  });
+
+  socket.on('webrtc-offer', (data: { senderId: string; targetId: string; offer: any }) => {
+    const targetSocketId = onlineUsers.get(data.targetId);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('webrtc-offer', { offer: data.offer, senderId: data.senderId });
+    }
+  });
+
+  socket.on('webrtc-answer', (data: { senderId: string; targetId: string; answer: any }) => {
+    const targetSocketId = onlineUsers.get(data.targetId);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('webrtc-answer', { answer: data.answer, senderId: data.senderId });
+    }
+  });
+
+  socket.on('webrtc-ice', (data: { senderId: string; targetId: string; candidate: any }) => {
+    const targetSocketId = onlineUsers.get(data.targetId);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('webrtc-ice', { candidate: data.candidate, senderId: data.senderId });
+    }
+  });
+
   // Send message
   socket.on('send-message', async (data: { conversationId: string; text: string; senderId: string; recipientId: string }) => {
     const { conversationId, text, senderId } = data;
@@ -129,11 +204,12 @@ io.on('connection', (socket) => {
       const convoRef = firestore.collection('conversations').doc(conversationId);
       const msgRef = await convoRef.collection('messages').add(messageData);
 
-      // Update parent conversation doc
+      // Update parent conversation doc (lastMessageRead: false so recipient sees unread dot)
       await convoRef.set({
         lastMessage: text,
         lastMessageAt: timestamp.toISOString(),
         lastMessageBy: senderId,
+        lastMessageRead: false,
       }, { merge: true });
 
       // Emit message directly back to sender (bypasses room-join requirement)
@@ -152,13 +228,60 @@ io.on('connection', (socket) => {
     }
   });
 
+  // MARK AS READ — recipient notifies backend that they've opened a conversation
+  socket.on('mark-as-read', async (payload: { conversationId: string; userId: string }) => {
+    const { conversationId, userId } = payload;
+    if (!conversationId || !userId || !firestore) return;
+    try {
+      const messagesRef = firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages');
+      // Batch update all messages where sender is NOT the current user and read === false
+      const snapshot = await messagesRef
+        .where('senderId', '!=', userId)
+        .where('read', '==', false)
+        .get();
+      const batch = firestore.batch();
+      snapshot.docs.forEach((doc) => {
+        batch.update(doc.ref, { read: true });
+      });
+      await batch.commit();
+
+      // Stamp conversation doc as read so inbox unread dots clear
+      if (snapshot.docs.length > 0) {
+        await firestore
+          .collection('conversations')
+          .doc(conversationId)
+          .set({ lastMessageRead: true }, { merge: true });
+      }
+
+      // Notify the original sender (if online) that their messages are now read
+      const senderId = snapshot.docs.length ? snapshot.docs[0].data().senderId : null;
+      if (senderId && onlineUsers.has(senderId)) {
+        const senderSocketId = onlineUsers.get(senderId);
+        io.to(senderSocketId as string).emit('messages-read', { conversationId });
+      }
+    } catch (err) {
+      console.error('Error marking messages as read:', err);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);
     for (const [userId, socketId] of onlineUsers.entries()) {
       if (socketId === socket.id) {
         onlineUsers.delete(userId);
-        console.log(`User went offline: ${userId}`);
-        io.emit('user-status', { userId, status: 'offline' });
+        const lastSeen = new Date().toISOString();
+        console.log(`User went offline: ${userId} at ${lastSeen}`);
+        // Persist lastSeen to Firestore so other users can query it later
+        if (firestore) {
+          firestore.collection('users').doc(userId).set(
+            { lastSeen },
+            { merge: true }
+          ).catch(() => {});
+        }
+        io.emit('user-status', { userId, status: 'offline', lastSeen });
         break;
       }
     }
