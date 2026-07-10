@@ -77,6 +77,47 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-5 sm:px-8 relative z-10 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
 
+            {/* Profile Photo - shows first on mobile */}
+            <div className="lg:col-span-5 mt-0 lg:mt-8 animate-slide-in-right flex flex-col items-center mx-auto order-1 lg:order-2 lg:sticky lg:top-24 lg:self-start">
+
+              {/* Picture Card */}
+              <div className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[280px] aspect-[4/5] rounded-3xl overflow-hidden glass-strong relative group card-spotlight shadow-2xl border border-white/8 mx-auto">
+                {/* Subtle overlay */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/50 z-10 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-blue-500/5 z-10 pointer-events-none" />
+                {/* Profile photo — fills the whole card */}
+                <img
+                  src="/profile.jpg"
+                  alt="Nishant Kumar — Founder of 2 AM Study"
+                  width={280}
+                  height={350}
+                  fetchPriority="high"
+                  decoding="async"
+                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                />
+              </div>
+
+              {/* Text info below card */}
+              <div className="mt-4 sm:mt-5 w-full max-w-[280px] text-center space-y-2">
+
+                {/* Name + title */}
+                <div>
+                  <p className="text-white font-bold text-xl sm:text-2xl tracking-tight">Nishant Kumar</p>
+                  <p className="text-brand-400 text-sm sm:text-base mt-1 font-medium">Founder · 2 AM Study</p>
+                </div>
+
+                {/* Elegant Quote Block */}
+                <div className="relative pt-1">
+                  <p className="text-base sm:text-lg font-caveat leading-tight font-medium italic relative z-10 px-3 sm:px-4 animate-pulse-slow text-gradient-static">
+                    <span className="text-xl sm:text-2xl text-accent/40 absolute -top-1 left-1 font-serif animate-float">&ldquo;</span>
+                    The best ideas come at 2 AM — when the world is asleep and your mind is on fire.
+                    <span className="text-xl sm:text-2xl text-accent/40 absolute -bottom-3 right-3 font-serif animate-float" style={{ animationDelay: '1s' }}>&rdquo;</span>
+                  </p>
+                </div>
+
+              </div>
+            </div>
+
             {/* Left Content (Hero + Narrative) */}
             <div className="lg:col-span-7 space-y-8 text-left order-2 lg:order-1">
               {/* Live badge */}
@@ -156,58 +197,14 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Visual — sticky on desktop */}
-            <div className="lg:col-span-5 mt-0 lg:mt-8 animate-slide-in-right flex flex-col items-center mx-auto order-1 lg:order-2 lg:sticky lg:top-24 lg:self-start">
-
-              {/* Picture Card */}
-              <div className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[280px] aspect-[4/5] rounded-3xl overflow-hidden glass-strong relative group card-spotlight shadow-2xl border border-white/8 mx-auto">
-                {/* Subtle overlay */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/50 z-10 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-blue-500/5 z-10 pointer-events-none" />
-                {/* Profile photo — fills the whole card */}
-                <img
-                  src="/profile.jpg"
-                  alt="Nishant Kumar — Founder of 2 AM Study"
-                  width={280}
-                  height={350}
-                  fetchPriority="high"
-                  decoding="async"
-                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
-                />
-              </div>
-
-              {/* Text info below card */}
-              <div className="mt-4 sm:mt-5 w-full max-w-[280px] text-center space-y-2">
-
-                {/* Name + title */}
-                <div>
-                  <p className="text-white font-bold text-xl sm:text-2xl tracking-tight">Nishant Kumar</p>
-                  <p className="text-brand-400 text-sm sm:text-base mt-1 font-medium">Founder · 2 AM Study</p>
-                </div>
-
-                {/* Elegant Quote Block */}
-                <div className="relative pt-1">
-                  <p className="text-base sm:text-lg font-caveat leading-tight font-medium italic relative z-10 px-3 sm:px-4 animate-pulse-slow text-gradient-static">
-                    <span className="text-xl sm:text-2xl text-accent/40 absolute -top-1 left-1 font-serif animate-float">&ldquo;</span>
-                    The best ideas come at 2 AM — when the world is asleep and your mind is on fire.
-                    <span className="text-xl sm:text-2xl text-accent/40 absolute -bottom-3 right-3 font-serif animate-float" style={{ animationDelay: '1s' }}>&rdquo;</span>
-                  </p>
-                </div>
-
-              </div>
-            </div>
-
-
-
-
-          </div >
-        </div >
-      </section >
+          </div>
+        </div>
+      </section>
 
       {/* ─── EXPLORE PORTAL ─── */}
-      < section id="explore" className="py-20 lg:py-28 relative overflow-hidden border-t border-white/5 bg-brand-950/10" >
+      <section id="explore" className="py-20 lg:py-28 relative overflow-hidden border-t border-white/5 bg-brand-950/10">
         {/* Subtle background glow */}
-        < div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-accent/3 blur-[140px] pointer-events-none -z-10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-accent/3 blur-[140px] pointer-events-none -z-10" />
 
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <div className="text-center mb-16">

@@ -52,11 +52,11 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Sidebar Navigation */}
       <NsgramSidebar />
 
-      {/* Fixed top header — sits in content area beside sidebar */}
-      <NsgramHeader />
+      {/* Fixed top header — only shows on homepage */}
+      {pathname === "/nsgram/home" && <NsgramHeader />}
 
-      {/* Main Content Area — pt-14 clears the fixed header */}
-      <main className="flex-1 md:pl-64 pt-14 pb-20 md:pb-0 min-h-screen transition-all duration-300">
+      {/* Main Content Area — pt-14 clears the fixed header only on homepage */}
+      <main className={`flex-1 md:pl-64 ${pathname === "/nsgram/home" ? "pt-14" : "pt-0"} pb-20 md:pb-0 min-h-screen transition-all duration-300`}>
         <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </div>

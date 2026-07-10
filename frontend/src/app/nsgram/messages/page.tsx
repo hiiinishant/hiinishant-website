@@ -339,6 +339,7 @@ export default function NsgramMessagesPage() {
   const [recordingDuration, setRecordingDuration] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // debounce for typing-stop
   
@@ -473,6 +474,7 @@ export default function NsgramMessagesPage() {
     // If a temp message exists (optimistic UI), replace it with the real one.
     // Otherwise just append (handles edge cases like page reload mid-send).
     const onMessageSent = (msg: Message & { tempId?: string }) => {
+      console.log("Message confirmed from server:", msg);
       setMessages((prev) => {
         // Find the temp placeholder by tempId if provided
         const tempIdx = msg.tempId ? prev.findIndex((m) => m.id === msg.tempId) : -1;
@@ -579,9 +581,18 @@ export default function NsgramMessagesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, selectedChatUser]);
 
-  // ── Auto-scroll messages ───────────────────────────────────────────────────
+  // ── Auto-scroll messages (only if user is near bottom) ─────────────────────
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!messagesContainerRef.current) return;
+
+    const container = messagesContainerRef.current;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+    // Only auto-scroll if user is already near the bottom (within 100px)
+    // This allows users to scroll up to read history without being forced down
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // ── Typing indicator: listen for partner's typing events ──────────────────
@@ -720,6 +731,7 @@ export default function NsgramMessagesPage() {
       if (!profile || !selectedConversation || !socket) return;
       const text = messageText.trim();
       if (!text) return;
+      console.log("Sending message:", text);
       // Stop typing indicator immediately on send
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socket.emit("typing-stop", { conversationId: selectedConversation.id, userId: profile.id });
@@ -744,6 +756,7 @@ export default function NsgramMessagesPage() {
         read: false,
         ...(replyPayload ? { replyTo: replyPayload } : {}),
       };
+      console.log("Adding optimistic message to state:", optimisticMsg);
       setMessages((prev) => [...prev, optimisticMsg]);
       setMessageText("");
       if (replyingToMessage) setReplyingToMessage(null);
@@ -757,6 +770,7 @@ export default function NsgramMessagesPage() {
       };
       if (replyPayload) payload.replyTo = replyPayload;
 
+      console.log("Emitting send-message to socket:", payload);
       socket.emit("send-message", payload);
     },
     [profile, selectedConversation, socket, messageText, selectedChatUser, replyingToMessage, users]
@@ -980,7 +994,7 @@ export default function NsgramMessagesPage() {
             </div>
 
             {/* Messages area */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center py-10 select-none">
                   <span className="text-3xl mb-2">👋</span>

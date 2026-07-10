@@ -98,15 +98,31 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+    console.log("Connecting to socket backend:", backendUrl);
     const socketClient = io(backendUrl, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
     });
 
     socketClient.on("connect", () => {
       console.log("Socket.IO client connected:", socketClient.id);
+      socketClient.emit("register", profile.id);
+    });
+
+    socketClient.on("connect_error", (error) => {
+      console.error("Socket.IO connection error:", error);
+    });
+
+    socketClient.on("disconnect", (reason) => {
+      console.log("Socket.IO client disconnected:", reason);
+    });
+
+    socketClient.on("reconnect", () => {
+      console.log("Socket.IO client reconnected:", socketClient.id);
       socketClient.emit("register", profile.id);
     });
 

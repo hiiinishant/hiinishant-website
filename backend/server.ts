@@ -193,16 +193,17 @@ io.on('connection', (socket) => {
   });
 
   // Send message (supports optional replyTo and audioUrl for voice notes)
-  socket.on('send-message', async (data: { 
-    conversationId: string; 
-    text: string; 
-    senderId: string; 
+  socket.on('send-message', async (data: {
+    conversationId: string;
+    text: string;
+    senderId: string;
     recipientId: string;
     replyTo?: { id: string; text: string; senderId: string; senderName: string };
     audioUrl?: string;
     tempId?: string; // optimistic UI placeholder id from client
   }) => {
     const { conversationId, text, senderId, replyTo, audioUrl, tempId } = data;
+    console.log('Received send-message from socket:', data);
     if (!conversationId || !senderId || !firestore) return;
 
     try {
@@ -231,18 +232,24 @@ io.on('connection', (socket) => {
         }, { merge: true }),
       ]);
 
+      console.log('Message saved to Firestore with ID:', msgRef.id);
+
       // Emit confirmation back to sender — includes tempId so client can swap optimistic placeholder
-      socket.emit('message-sent', {
+      const confirmationPayload = {
         id: msgRef.id,
         tempId: tempId ?? null,
         ...messageData,
-      });
+      };
+      console.log('Emitting message-sent confirmation to sender:', confirmationPayload);
+      socket.emit('message-sent', confirmationPayload);
 
       // Broadcast to all other sockets in the room (e.g. recipient)
-      socket.to(conversationId).emit('receive-message', {
+      const broadcastPayload = {
         id: msgRef.id,
         ...messageData,
-      });
+      };
+      console.log('Broadcasting receive-message to room:', conversationId, broadcastPayload);
+      socket.to(conversationId).emit('receive-message', broadcastPayload);
     } catch (err) {
       console.error('Error handling socket message:', err);
     }
