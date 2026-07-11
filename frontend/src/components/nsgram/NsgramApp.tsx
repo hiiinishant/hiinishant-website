@@ -70,7 +70,7 @@ export default function NsgramApp() {
         return;
       }
 
-      const userRef = doc(db, "users", user.uid);
+      const userRef = doc(db!, "users", user.uid);
       unsubscribeProfile?.();
       unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
         if (snapshot.exists()) {
@@ -163,7 +163,7 @@ export default function NsgramApp() {
     setNotice("");
     try {
       await reload(authUser);
-      const currentUser = auth.currentUser;
+      const currentUser = auth!.currentUser;
       if (currentUser?.emailVerified) {
         // Activate profile on backend with Firebase ID token
         const idToken = await getIdToken(currentUser);
@@ -183,7 +183,7 @@ export default function NsgramApp() {
 
         // Set states so redirect triggers
         setAuthUser(currentUser);
-        const docRef = doc(db, "users", currentUser.uid);
+        const docRef = doc(db!, "users", currentUser.uid);
         const snapshot = await getDoc(docRef);
         if (snapshot.exists()) {
           const data = snapshot.data();
@@ -207,7 +207,7 @@ export default function NsgramApp() {
     setAuthLoading(true);
     setNotice("");
     try {
-      await signOut(auth);
+      await signOut(auth!);
       setAuthUser(null);
       setProfile(null);
     } catch (error: any) {

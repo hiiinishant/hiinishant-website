@@ -58,7 +58,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
         return;
       }
 
-      const userRef = doc(db, "users", user.uid);
+      const userRef = doc(db!, "users", user.uid);
       unsubscribeProfile?.();
       unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
         if (snapshot.exists()) {
@@ -71,7 +71,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
       });
     });
 
-    const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+    const unsubscribeUsers = onSnapshot(collection(db!, "users"), (snapshot) => {
       const latestUsers = snapshot.docs
         .map((docSnap) => ({
           id: docSnap.id,

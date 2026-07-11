@@ -425,10 +425,8 @@ export default function NsgramMessagesPage() {
       (snap) => {
         setFirestoreError(null);
         const dbMsgs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message));
+        console.log(`[onSnapshot] Fired for convo ${selectedConversationId}. Docs count: ${dbMsgs.length}. FromCache: ${snap.metadata.fromCache}. HasPendingWrites: ${snap.metadata.hasPendingWrites}`);
         setMessages((prev) => {
-          // Keep only temp/optimistic messages whose tempId has NOT yet been confirmed
-          // by Firestore (i.e. no dbMsg references this tempId). This is unambiguous
-          // regardless of message text or sender — fixes voice notes and multi-send dedup.
           const confirmedTempIds = new Set(
             dbMsgs.map((m) => (m as any).tempId).filter(Boolean)
           );
@@ -439,7 +437,7 @@ export default function NsgramMessagesPage() {
         });
       },
       (err) => {
-        console.error("Error listening to messages:", err);
+        console.error("[onSnapshot] ERROR listening to messages:", err);
         setFirestoreError(err.message);
       }
     );
@@ -465,26 +463,22 @@ export default function NsgramMessagesPage() {
   );
 
   // ── Socket.IO: join/leave room + receive incoming messages ─────────────────
+  // Depends on socketConnected so that reconnects automatically re-emit join-room.
   useEffect(() => {
-    if (!socket || !selectedConversationId || !profile?.id) return;
+    if (!socket || !selectedConversationId || !profile?.id || !socketConnected) return;
 
-    const joinRoom = () => {
-      socket.emit("join-room", {
-        conversationId: selectedConversationId,
-        userId: profile.id,
-      });
-    };
-
-    joinRoom();
-
-    // Re-join room automatically on reconnect (fixes missing messages bug)
-    socket.on("connect", joinRoom);
+    console.log(`[join-room] Emitting join-room for convo: ${selectedConversationId}`);
+    socket.emit("join-room", {
+      conversationId: selectedConversationId,
+      userId: profile.id,
+    });
 
     // Mark conversation as read the moment we join it
     markAsRead(selectedConversationId);
 
     // Incoming message from other users in the room
     const onReceiveMessage = (msg: Message) => {
+      console.log("[receive-message] Socket event received:", msg.id, msg.text?.slice(0, 30));
       setMessages((prev) =>
         prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
       );
@@ -496,11 +490,10 @@ export default function NsgramMessagesPage() {
 
     return () => {
       socket.emit("leave-room", { conversationId: selectedConversationId });
-      socket.off("connect", joinRoom);
       socket.off("receive-message", onReceiveMessage);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket, selectedConversationId, profile?.id]);
+  }, [socket, socketConnected, selectedConversationId, profile?.id]);
 
   // ── Socket.IO: messages-read — recipient read our messages (show "Seen") ───
   useEffect(() => {
@@ -530,7 +523,7 @@ export default function NsgramMessagesPage() {
     // If a temp message exists (optimistic UI), replace it with the real one.
     // Otherwise just append (handles edge cases like page reload mid-send).
     const onMessageSent = (msg: Message & { tempId?: string }) => {
-      console.log("Message confirmed from server:", msg);
+      console.log("[message-sent] Server confirmed message:", msg.id, "tempId:", msg.tempId);
       setMessages((prev) => {
         // Find the temp placeholder by tempId if provided
         const tempIdx = msg.tempId ? prev.findIndex((m) => m.id === msg.tempId) : -1;
@@ -630,7 +623,7 @@ export default function NsgramMessagesPage() {
           } else if (db) {
             // If offline, fetch lastSeen from Firestore
             import("firebase/firestore").then(({ doc, getDoc }) => {
-              getDoc(doc(db, "users", selectedChatUser.id))
+              getDoc(doc(db!, "users", selectedChatUser.id))
                 .then((snap) => {
                   const ls = snap.data()?.lastSeen ?? null;
                   setLastSeenMap((prev) => ({ ...prev, [selectedChatUser.id]: ls }));
@@ -744,6 +737,7 @@ export default function NsgramMessagesPage() {
     }
 
     const onUserTyping = (data: { conversationId: string; userId: string; isTyping: boolean }) => {
+      console.log("[user-typing] Received typing status update:", data);
       // Only care about this conversation and the other person (not ourselves)
       if (data.conversationId === selectedConversationId && data.userId === selectedChatUser.id) {
         setIsTyping(data.isTyping);
@@ -756,6 +750,15 @@ export default function NsgramMessagesPage() {
       setIsTyping(false);
     };
   }, [socket, selectedConversationId, selectedChatUser?.id]);
+
+  // Cleanup active typing timeouts on conversation switch or unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [selectedConversationId]);
 
   // ── Audio Recording Handlers ───────────────────────────────────────────────
   const createMockAudioBase64 = (durationSeconds: number): string => {

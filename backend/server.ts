@@ -127,27 +127,49 @@ io.on('connection', (socket) => {
 
   // ── Join direct conversation room ─────────────────────────────────────────
   // Uses in-memory participant cache; falls back to Firestore only on first join.
+  // If the conversation document doesn't exist yet (client write still propagating),
+  // we retry once after a short delay to handle the race condition between
+  // profile/[id]/page.tsx setDoc() and router.push() navigating immediately.
   socket.on('join-room', async (data: { conversationId: string; userId: string }) => {
     const { conversationId, userId } = data;
     if (!conversationId || !userId || !firestore) return;
 
-    try {
-      let participants = convoParticipantsCache.get(conversationId);
-      if (!participants) {
-        const convoDoc = await firestore.collection('conversations').doc(conversationId).get();
-        if (!convoDoc.exists) return;
-        participants = convoDoc.data()?.participants || [];
-        convoParticipantsCache.set(conversationId, participants);
-      }
+    const tryJoin = async (attempt: number): Promise<void> => {
+      try {
+        let participants = convoParticipantsCache.get(conversationId);
+        if (!participants) {
+          console.log(`[join-room] Cache miss — fetching Firestore for convo: ${conversationId} (attempt ${attempt})`);
+          const convoDoc = await firestore!.collection('conversations').doc(conversationId).get();
+          if (!convoDoc.exists) {
+            if (attempt < 2) {
+              // Retry once after 600ms — the client setDoc may still be propagating
+              console.warn(`[join-room] Doc not found yet for ${conversationId}, retrying in 600ms...`);
+              await new Promise(resolve => setTimeout(resolve, 600));
+              return tryJoin(attempt + 1);
+            }
+            console.warn(`[join-room] DROPPED — conversation doc does NOT exist: ${conversationId}. Socket ${socket.id} for user ${userId} NOT joined.`);
+            return;
+          }
+          participants = convoDoc.data()?.participants || [];
+          convoParticipantsCache.set(conversationId, participants);
+          console.log(`[join-room] Participants fetched:`, participants);
+        } else {
+          console.log(`[join-room] Cache hit for convo: ${conversationId}`);
+        }
 
-      if (participants.includes(userId)) {
-        socket.join(conversationId);
-      } else {
-        console.warn(`Auth mismatch: User ${userId} tried to join convo ${conversationId}`);
+        if (participants.includes(userId)) {
+          socket.join(conversationId);
+          const roomSize = io.sockets.adapter.rooms.get(conversationId)?.size ?? 0;
+          console.log(`[join-room] SUCCESS — user ${userId} joined room ${conversationId}. Room size now: ${roomSize}`);
+        } else {
+          console.warn(`Auth mismatch: User ${userId} tried to join convo ${conversationId}`);
+        }
+      } catch (err) {
+        console.error('Error joining socket room:', err);
       }
-    } catch (err) {
-      console.error('Error joining socket room:', err);
-    }
+    };
+
+    await tryJoin(1);
   });
 
   // ── Leave direct conversation room ────────────────────────────────────────
@@ -160,12 +182,14 @@ io.on('connection', (socket) => {
   socket.on('typing-start', (data: { conversationId: string; userId: string }) => {
     const { conversationId, userId } = data;
     if (!conversationId || !userId) return;
+    console.log(`[typing-start] User ${userId} is typing in room ${conversationId}`);
     socket.to(conversationId).emit('user-typing', { conversationId, userId, isTyping: true });
   });
 
   socket.on('typing-stop', (data: { conversationId: string; userId: string }) => {
     const { conversationId, userId } = data;
     if (!conversationId || !userId) return;
+    console.log(`[typing-stop] User ${userId} stopped typing in room ${conversationId}`);
     socket.to(conversationId).emit('user-typing', { conversationId, userId, isTyping: false });
   });
 
@@ -256,10 +280,14 @@ io.on('connection', (socket) => {
 
       const convoRef = firestore.collection('conversations').doc(conversationId);
 
-      // Parallel write: message document + conversation metadata
+      // Parallel write: message document + conversation metadata.
+      // NOTE: participants must be set here too (with merge:true it is additive),
+      // so the conversation document is always fully populated even if the client
+      // setDoc raced and lost. This ensures join-room can always find participants.
       const [msgRef] = await Promise.all([
         convoRef.collection('messages').add(messageData),
         convoRef.set({
+          participants: [senderId, data.recipientId].sort(),
           lastMessage: audioUrl ? '🎤 Voice note' : text,
           lastMessageAt: timestamp.toISOString(),
           lastMessageBy: senderId,
@@ -277,6 +305,11 @@ io.on('connection', (socket) => {
       });
 
       // Broadcast to recipient (and any other participants in the room)
+      const roomSize = io.sockets.adapter.rooms.get(conversationId)?.size ?? 0;
+      console.log(`[send-message] Broadcasting receive-message to room ${conversationId}. Room size (excluding sender): ${roomSize - 1}`);
+      if (roomSize <= 1) {
+        console.warn(`[send-message] WARNING: Only sender is in room ${conversationId}. Recipient may not have joined. Message will NOT be received in real-time via socket.`);
+      }
       socket.to(conversationId).emit('receive-message', {
         id: msgRef.id,
         ...messageData,

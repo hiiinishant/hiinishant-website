@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { useNsgramAuth, type AvatarType } from "@/components/nsgram/NsgramAuthProvider";
 
 export default function NsgramProfilePage() {
-  const { profile } = useNsgramAuth();
+  const { profile, authUser } = useNsgramAuth();
 
   const [displayName, setDisplayName] = useState(profile?.displayName || "");
   const [bio, setBio] = useState(profile?.bio || "");
@@ -48,19 +48,26 @@ export default function NsgramProfilePage() {
 
       // Update via backend API too (optional, but good for database consistency if backend tracks login/profile history)
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-      if (backendUrl) {
-        await fetch(`${backendUrl}/api/users/profile`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            uid: profile.id,
-            displayName: displayName.trim(),
-            bio: bio.trim(),
-            avatar,
-          }),
-        }).catch((err) => console.error("Backend profile sync warning:", err));
+      if (backendUrl && authUser) {
+        try {
+          const idToken = await authUser.getIdToken();
+          await fetch(`${backendUrl}/api/users/profile`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              uid: profile.id,
+              displayName: displayName.trim(),
+              bio: bio.trim(),
+              avatar,
+              email: profile.email,
+            }),
+          });
+        } catch (err) {
+          console.error("Backend profile sync warning:", err);
+        }
       }
 
       setNotice("Profile updated successfully!");
