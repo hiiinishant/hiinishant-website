@@ -12,18 +12,22 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // If not loading, and there's no active verified user or activated profile, and we are not on the login/signup index page (/nsgram)
     const isVerified = authUser && authUser.emailVerified;
     const isProfileActivated = profile && profile.isActivated;
-    if (!loading && (!authUser || !isVerified || !profile || !isProfileActivated) && pathname !== "/nsgram") {
+
+    if (
+      !loading &&
+      (!authUser || !isVerified || !profile || !isProfileActivated) &&
+      pathname !== "/nsgram"
+    ) {
       router.replace("/nsgram");
     }
   }, [authUser, profile, loading, pathname, router]);
 
-  // If loading, show community loading spinner
+  // Loading screen
   if (loading) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-brand-100">
+      <section className="flex h-dvh items-center justify-center bg-slate-950 px-4 text-brand-100">
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-400 border-t-transparent" />
           <p className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm tracking-wide">
@@ -34,8 +38,7 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If not logged in and not loading, we redirect (but show empty section while redirecting)
-  // If we are on `/nsgram`, we don't show the layout sidebar/padding (since that's the login screen)
+  // Login page
   if (pathname === "/nsgram") {
     return <>{children}</>;
   }
@@ -44,29 +47,29 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
   const isProfileActivated = profile && profile.isActivated;
 
   if (!authUser || !isVerified || !profile || !isProfileActivated) {
-    return <section className="min-h-screen bg-slate-950" />;
+    return <section className="h-dvh bg-slate-950" />;
   }
 
   const isMessagesPage = pathname === "/nsgram/messages";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col md:flex-row">
-      {/* Sidebar Navigation */}
+    <div className="h-dvh overflow-hidden bg-slate-950 text-white flex flex-col md:flex-row">
+      {/* Sidebar */}
       <NsgramSidebar />
 
-      {/* Fixed top header — only shows on homepage */}
+      {/* Homepage Header */}
       {pathname === "/nsgram/home" && <NsgramHeader />}
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main
-        className={`flex-1 md:pl-64 ${pathname === "/nsgram/home" ? "pt-14" : "pt-0"
+        className={`flex-1 md:pl-64 overflow-hidden ${pathname === "/nsgram/home" ? "pt-14" : ""
           } ${isMessagesPage ? "pb-16 md:pb-0" : "pb-20 md:pb-0"
-          } min-h-0 transition-all duration-300`}
+          }`}
       >
         <div
           className={
             isMessagesPage
-              ? "w-full h-[calc(100dvh-64px)]"
+              ? "w-full h-full overflow-hidden"
               : "max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8"
           }
         >
@@ -77,7 +80,11 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function NsgramLayout({ children }: { children: React.ReactNode }) {
+export default function NsgramLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <NsgramAuthProvider>
       <NsgramLayoutContent>{children}</NsgramLayoutContent>
