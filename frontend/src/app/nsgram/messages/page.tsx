@@ -1002,7 +1002,7 @@ export default function NsgramMessagesPage() {
 
   return (
     <div
-      className="flex gap-0 lg:gap-4 overflow-hidden w-full h-[calc(100dvh-64px)] md:h-dvh"
+      className={`flex gap-0 lg:gap-4 overflow-hidden w-full ${panelHeight}`}
     >
       {/* ── Inbox Panel ───────────────────────────────────────────────────── */}
       <div
@@ -1075,7 +1075,7 @@ export default function NsgramMessagesPage() {
         {selectedConversation && selectedChatUser ? (
           <>
             {/* Chat header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/8 shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 bg-red-500 border-b border-white/8 shrink-0">
               <div className="flex items-center gap-3 min-w-0">
                 {/* Back button (mobile) */}
                 <button

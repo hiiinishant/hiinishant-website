@@ -58,8 +58,18 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
       {pathname === "/nsgram/home" && <NsgramHeader />}
 
       {/* Main Content Area */}
-      <main className={`flex-1 md:pl-64 ${pathname === "/nsgram/home" ? "pt-14" : "pt-0"} ${isMessagesPage ? "pb-16 md:pb-0" : "pb-20 md:pb-0"} min-h-screen transition-all duration-300`}>
-        <div className={isMessagesPage ? "w-full h-full" : "max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8"}>
+      <main
+        className={`flex-1 md:pl-64 ${pathname === "/nsgram/home" ? "pt-14" : "pt-0"
+          } ${isMessagesPage ? "pb-16 md:pb-0" : "pb-20 md:pb-0"
+          } min-h-0 transition-all duration-300`}
+      >
+        <div
+          className={
+            isMessagesPage
+              ? "w-full h-[calc(100dvh-64px)]"
+              : "max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8"
+          }
+        >
           {children}
         </div>
       </main>
