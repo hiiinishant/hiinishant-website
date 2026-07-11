@@ -246,6 +246,7 @@ export function useVoiceCall(
   const acceptCall = useCallback(async () => {
     if (!incomingCallInfo || !socket || !profile) return;
     if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+    stopRinging(); // Stop the incoming ring tone when answered
 
     activePartnerIdRef.current = incomingCallInfo.callerId;
     setCallState("in-call");
@@ -283,7 +284,7 @@ export function useVoiceCall(
       });
       cleanupCall();
     }
-  }, [incomingCallInfo, socket, profile, callType, createPeerConnection, cleanupCall]);
+  }, [incomingCallInfo, socket, profile, callType, createPeerConnection, cleanupCall, stopRinging]);
 
   // Initiate call to selectedChatUser
   const initiateCall = useCallback(async (type: CallType) => {

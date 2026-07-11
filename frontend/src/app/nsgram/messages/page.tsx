@@ -98,6 +98,35 @@ function formatLastSeen(value: string | null | undefined): string {
   return `last seen ${date.toLocaleDateString("en", { month: "short", day: "numeric" })}`;
 }
 
+/** Robust deduplication of message arrays by ID and tempId */
+function deduplicateMessages(msgs: Message[]): Message[] {
+  const confirmedTempIds = new Set<string>();
+  const seenIds = new Set<string>();
+
+  // Collect all confirmed tempIds from database messages
+  for (const m of msgs) {
+    if (!m.id.startsWith("temp-")) {
+      const tId = (m as any).tempId;
+      if (tId) confirmedTempIds.add(tId);
+    }
+  }
+
+  const result: Message[] = [];
+  for (const m of msgs) {
+    // Skip if it's a temporary placeholder that has been replaced/confirmed
+    if (m.id.startsWith("temp-") && confirmedTempIds.has(m.id)) {
+      continue;
+    }
+    // Deduplicate standard IDs
+    if (!seenIds.has(m.id)) {
+      seenIds.add(m.id);
+      result.push(m);
+    }
+  }
+  return result;
+}
+
+
 function sortByRecent(list: Conversation[]): Conversation[] {
   return [...list].sort((a, b) => {
     const aT = toDate(a.lastMessageAt)?.getTime() ?? 0;
@@ -433,7 +462,7 @@ export default function NsgramMessagesPage() {
           const pendingTempMsgs = prev.filter(
             (m) => m.id.startsWith("temp-") && !confirmedTempIds.has(m.id)
           );
-          return [...dbMsgs, ...pendingTempMsgs];
+          return deduplicateMessages([...dbMsgs, ...pendingTempMsgs]);
         });
       },
       (err) => {
@@ -480,7 +509,7 @@ export default function NsgramMessagesPage() {
     const onReceiveMessage = (msg: Message) => {
       console.log("[receive-message] Socket event received:", msg.id, msg.text?.slice(0, 30));
       setMessages((prev) =>
-        prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
+        deduplicateMessages(prev.some((m) => m.id === msg.id) ? prev : [...prev, msg])
       );
       // Auto-mark as read since the chat is open
       markAsRead(selectedConversationId);
@@ -531,10 +560,10 @@ export default function NsgramMessagesPage() {
           // Swap the temp placeholder with the real confirmed message
           const updated = [...prev];
           updated[tempIdx] = { ...msg };
-          return updated;
+          return deduplicateMessages(updated);
         }
         // No temp placeholder (e.g. browser refresh) — only append if not already present
-        return prev.some((m) => m.id === msg.id) ? prev : [...prev, msg];
+        return deduplicateMessages(prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
       });
     };
 
@@ -864,7 +893,7 @@ export default function NsgramMessagesPage() {
               createdAt: new Date().toISOString(),
               read: false,
             };
-            setMessages((prev) => [...prev, optimisticVoiceMsg]);
+            setMessages((prev) => deduplicateMessages([...prev, optimisticVoiceMsg]));
 
             socket.emit("send-message", {
               conversationId: selectedConversation.id,
@@ -918,7 +947,7 @@ export default function NsgramMessagesPage() {
         read: false,
         ...(replyPayload ? { replyTo: replyPayload } : {}),
       };
-      setMessages((prev) => [...prev, optimisticMsg]);
+      setMessages((prev) => deduplicateMessages([...prev, optimisticMsg]));
       setMessageText("");
       if (replyingToMessage) setReplyingToMessage(null);
 

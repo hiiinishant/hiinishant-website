@@ -194,11 +194,11 @@ io.on('connection', (socket) => {
   });
 
   // ── WebRTC Voice Call Signaling ───────────────────────────────────────────
-  socket.on('call-user', (data: { callerId: string; calleeId: string; callerName: string; callerAvatar: string; conversationId: string }) => {
-    const { callerId, calleeId, callerName, callerAvatar, conversationId } = data;
+  socket.on('call-user', (data: { callerId: string; calleeId: string; callerName: string; callerAvatar: string; conversationId: string; callType: 'voice' | 'video' }) => {
+    const { callerId, calleeId, callerName, callerAvatar, conversationId, callType } = data;
     const calleeSocketId = getUserSocketId(calleeId);
     if (calleeSocketId) {
-      io.to(calleeSocketId).emit('incoming-call', { callerId, callerName, callerAvatar, conversationId });
+      io.to(calleeSocketId).emit('incoming-call', { callerId, callerName, callerAvatar, conversationId, callType });
     } else {
       socket.emit('call-declined', { reason: 'offline' });
     }
