@@ -63,8 +63,17 @@ const io = new Server(httpServer, {
   }
 });
 
-// Map to track online users: userId -> socketId
-const onlineUsers = new Map<string, string>();
+// Map to track online users: userId -> Set of socketIds
+// Fix #18 NOTE: This is stored in-memory. If server restarts (e.g. Render cold start),
+// this state is cleared. Sockets will re-register on client reconnect.
+const onlineUsers = new Map<string, Set<string>>();
+
+// Get the latest socket ID for a user
+function getUserSocketId(userId: string): string | undefined {
+  const sockets = onlineUsers.get(userId);
+  if (!sockets || sockets.size === 0) return undefined;
+  return Array.from(sockets).pop();
+}
 
 // Cache conversation participants to avoid Firestore reads on every join-room
 const convoParticipantsCache = new Map<string, string[]>();
@@ -91,8 +100,13 @@ io.on('connection', (socket) => {
       console.log(`Cancelled pending offline timer for ${userId} (reconnected)`);
     }
 
-    onlineUsers.set(userId, socket.id);
-    console.log(`User registered online: ${userId} (${socket.id})`);
+    let sockets = onlineUsers.get(userId);
+    if (!sockets) {
+      sockets = new Set<string>();
+      onlineUsers.set(userId, sockets);
+    }
+    sockets.add(socket.id);
+    console.log(`User registered online: ${userId} (${socket.id}). Active sockets: ${sockets.size}`);
 
     // Clear lastSeen in Firestore — user is now online
     if (firestore) {
@@ -106,7 +120,8 @@ io.on('connection', (socket) => {
 
   // ── Query specific user's online status ──────────────────────────────────
   socket.on('check-online-status', (targetUserId: string, callback: (isOnline: boolean) => void) => {
-    const isOnline = onlineUsers.has(targetUserId);
+    const sockets = onlineUsers.get(targetUserId);
+    const isOnline = !!(sockets && sockets.size > 0);
     callback(isOnline);
   });
 
@@ -157,7 +172,7 @@ io.on('connection', (socket) => {
   // ── WebRTC Voice Call Signaling ───────────────────────────────────────────
   socket.on('call-user', (data: { callerId: string; calleeId: string; callerName: string; callerAvatar: string; conversationId: string }) => {
     const { callerId, calleeId, callerName, callerAvatar, conversationId } = data;
-    const calleeSocketId = onlineUsers.get(calleeId);
+    const calleeSocketId = getUserSocketId(calleeId);
     if (calleeSocketId) {
       io.to(calleeSocketId).emit('incoming-call', { callerId, callerName, callerAvatar, conversationId });
     } else {
@@ -166,42 +181,42 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call-accepted', (data: { callerId: string; calleeId: string }) => {
-    const callerSocketId = onlineUsers.get(data.callerId);
+    const callerSocketId = getUserSocketId(data.callerId);
     if (callerSocketId) {
       io.to(callerSocketId).emit('call-accepted', { calleeId: data.calleeId });
     }
   });
 
   socket.on('call-declined', (data: { callerId: string; reason?: string }) => {
-    const callerSocketId = onlineUsers.get(data.callerId);
+    const callerSocketId = getUserSocketId(data.callerId);
     if (callerSocketId) {
       io.to(callerSocketId).emit('call-declined', { reason: data.reason });
     }
   });
 
   socket.on('call-ended', (data: { targetId: string }) => {
-    const targetSocketId = onlineUsers.get(data.targetId);
+    const targetSocketId = getUserSocketId(data.targetId);
     if (targetSocketId) {
       io.to(targetSocketId).emit('call-ended');
     }
   });
 
   socket.on('webrtc-offer', (data: { senderId: string; targetId: string; offer: any }) => {
-    const targetSocketId = onlineUsers.get(data.targetId);
+    const targetSocketId = getUserSocketId(data.targetId);
     if (targetSocketId) {
       io.to(targetSocketId).emit('webrtc-offer', { offer: data.offer, senderId: data.senderId });
     }
   });
 
   socket.on('webrtc-answer', (data: { senderId: string; targetId: string; answer: any }) => {
-    const targetSocketId = onlineUsers.get(data.targetId);
+    const targetSocketId = getUserSocketId(data.targetId);
     if (targetSocketId) {
       io.to(targetSocketId).emit('webrtc-answer', { answer: data.answer, senderId: data.senderId });
     }
   });
 
   socket.on('webrtc-ice', (data: { senderId: string; targetId: string; candidate: any }) => {
-    const targetSocketId = onlineUsers.get(data.targetId);
+    const targetSocketId = getUserSocketId(data.targetId);
     if (targetSocketId) {
       io.to(targetSocketId).emit('webrtc-ice', { candidate: data.candidate, senderId: data.senderId });
     }
@@ -339,9 +354,9 @@ io.on('connection', (socket) => {
 
       // Notify the sender that their messages have been read
       const senderId = snapshot.docs[0].data().senderId;
-      if (senderId && onlineUsers.has(senderId)) {
-        const senderSocketId = onlineUsers.get(senderId);
-        io.to(senderSocketId as string).emit('messages-read', { conversationId });
+      const senderSocketId = senderId ? getUserSocketId(senderId) : undefined;
+      if (senderSocketId) {
+        io.to(senderSocketId).emit('messages-read', { conversationId });
       }
     } catch (err) {
       console.error('Error marking messages as read:', err);
@@ -356,9 +371,14 @@ io.on('connection', (socket) => {
     console.log(`Client disconnected: ${socket.id}`);
 
     let disconnectedUserId: string | null = null;
-    for (const [userId, socketId] of onlineUsers.entries()) {
-      if (socketId === socket.id) {
+    for (const [userId, sockets] of onlineUsers.entries()) {
+      if (sockets.has(socket.id)) {
         disconnectedUserId = userId;
+        sockets.delete(socket.id);
+        console.log(`Removed socket ${socket.id} for user ${userId}. Remaining: ${sockets.size}`);
+        if (sockets.size === 0) {
+          onlineUsers.delete(userId);
+        }
         break;
       }
     }
@@ -366,11 +386,21 @@ io.on('connection', (socket) => {
     if (!disconnectedUserId) return;
 
     const userId = disconnectedUserId;
-    // Remove immediately so status-check calls return offline during grace period
-    onlineUsers.delete(userId);
+
+    // Check if the user is truly offline (no remaining sockets under this userId)
+    const remainingSockets = onlineUsers.get(userId);
+    if (remainingSockets && remainingSockets.size > 0) {
+      return;
+    }
 
     const timer = setTimeout(() => {
       disconnectTimers.delete(userId);
+      // Double check they didn't reconnect in the meantime
+      const activeSockets = onlineUsers.get(userId);
+      if (activeSockets && activeSockets.size > 0) {
+        return;
+      }
+      
       const lastSeen = new Date().toISOString();
       console.log(`User went offline: ${userId} at ${lastSeen}`);
       if (firestore) {

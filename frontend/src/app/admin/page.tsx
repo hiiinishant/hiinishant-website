@@ -213,16 +213,26 @@ export default function AdminPage() {
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
   const [plans, setPlans] = useState<FuturePlan[]>(() => {
     if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("cached_plans");
-      return cached ? JSON.parse(cached) : [];
+      try {
+        const cached = localStorage.getItem("cached_plans");
+        return cached ? JSON.parse(cached) : [];
+      } catch (e) {
+        console.error("Failed to parse cached plans:", e);
+        return [];
+      }
     }
     return [];
   });
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [statuses, setStatuses] = useState<DailyStatus[]>(() => {
     if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("cached_statuses");
-      return cached ? JSON.parse(cached) : [];
+      try {
+        const cached = localStorage.getItem("cached_statuses");
+        return cached ? JSON.parse(cached) : [];
+      } catch (e) {
+        console.error("Failed to parse cached statuses:", e);
+        return [];
+      }
     }
     return [];
   });
@@ -282,6 +292,7 @@ export default function AdminPage() {
   const [blogForm, setBlogForm] = useState({
     slug: "", title: "", excerpt: "", date: new Date().toISOString().split("T")[0], readTime: "5 min read", tags: "", featured: false, content: ""
   });
+  const [editingBlogSlug, setEditingBlogSlug] = useState<string | null>(null);
 
   // Daily Status Form
   const [statusForm, setStatusForm] = useState<{
@@ -585,16 +596,18 @@ export default function AdminPage() {
     setSubmitting(true);
     try {
       const tagsArray = blogForm.tags.split(",").map(t => t.trim()).filter(t => t);
+      const isEdit = !!editingBlogSlug;
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/blog`, {
-        method: "POST",
+        method: isEdit ? "PUT" : "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ ...blogForm, tags: tagsArray }),
+        body: JSON.stringify({ ...blogForm, tags: tagsArray, originalSlug: editingBlogSlug }),
       });
-      if (!res.ok) throw new Error("Failed to publish blog.");
-      showToast("Blog published successfully!", "success");
+      if (!res.ok) throw new Error(isEdit ? "Failed to update blog." : "Failed to publish blog.");
+      showToast(isEdit ? "Blog updated successfully!" : "Blog published successfully!", "success");
       fetchAdminData();
       setActiveTab("manage-blogs");
       setBlogForm({ slug: "", title: "", excerpt: "", date: new Date().toISOString().split("T")[0], readTime: "5 min read", tags: "", featured: false, content: "" });
+      setEditingBlogSlug(null);
     } catch (err: any) {
       showToast(err.message, "error");
     } finally {
@@ -1803,8 +1816,8 @@ export default function AdminPage() {
               {activeTab === "write-blog" && (
                 <div className="space-y-6">
                   <div className="font-mono">
-                    <h2 className="text-lg font-bold text-white mb-1">Write Blog Post</h2>
-                    <p className="text-[10px] text-brand-400">Publish a new markdown blog post.</p>
+                    <h2 className="text-lg font-bold text-white mb-1">{editingBlogSlug ? "Edit Blog Post" : "Write Blog Post"}</h2>
+                    <p className="text-[10px] text-brand-400">{editingBlogSlug ? "Modify your existing markdown blog post." : "Publish a new markdown blog post."}</p>
                   </div>
 
                   <form onSubmit={handleBlogSubmit} className="space-y-5 glass-strong border border-white/10 rounded-2xl p-6">
@@ -1834,12 +1847,12 @@ export default function AdminPage() {
                       <button type="submit" disabled={submitting}
                         className="px-8 py-3.5 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] disabled:opacity-50 cursor-pointer"
                       >
-                        {submitting ? "Publishing…" : "Publish Blog"}
+                        {submitting ? (editingBlogSlug ? "Updating…" : "Publishing…") : (editingBlogSlug ? "Update Blog" : "Publish Blog")}
                       </button>
-                      <button type="button" onClick={() => setBlogForm({ slug: "", title: "", excerpt: "", date: new Date().toISOString().split("T")[0], readTime: "5 min read", tags: "", featured: false, content: "" })}
+                      <button type="button" onClick={() => { setBlogForm({ slug: "", title: "", excerpt: "", date: new Date().toISOString().split("T")[0], readTime: "5 min read", tags: "", featured: false, content: "" }); setEditingBlogSlug(null); }}
                         className="px-5 py-3.5 rounded-xl bg-white/5 border border-white/10 text-xs text-brand-300 hover:text-white transition-all cursor-pointer font-bold uppercase tracking-wider"
                       >
-                        Clear Form
+                        {editingBlogSlug ? "Cancel Edit" : "Clear Form"}
                       </button>
                     </div>
                   </form>
@@ -1890,6 +1903,7 @@ export default function AdminPage() {
                                   featured: blog.featured,
                                   content: blog.content ? blog.content.join("\n\n") : "",
                                 });
+                                setEditingBlogSlug(blog.slug);
                                 setActiveTab("write-blog");
                               }}
                               className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-brand-300 text-[10px] font-bold hover:text-white hover:border-white/20 transition-all cursor-pointer uppercase tracking-wider"

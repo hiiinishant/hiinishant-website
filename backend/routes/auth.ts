@@ -8,13 +8,29 @@ const router = Router();
 router.post('/login', async (req, res) => {
   try {
     const { password } = req.body;
-    if (!password) { res.status(400).json({ error: "Password is required." }); return; }
+    if (!password) {
+      res.status(400).json({ error: "Password is required." });
+      return;
+    }
 
-    const adminPassword = process.env.ADMIN_PASSWORD || "nishant2am";
-    const computedHash = crypto.createHash("sha256").update(password).digest("hex");
-    const oldHash = "c54dfd60e7552554703a55b3b1f5c6b97a22026858e9ad36cc2e9be49df0a5be";
+    // SECURITY: ADMIN_PASSWORD must be set explicitly in environment variables.
+    // There is no default or fallback password — server returns 500 if unconfigured.
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      console.error('[Auth] ADMIN_PASSWORD environment variable is not set.');
+      res.status(500).json({ error: "Server authentication is not configured." });
+      return;
+    }
 
-    if (password === adminPassword || computedHash === oldHash || computedHash === process.env.ADMIN_PASSWORD) {
+    // Constant-time comparison to prevent timing attacks
+    const inputBuffer = Buffer.from(password);
+    const adminBuffer = Buffer.from(adminPassword);
+
+    const isMatch =
+      inputBuffer.length === adminBuffer.length &&
+      crypto.timingSafeEqual(inputBuffer, adminBuffer);
+
+    if (isMatch) {
       const token = generateToken();
       res.status(200).json({ success: true, token });
     } else {

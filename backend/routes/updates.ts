@@ -132,6 +132,10 @@ router.get('/', async (req, res) => {
 
 router.get('/static', async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(200).json([]);
+      return;
+    }
     const snap = await firestore.collection('updateItems').orderBy('date', 'desc').get();
     const updates = snap.docs.map((d: any) => {
       const data = d.data();
@@ -190,6 +194,14 @@ router.put('/', requireAuth, async (req, res) => {
 router.delete('/', requireAuth, async (req, res) => {
   try {
     const { id } = req.body;
+    if (!id) {
+      res.status(400).json({ error: "ID is required." });
+      return;
+    }
+    if (!firestore) {
+      res.status(503).json({ error: "Database not available." });
+      return;
+    }
     await firestore.collection('updateItems').doc(id).delete();
     res.status(200).json({ success: true });
   } catch (error: any) {

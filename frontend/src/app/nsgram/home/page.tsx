@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useNsgramAuth } from "@/components/nsgram/NsgramAuthProvider";
 
 export default function NsgramHomePage() {
-  const { profile } = useNsgramAuth();
+  const { profile, socketConnected } = useNsgramAuth();
 
   if (!profile) return null;
 
@@ -117,11 +117,11 @@ export default function NsgramHomePage() {
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-brand-500">
-            <span>Server: Connected</span>
+          <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-brand-500 font-mono">
+            <span>Server: {socketConnected ? "Connected" : "Disconnected"}</span>
             <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${socketConnected ? "bg-green-400" : "bg-red-400"} opacity-75`} />
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${socketConnected ? "bg-green-500" : "bg-red-500"}`} />
             </span>
           </div>
         </div>

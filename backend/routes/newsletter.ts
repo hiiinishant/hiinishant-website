@@ -65,8 +65,13 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.get('/', async (req, res) => {
+// GET — admin-only: view all subscribers
+router.get('/', requireAuth, async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(200).json([]);
+      return;
+    }
     const snap = await firestore.collection('newsletterSubscribers').orderBy('date', 'desc').get();
     const subscribers = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
     res.status(200).json(subscribers);
@@ -75,9 +80,18 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.delete('/', async (req, res) => {
+// DELETE — admin-only: remove a subscriber
+router.delete('/', requireAuth, async (req, res) => {
   try {
     const { id } = req.body;
+    if (!id) {
+      res.status(400).json({ error: "Subscriber ID is required." });
+      return;
+    }
+    if (!firestore) {
+      res.status(503).json({ error: "Database not available." });
+      return;
+    }
     await firestore.collection('newsletterSubscribers').doc(id).delete();
     res.status(200).json({ success: true });
   } catch (error: any) {

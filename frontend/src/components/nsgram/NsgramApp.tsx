@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
@@ -10,6 +10,7 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail,
   reload,
+  getIdToken,
   GoogleAuthProvider,
   signInWithPopup,
   type User as FirebaseUser,
@@ -96,16 +97,20 @@ export default function NsgramApp() {
   }, [authUser, profile, loading, router]);
 
   // Silent background verification check (no loading spinner, no notice update)
-  const autoCheckVerification = async () => {
+  const autoCheckVerification = useCallback(async () => {
     if (!authUser || authUser.emailVerified || !auth || !db) return;
     try {
       await reload(authUser);
       const currentUser = auth.currentUser;
       if (currentUser?.emailVerified) {
+        const idToken = await getIdToken(currentUser);
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
         await fetch(`${backendUrl}/api/users/profile`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
           body: JSON.stringify({
             uid: currentUser.uid,
             email: currentUser.email,
@@ -124,7 +129,7 @@ export default function NsgramApp() {
     } catch {
       // Silent — do not interrupt the user or show an error
     }
-  };
+  }, [authUser, db, router]);
 
   // Auto-check when user returns to this tab after verifying email in another tab
   useEffect(() => {
@@ -160,12 +165,14 @@ export default function NsgramApp() {
       await reload(authUser);
       const currentUser = auth.currentUser;
       if (currentUser?.emailVerified) {
-        // Activate profile on backend
+        // Activate profile on backend with Firebase ID token
+        const idToken = await getIdToken(currentUser);
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
         await fetch(`${backendUrl}/api/users/profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
           },
           body: JSON.stringify({
             uid: currentUser.uid,
@@ -282,10 +289,12 @@ export default function NsgramApp() {
         }
 
         // Create profile on backend with isActivated: true (Google is pre-verified)
+        const idToken = await getIdToken(credential.user);
         await fetch(`${backendUrl}/api/users/profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
           },
           body: JSON.stringify({
             uid: credential.user.uid,
@@ -310,9 +319,13 @@ export default function NsgramApp() {
         setProfile({ id: userSnap.id, uid: data.uid ?? userSnap.id, ...data } as UserProfile);
 
         // Fire-and-forget background update (does not block redirect)
+        const existingIdToken = await getIdToken(credential.user);
         fetch(`${backendUrl}/api/users/profile`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${existingIdToken}`,
+          },
           body: JSON.stringify({
             uid: credential.user.uid,
             email: credential.user.email,
@@ -382,11 +395,13 @@ export default function NsgramApp() {
         await sendEmailVerification(credential.user);
 
         // Create user profile via backend API (role defaults to 'user', isActivated defaults to false)
+        const idToken = await getIdToken(credential.user);
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
         await fetch(`${backendUrl}/api/users/profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
           },
           body: JSON.stringify({
             uid: credential.user.uid,

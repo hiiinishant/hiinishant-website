@@ -37,15 +37,18 @@ router.get('/', async (req, res) => {
 router.post('/', requireAuth, upload.single('resume'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'Resume file is required' });
+      res.status(400).json({ error: 'Resume file is required' });
+      return;
     }
     if (!ALLOWED_MIME_TYPES.includes(req.file.mimetype)) {
-      return res.status(400).json({ error: 'Only PDF, DOC, and DOCX files are allowed' });
+      res.status(400).json({ error: 'Only PDF, DOC, and DOCX files are allowed' });
+      return;
     }
 
     const { title } = req.body;
     if (!title) {
-      return res.status(400).json({ error: 'Title is required' });
+      res.status(400).json({ error: 'Title is required' });
+      return;
     }
 
     // Build a clean public_id preserving the original file extension (essential for 'raw' uploads)
@@ -104,13 +107,15 @@ router.delete('/', requireAuth, async (req, res) => {
   try {
     const { id } = req.body;
     if (!id) {
-      return res.status(400).json({ error: 'Resume ID required' });
+      res.status(400).json({ error: 'Resume ID required' });
+      return;
     }
 
     const docRef = firestore.collection('resumes').doc(id);
     const docSnap = await docRef.get();
     if (!docSnap.exists) {
-      return res.status(404).json({ error: 'Resume not found' });
+      res.status(404).json({ error: 'Resume not found' });
+      return;
     }
 
     const data = docSnap.data() as any;

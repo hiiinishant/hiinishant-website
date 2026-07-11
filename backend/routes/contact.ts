@@ -47,6 +47,15 @@ router.post('/', async (req, res) => {
       hour12: true,
     });
 
+    // HTML-escape helper to prevent XSS in email body
+    const escapeHtml = (str: string) =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
     const messageData = {
       name: name.trim(),
       email: email.trim().toLowerCase(),
@@ -57,6 +66,12 @@ router.post('/', async (req, res) => {
       read: false
     };
 
+    // Check firestore is available before attempting to save
+    if (!firestore) {
+      res.status(503).json({ error: 'Database not available. Please try again later.' });
+      return;
+    }
+
     // Always save to Firestore first
     await firestore.collection('contactMessages').add(messageData);
 
@@ -66,13 +81,20 @@ router.post('/', async (req, res) => {
       message: 'Message sent successfully.',
     });
 
+    // Use escaped values in email to prevent HTML injection
+    const safeName = escapeHtml(messageData.name);
+    const safeEmail = escapeHtml(messageData.email);
+    const safePhone = escapeHtml(messageData.phone);
+    const safeSubject = escapeHtml(messageData.subject);
+    const safeMessage = escapeHtml(messageData.message);
+
     // Send admin notification email in background (non-blocking)
     const emailTo = process.env.EMAIL_TO || 'hiiinishant@gmail.com';
 
-    const phoneRow = messageData.phone
+    const phoneRow = safePhone
       ? `<tr>
            <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Phone</td>
-           <td style="padding:10px 16px;font-size:14px;color:#e2e8f0">${messageData.phone}</td>
+           <td style="padding:10px 16px;font-size:14px;color:#e2e8f0">${safePhone}</td>
          </tr>`
       : '';
 
@@ -96,16 +118,16 @@ router.post('/', async (req, res) => {
           <table style="width:100%;border-collapse:collapse;background:#1e293b;border-radius:10px;overflow:hidden">
             <tr style="border-bottom:1px solid #334155">
               <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Name</td>
-              <td style="padding:10px 16px;font-size:14px;color:#e2e8f0;font-weight:600">${messageData.name}</td>
+              <td style="padding:10px 16px;font-size:14px;color:#e2e8f0;font-weight:600">${safeName}</td>
             </tr>
             <tr style="border-bottom:1px solid #334155">
               <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Email</td>
-              <td style="padding:10px 16px;font-size:14px"><a href="mailto:${messageData.email}" style="color:#818cf8;text-decoration:none">${messageData.email}</a></td>
+              <td style="padding:10px 16px;font-size:14px"><a href="mailto:${safeEmail}" style="color:#818cf8;text-decoration:none">${safeEmail}</a></td>
             </tr>
             ${phoneRow}
             <tr style="border-bottom:1px solid #334155">
               <td style="padding:10px 16px;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">Subject</td>
-              <td style="padding:10px 16px;font-size:14px;color:#e2e8f0">${messageData.subject}</td>
+              <td style="padding:10px 16px;font-size:14px;color:#e2e8f0">${safeSubject}</td>
             </tr>
           </table>
 
@@ -113,13 +135,13 @@ router.post('/', async (req, res) => {
           <div style="margin-top:20px">
             <p style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px">Message</p>
             <div style="background:#1e293b;border-left:4px solid #6366f1;border-radius:0 10px 10px 0;padding:16px 20px">
-              <p style="margin:0;font-size:14px;color:#cbd5e1;line-height:1.7;white-space:pre-wrap">${messageData.message}</p>
+              <p style="margin:0;font-size:14px;color:#cbd5e1;line-height:1.7;white-space:pre-wrap">${safeMessage}</p>
             </div>
           </div>
 
           <!-- Reply CTA -->
           <div style="text-align:center;margin-top:28px">
-            <a href="mailto:${messageData.email}?subject=Re: ${messageData.subject}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">Reply to ${messageData.name} →</a>
+            <a href="mailto:${safeEmail}?subject=Re: ${safeSubject}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">Reply to ${safeName} →</a>
           </div>
         </div>
 
@@ -134,7 +156,7 @@ router.post('/', async (req, res) => {
     sendEmail({
       to: emailTo,
       replyTo: messageData.email,
-      subject: `📬 New Message: ${messageData.subject} — from ${messageData.name}`,
+      subject: `\uD83D\uDCEC New Message: ${messageData.subject} \u2014 from ${messageData.name}`,
       html: htmlBody,
       text: plainText,
     }).then(() => {
