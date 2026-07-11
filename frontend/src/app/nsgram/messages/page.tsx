@@ -179,7 +179,7 @@ function VoiceNotePlayer({ audioUrl }: { audioUrl: string }) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play().catch(() => {});
+      audioRef.current.play().catch(() => { });
       setIsPlaying(true);
     }
   };
@@ -282,37 +282,33 @@ function ConvoCard({
   return (
     <button
       onClick={onClick}
-      className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-200 ${
-        isActive
-          ? "border-amber-400/30 bg-amber-400/8 shadow-sm"
-          : "border-transparent hover:border-white/8 hover:bg-white/5"
-      }`}
+      className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-200 ${isActive
+        ? "border-amber-400/30 bg-amber-400/8 shadow-sm"
+        : "border-transparent hover:border-white/8 hover:bg-white/5"
+        }`}
     >
       {/* Avatar + online ring */}
       <div className="relative shrink-0">
         <div
-          className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl select-none border transition-all duration-200 ${
-            isActive
-              ? "border-amber-400/30 bg-amber-400/10"
-              : "border-white/10 bg-white/5 group-hover:border-white/20"
-          }`}
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl select-none border transition-all duration-200 ${isActive
+            ? "border-amber-400/30 bg-amber-400/10"
+            : "border-white/10 bg-white/5 group-hover:border-white/20"
+            }`}
         >
           {chatUser?.avatar === "girl" ? "👧" : "👦"}
         </div>
         {/* Online indicator dot */}
         <span
-          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-950 transition-colors duration-300 ${
-            isOnline ? "bg-green-400" : "bg-brand-600"
-          }`}
+          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-950 transition-colors duration-300 ${isOnline ? "bg-green-400" : "bg-brand-600"
+            }`}
         />
       </div>
 
       {/* Text info */}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <p className={`text-sm truncate leading-tight ${
-            hasUnread ? "font-bold text-white" : "font-semibold text-white"
-          }`}>
+          <p className={`text-sm truncate leading-tight ${hasUnread ? "font-bold text-white" : "font-semibold text-white"
+            }`}>
             {chatUser?.displayName ?? "Unknown"}
           </p>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -331,13 +327,12 @@ function ConvoCard({
           @{chatUser?.username ?? "—"}
         </p>
         <p
-          className={`text-xs truncate leading-snug ${
-            hasUnread
-              ? "text-white font-semibold"
-              : convo.lastMessage
+          className={`text-xs truncate leading-snug ${hasUnread
+            ? "text-white font-semibold"
+            : convo.lastMessage
               ? "text-brand-400"
               : "text-brand-600 italic"
-          }`}
+            }`}
         >
           {convo.lastMessage || "No messages yet"}
         </p>
@@ -373,7 +368,7 @@ export default function NsgramMessagesPage() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // debounce for typing-stop
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -521,7 +516,7 @@ export default function NsgramMessagesPage() {
       socket.emit("leave-room", { conversationId: selectedConversationId });
       socket.off("receive-message", onReceiveMessage);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, socketConnected, selectedConversationId, profile?.id]);
 
   // ── Socket.IO: messages-read — recipient read our messages (show "Seen") ───
@@ -541,7 +536,7 @@ export default function NsgramMessagesPage() {
 
     socket.on("messages-read", onMessagesRead);
     return () => socket.off("messages-read", onMessagesRead);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, selectedConversationId, profile?.id]);
 
   // ── Socket.IO: own sent message confirmation (always fires, even if offline) ─
@@ -657,7 +652,7 @@ export default function NsgramMessagesPage() {
                   const ls = snap.data()?.lastSeen ?? null;
                   setLastSeenMap((prev) => ({ ...prev, [selectedChatUser.id]: ls }));
                 })
-                .catch(() => {});
+                .catch(() => { });
             });
           }
         }
@@ -672,7 +667,7 @@ export default function NsgramMessagesPage() {
     return () => {
       socket.off("connect", checkStatus);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, selectedChatUser?.id]);
 
   // ── Socket.IO: query status for all inbox conversations on load / reconnect ────
@@ -920,50 +915,63 @@ export default function NsgramMessagesPage() {
   const handleSendMessage = useCallback(
     async (e: FormEvent) => {
       e.preventDefault();
+
       if (!profile || !selectedConversation || !socket) return;
+
       const text = messageText.trim();
       if (!text) return;
+
       // Stop typing indicator immediately on send
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      socket.emit("typing-stop", { conversationId: selectedConversation.id, userId: profile.id });
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      socket.emit("typing-stop", {
+        conversationId: selectedConversation.id,
+        userId: profile.id,
+      });
 
       const replyPayload = replyingToMessage
         ? {
-            id: replyingToMessage.id,
-            text: replyingToMessage.text,
-            senderId: replyingToMessage.senderId,
-            senderName:
-              users.find((u) => u.id === replyingToMessage.senderId)?.displayName || "User",
-          }
+          id: replyingToMessage.id,
+          text: replyingToMessage.text,
+          senderId: replyingToMessage.senderId,
+          senderName:
+            users.find((u) => u.id === replyingToMessage.senderId)?.displayName ||
+            "User",
+        }
         : undefined;
-
-      // ── OPTIMISTIC UI: show message immediately without waiting for server ──
-      const tempId = `temp-${Date.now()}`;
-      const optimisticMsg: Message = {
-        id: tempId,
-        senderId: profile.id,
-        text,
-        createdAt: new Date().toISOString(),
-        read: false,
-        ...(replyPayload ? { replyTo: replyPayload } : {}),
-      };
-      setMessages((prev) => deduplicateMessages([...prev, optimisticMsg]));
-      setMessageText("");
-      if (replyingToMessage) setReplyingToMessage(null);
 
       const payload: any = {
         conversationId: selectedConversation.id,
         text,
         senderId: profile.id,
         recipientId: selectedChatUser?.id ?? "",
-        tempId, // pass tempId so we can swap it when server confirms
       };
-      if (replyPayload) payload.replyTo = replyPayload;
+
+      if (replyPayload) {
+        payload.replyTo = replyPayload;
+      }
+
+      // Clear input after sending
+      setMessageText("");
+
+      if (replyingToMessage) {
+        setReplyingToMessage(null);
+      }
 
       console.log("Emitting send-message to socket:", payload);
       socket.emit("send-message", payload);
     },
-    [profile, selectedConversation, socket, messageText, selectedChatUser, replyingToMessage, users]
+    [
+      profile,
+      selectedConversation,
+      socket,
+      messageText,
+      selectedChatUser,
+      replyingToMessage,
+      users,
+    ]
   );
 
   const openConvo = useCallback(
@@ -998,9 +1006,8 @@ export default function NsgramMessagesPage() {
     >
       {/* ── Inbox Panel ───────────────────────────────────────────────────── */}
       <div
-        className={`flex flex-col w-full lg:w-80 xl:w-96 shrink-0 border-r border-white/8 bg-slate-950 ${
-          selectedConversationId ? "hidden lg:flex" : "flex"
-        }`}
+        className={`flex flex-col w-full lg:w-80 xl:w-96 shrink-0 border-r border-white/8 bg-slate-950 ${selectedConversationId ? "hidden lg:flex" : "flex"
+          }`}
       >
         {/* Inbox header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
@@ -1062,9 +1069,8 @@ export default function NsgramMessagesPage() {
 
       {/* ── Chat Panel ────────────────────────────────────────────────────── */}
       <div
-        className={`flex flex-col flex-1 bg-slate-950 min-w-0 ${
-          selectedConversationId ? "flex" : "hidden lg:flex"
-        }`}
+        className={`flex flex-col flex-1 bg-slate-950 min-w-0 ${selectedConversationId ? "flex" : "hidden lg:flex"
+          }`}
       >
         {selectedConversation && selectedChatUser ? (
           <>
@@ -1092,9 +1098,8 @@ export default function NsgramMessagesPage() {
                       {selectedChatUser.avatar === "girl" ? "👧" : "👦"}
                     </div>
                     <span
-                      className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
-                        chatUserStatus ? "bg-green-400" : "bg-brand-600"
-                      }`}
+                      className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${chatUserStatus ? "bg-green-400" : "bg-brand-600"
+                        }`}
                     />
                   </div>
 
@@ -1110,15 +1115,14 @@ export default function NsgramMessagesPage() {
                         <>
                           <span className="text-brand-700">·</span>
                           <span
-                            className={`text-[10px] font-semibold ${
-                              chatUserStatus ? "text-green-400" : "text-brand-600"
-                            }`}
+                            className={`text-[10px] font-semibold ${chatUserStatus ? "text-green-400" : "text-brand-600"
+                              }`}
                           >
                             {chatUserStatus
                               ? "Online"
                               : chatUserLastSeen
-                              ? formatLastSeen(chatUserLastSeen)
-                              : "Offline"}
+                                ? formatLastSeen(chatUserLastSeen)
+                                : "Offline"}
                           </span>
                         </>
                       )}
@@ -1238,20 +1242,17 @@ export default function NsgramMessagesPage() {
                       e.stopPropagation();
                       setActiveMenuMessageId((prev) => (prev === msg.id ? null : msg.id));
                     }}
-                    className={`flex flex-col gap-1 max-w-[75%] sm:max-w-[60%] relative group border border-transparent rounded-2xl p-0.5 transition-all duration-300 cursor-pointer ${
-                      isMine ? "ml-auto items-end" : "mr-auto items-start"
-                    }`}
+                    className={`flex flex-col gap-1 max-w-[75%] sm:max-w-[60%] relative group border border-transparent rounded-2xl p-0.5 transition-all duration-300 cursor-pointer ${isMine ? "ml-auto items-end" : "mr-auto items-start"
+                      }`}
                   >
                     {/* Hover controls (quick reactions + quote replies) */}
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1.5 transition duration-150 z-30 ${
-                        isMine ? "right-full mr-3 flex-row-reverse" : "left-full ml-3 flex-row"
-                      } ${
-                        activeMenuMessageId === msg.id
+                      className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1.5 transition duration-150 z-30 ${isMine ? "right-full mr-3 flex-row-reverse" : "left-full ml-3 flex-row"
+                        } ${activeMenuMessageId === msg.id
                           ? "opacity-100 pointer-events-auto"
                           : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
-                      }`}
+                        }`}
                     >
                       {/* Reply/Quote Trigger */}
                       <button
@@ -1296,9 +1297,8 @@ export default function NsgramMessagesPage() {
                     {msg.replyTo && (
                       <div
                         onClick={() => scrollToMessage(msg.replyTo!.id)}
-                        className={`mb-0.5 text-[10px] px-3 py-1 rounded-xl bg-white/5 border border-white/5 opacity-60 text-white truncate max-w-full italic cursor-pointer select-none hover:opacity-100 transition-opacity ${
-                          isMine ? "text-right" : "text-left"
-                        }`}
+                        className={`mb-0.5 text-[10px] px-3 py-1 rounded-xl bg-white/5 border border-white/5 opacity-60 text-white truncate max-w-full italic cursor-pointer select-none hover:opacity-100 transition-opacity ${isMine ? "text-right" : "text-left"
+                          }`}
                       >
                         <span className="font-bold block text-[8px] text-amber-300">
                           {msg.replyTo.senderId === profile.id ? "Replying to yourself" : `Replying to ${msg.replyTo.senderName}`}
@@ -1308,11 +1308,10 @@ export default function NsgramMessagesPage() {
                     )}
 
                     <div
-                      className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm relative ${
-                        isMine
-                          ? "bg-amber-400 text-slate-950 font-medium rounded-br-md"
-                          : "bg-white/8 text-white border border-white/8 rounded-bl-md"
-                      }`}
+                      className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm relative ${isMine
+                        ? "bg-amber-400 text-slate-950 font-medium rounded-br-md"
+                        : "bg-white/8 text-white border border-white/8 rounded-bl-md"
+                        }`}
                     >
                       {msg.audioUrl ? (
                         <VoiceNotePlayer audioUrl={msg.audioUrl} />
@@ -1322,9 +1321,8 @@ export default function NsgramMessagesPage() {
 
                       {/* Message reactions badge */}
                       {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                        <div className={`absolute -bottom-2.5 flex items-center gap-0.5 rounded-full bg-slate-900 border border-white/10 px-1.5 py-0.5 text-[9px] shadow-md z-10 select-none ${
-                          isMine ? "right-2" : "left-2"
-                        }`}>
+                        <div className={`absolute -bottom-2.5 flex items-center gap-0.5 rounded-full bg-slate-900 border border-white/10 px-1.5 py-0.5 text-[9px] shadow-md z-10 select-none ${isMine ? "right-2" : "left-2"
+                          }`}>
                           {Array.from(new Set(Object.values(msg.reactions))).join(" ")}
                           {Object.keys(msg.reactions).length > 1 && (
                             <span className="text-[8px] text-brand-400 ml-0.5 font-bold">
@@ -1480,7 +1478,7 @@ export default function NsgramMessagesPage() {
         onAccept={voiceCall.acceptCall}
         onDecline={voiceCall.declineCall}
       />
-      
+
       {(voiceCall.callState === "calling" || voiceCall.callState === "in-call") && (
         <ActiveCallOverlay
           callState={voiceCall.callState}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { IncomingCallInfo, CallType } from "./useVoiceCall";
+import { PhoneOff, PhoneCall } from "lucide-react";
 
 // Format call duration to mm:ss
 function formatTime(seconds: number): string {
@@ -138,7 +139,7 @@ export function ActiveCallOverlay({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md px-4">
       <div className="relative w-full max-w-sm h-[600px] overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl flex flex-col justify-between p-6">
-        
+
         {/* Full-screen Remote Video for Video calls */}
         {showRemoteVideo ? (
           <div className="absolute inset-0 bg-slate-950 z-0">
@@ -190,11 +191,10 @@ export function ActiveCallOverlay({
           {/* Mute Mic */}
           <button
             onClick={onToggleMute}
-            className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition duration-200 shadow-md bg-slate-900/80 backdrop-blur-sm ${
-              isMuted
-                ? "border-amber-400/30 text-amber-300 bg-amber-400/10"
-                : "border-white/10 text-white hover:bg-white/10"
-            }`}
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition duration-200 shadow-md bg-slate-900/80 backdrop-blur-sm ${isMuted
+              ? "border-amber-400/30 text-amber-300 bg-amber-400/10"
+              : "border-white/10 text-white hover:bg-white/10"
+              }`}
             title={isMuted ? "Unmute mic" : "Mute mic"}
           >
             {isMuted ? (
@@ -223,11 +223,10 @@ export function ActiveCallOverlay({
           {isVideoCall && (
             <button
               onClick={onToggleCamera}
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition duration-200 shadow-md bg-slate-900/80 backdrop-blur-sm ${
-                !isCameraOn
-                  ? "border-rose-400/30 text-rose-300 bg-rose-400/10"
-                  : "border-white/10 text-white hover:bg-white/10"
-              }`}
+              className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition duration-200 shadow-md bg-slate-900/80 backdrop-blur-sm ${!isCameraOn
+                ? "border-rose-400/30 text-rose-300 bg-rose-400/10"
+                : "border-white/10 text-white hover:bg-white/10"
+                }`}
               title={isCameraOn ? "Turn Camera Off" : "Turn Camera On"}
             >
               {isCameraOn ? (
