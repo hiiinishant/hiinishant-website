@@ -49,7 +49,7 @@ export function useVoiceCall(
       ringIntervalRef.current = null;
     }
     if (ringAudioCtxRef.current) {
-      ringAudioCtxRef.current.close().catch(() => {});
+      ringAudioCtxRef.current.close().catch(() => { });
       ringAudioCtxRef.current = null;
     }
   }, []);
@@ -61,7 +61,7 @@ export function useVoiceCall(
       ringIntervalRef.current = null;
     }
     if (ringAudioCtxRef.current) {
-      ringAudioCtxRef.current.close().catch(() => {});
+      ringAudioCtxRef.current.close().catch(() => { });
       ringAudioCtxRef.current = null;
     }
 
@@ -283,12 +283,23 @@ export function useVoiceCall(
         setCallDuration((prev) => prev + 1);
       }, 1000);
     } catch (err: any) {
-      console.error("Accept call mic/cam error:", err);
-      setCallErrorMessage("Could not access camera/microphone.");
-      socket.emit("call-declined", {
-        callerId: incomingCallInfo.callerId,
-        reason: "mic_error",
-      });
+      console.error("Media access error:", err.name, err.message, err);
+
+      let message = "Unable to access camera or microphone.";
+
+      if (err.name === "NotAllowedError") {
+        message = "Permission denied. Please allow Camera & Microphone.";
+      } else if (err.name === "NotFoundError") {
+        message = "No camera or microphone found.";
+      } else if (err.name === "NotReadableError") {
+        message = "Camera or microphone is already being used by another application.";
+      } else if (err.name === "OverconstrainedError") {
+        message = "The requested camera settings are not supported.";
+      } else if (err.name === "SecurityError") {
+        message = "Camera access requires HTTPS.";
+      }
+
+      setCallErrorMessage(message);
       cleanupCall();
     }
   }, [incomingCallInfo, socket, profile, createPeerConnection, cleanupCall, stopRinging]);
@@ -335,8 +346,23 @@ export function useVoiceCall(
         endCall();
       }, 30000);
     } catch (err: any) {
-      console.error("Media access error initiating call:", err);
-      setCallErrorMessage("Camera or Microphone permission denied.");
+      console.error("Media access error:", err.name, err.message, err);
+
+      let message = "Unable to access camera or microphone.";
+
+      if (err.name === "NotAllowedError") {
+        message = "Permission denied. Please allow Camera & Microphone.";
+      } else if (err.name === "NotFoundError") {
+        message = "No camera or microphone found.";
+      } else if (err.name === "NotReadableError") {
+        message = "Camera or microphone is already being used by another application.";
+      } else if (err.name === "OverconstrainedError") {
+        message = "The requested camera settings are not supported.";
+      } else if (err.name === "SecurityError") {
+        message = "Camera access requires HTTPS.";
+      }
+
+      setCallErrorMessage(message);
       cleanupCall();
     }
   }, [selectedChatUser, socket, profile, selectedConversationId, endCall, cleanupCall, startRinging]);

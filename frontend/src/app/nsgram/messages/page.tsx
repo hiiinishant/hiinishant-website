@@ -894,57 +894,48 @@ export default function NsgramMessagesPage() {
   };
 
   const stopRecording = (shouldSend: boolean) => {
-    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") return;
-
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
       recordingIntervalRef.current = null;
     }
 
-    mediaRecorderRef.current.onstop = () => {
-      if (recordStreamRef.current) {
-        recordStreamRef.current.getTracks().forEach((track) => track.stop());
-        recordStreamRef.current = null;
-      }
-
-      if (shouldSend && audioChunksRef.current.length > 0) {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          const base64Audio = reader.result as string;
-          if (socket && profile && selectedConversation) {
-            // ── OPTIMISTIC UI for voice notes ───────────────────────────────
-            // Show the voice note immediately for the sender before the server confirms.
-            // The tempId lets onSnapshot dedup correctly replace this placeholder.
-            const tempId = `temp-${Date.now()}`;
-            const optimisticVoiceMsg: Message = {
-              id: tempId,
-              senderId: profile.id,
-              text: "🎤 Voice note",
-              audioUrl: base64Audio,
-              createdAt: new Date().toISOString(),
-              read: false,
-            };
-            setMessages((prev) => deduplicateMessages([...prev, optimisticVoiceMsg]));
-
-            socket.emit("send-message", {
-              conversationId: selectedConversation.id,
-              text: "🎤 Voice note",
-              audioUrl: base64Audio,
-              senderId: profile.id,
-              recipientId: selectedChatUser?.id ?? "",
-              tempId, // server echoes this back in message-sent so onSnapshot can swap it
-            });
-          }
-        };
-      }
-    };
-
-    mediaRecorderRef.current.stop();
     setIsRecording(false);
-  };
 
+    if (!mediaRecorderRef.current) return;
+
+    if (shouldSend && audioChunksRef.current.length > 0) {
+      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      reader.onloadend = () => {
+        const base64Audio = reader.result as string;
+        if (socket && profile && selectedConversation) {
+          // ── OPTIMISTIC UI for voice notes ───────────────────────────────
+          // Show the voice note immediately for the sender before the server confirms.
+          // The tempId lets onSnapshot dedup correctly replace this placeholder.
+          const tempId = `temp-${Date.now()}`;
+          const optimisticVoiceMsg: Message = {
+            id: tempId,
+            senderId: profile.id,
+            text: "🎤 Voice note",
+            audioUrl: base64Audio,
+            createdAt: new Date().toISOString(),
+            read: false,
+          };
+          setMessages((prev) => deduplicateMessages([...prev, optimisticVoiceMsg]));
+
+          socket.emit("send-message", {
+            conversationId: selectedConversation.id,
+            text: "🎤 Voice note",
+            audioUrl: base64Audio,
+            senderId: profile.id,
+            recipientId: selectedChatUser?.id ?? "",
+            tempId, // server echoes this back in message-sent so onSnapshot can swap it
+          });
+        }
+      };
+    }
+  };
   const cancelRecording = () => {
     stopRecording(false);
   };
@@ -1115,7 +1106,8 @@ export default function NsgramMessagesPage() {
         {selectedConversation && selectedChatUser ? (
           <>
             {/* Chat header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-red-500 border-b border-white/8 shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 bg-[#121212]/90 backdrop-blur-md border-b border-white/10 shrink-0">
+
               <div className="flex items-center gap-3 min-w-0">
                 {/* Back button (mobile) */}
                 <button
@@ -1433,14 +1425,20 @@ export default function NsgramMessagesPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={cancelRecording}
+                    onPointerUp={() => {
+                      console.log("Cancel pressed");
+                      cancelRecording();
+                    }}
                     className="px-3 py-1.5 rounded-xl border border-white/10 hover:border-rose-500/30 hover:bg-rose-500/10 text-brand-400 hover:text-rose-300 text-xs font-bold transition duration-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    onClick={() => stopRecording(true)}
+                    onPointerUp={() => {
+                      console.log("Send pressed");
+                      stopRecording(true);
+                    }}
                     className="px-4 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold shadow-md transition duration-200"
                   >
                     Send Voice Note
