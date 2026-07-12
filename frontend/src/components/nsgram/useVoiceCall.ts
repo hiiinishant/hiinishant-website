@@ -180,7 +180,7 @@ export function useVoiceCall(
 
   // Setup WebRTC peer connection
   const createPeerConnection = useCallback(
-    (targetId: string) => {
+    (targetId: string, stream?: MediaStream | null) => {
       if (pcRef.current) return pcRef.current;
 
       const pc = new RTCPeerConnection({
@@ -229,10 +229,11 @@ export function useVoiceCall(
         }
       };
 
-      // Add local stream tracks if available
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => {
-          pc.addTrack(track, localStreamRef.current!);
+      // Add tracks from the provided stream OR fall back to localStreamRef
+      const trackSource = stream ?? localStreamRef.current;
+      if (trackSource) {
+        trackSource.getTracks().forEach((track) => {
+          pc.addTrack(track, trackSource);
         });
       }
 
@@ -248,6 +249,11 @@ export function useVoiceCall(
     if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
     stopRinging(); // Stop the incoming ring tone when answered
 
+    // Read callType directly from incomingCallInfo to avoid stale React state
+    const acceptedCallType = incomingCallInfo.callType;
+    setCallType(acceptedCallType);
+    setIsCameraOn(acceptedCallType === "video");
+
     activePartnerIdRef.current = incomingCallInfo.callerId;
     setCallState("in-call");
     setConnectionStatus("Connecting...");
@@ -259,16 +265,17 @@ export function useVoiceCall(
     });
 
     try {
+      // Use acceptedCallType (from incomingCallInfo) — NOT the stale callType state
       const constraints = {
         audio: true,
-        video: callType === "video" ? { facingMode: "user" } : false,
+        video: acceptedCallType === "video" ? { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } : false,
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
       setLocalStream(stream);
 
-      // Create WebRTC peer connection (tracks will be added from localStreamRef)
-      createPeerConnection(incomingCallInfo.callerId);
+      // Create WebRTC peer connection — pass stream explicitly to ensure tracks are added
+      createPeerConnection(incomingCallInfo.callerId, stream);
 
       // Start call duration timer
       setCallDuration(0);
@@ -284,7 +291,7 @@ export function useVoiceCall(
       });
       cleanupCall();
     }
-  }, [incomingCallInfo, socket, profile, callType, createPeerConnection, cleanupCall, stopRinging]);
+  }, [incomingCallInfo, socket, profile, createPeerConnection, cleanupCall, stopRinging]);
 
   // Initiate call to selectedChatUser
   const initiateCall = useCallback(async (type: CallType) => {
@@ -302,10 +309,15 @@ export function useVoiceCall(
     try {
       const constraints = {
         audio: true,
-        video: type === "video" ? { facingMode: "user" } : false,
+        video: type === "video" ? { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } : false,
       };
 
-      // Emit call signal IMMEDIATELY — don't wait for media so signaling starts right away
+      // Get media FIRST so tracks are ready before we create the peer connection on call-accepted
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+
+      // Emit call signal AFTER media so localStreamRef is populated when offer is made
       socket.emit("call-user", {
         callerId: profile.id,
         calleeId: selectedChatUser.id,
@@ -314,11 +326,6 @@ export function useVoiceCall(
         conversationId: selectedConversationId,
         callType: type,
       });
-
-      // Get media in parallel with signaling
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      localStreamRef.current = stream;
-      setLocalStream(stream);
 
       setConnectionStatus("Ringing...");
 
@@ -380,18 +387,21 @@ export function useVoiceCall(
       }, 30000);
     };
 
-    // 2. Call Accepted
+    // 2. Call Accepted — Caller (User A) creates PeerConnection and sends offer
     const onCallAccepted = async (data: { calleeId: string }) => {
       if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
       stopRinging(); // User A: stop outgoing ring tone when answered
       setCallState("in-call");
       setConnectionStatus("Connecting...");
 
-      // Caller creates PeerConnection
-      const pc = createPeerConnection(data.calleeId);
+      // Caller creates PeerConnection — pass localStreamRef so video tracks are added
+      const pc = createPeerConnection(data.calleeId, localStreamRef.current);
 
       try {
-        const offer = await pc.createOffer();
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true, // Always request video capability in the SDP
+        });
         await pc.setLocalDescription(offer);
         console.log("Created offer, sending to", data.calleeId);
         socket.emit("webrtc-offer", {

@@ -62,9 +62,11 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main
-        className={`flex-1 md:pl-64 overflow-hidden ${pathname === "/nsgram/home" ? "pt-14" : ""
-          } ${isMessagesPage ? "pb-16 md:pb-0" : "pb-20 md:pb-0"
-          }`}
+        className={`flex-1 min-h-0 md:pl-64 ${
+          isMessagesPage
+            ? "overflow-hidden pb-16 md:pb-0"
+            : "overflow-y-auto pb-20 md:pb-0"
+        }${pathname === "/nsgram/home" ? " pt-14" : ""}`}
       >
         <div
           className={

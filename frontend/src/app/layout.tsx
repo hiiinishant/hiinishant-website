@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Caveat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
@@ -18,6 +18,16 @@ const caveat = Caveat({
   subsets: ["latin"],
   display: "swap",
 });
+
+// Tell Android Chrome: when the virtual keyboard opens, shrink only the
+// *visual* viewport — not the layout viewport. This prevents the entire page
+// from reflowing/scrolling up and hiding fixed headers in PWA-style layouts.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  interactiveWidget: "resizes-visual",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://hiiinishant.com"),

@@ -35,6 +35,11 @@ type Message = {
   replyTo?: { id: string; text: string; senderId: string; senderName: string };
   reactions?: Record<string, string>; // userId -> emoji
   audioUrl?: string;
+  // Call log fields
+  type?: "call";
+  callType?: "voice" | "video";
+  callStatus?: "completed" | "missed" | "declined";
+  callDuration?: number; // seconds
 };
 
 type Conversation = {
@@ -234,6 +239,48 @@ function VoiceNotePlayer({ audioUrl }: { audioUrl: string }) {
   );
 }
 
+// ─── Call Log Bubble ──────────────────────────────────────────────────────────
+function CallLogBubble({ msg, currentUserId }: { msg: Message; currentUserId: string }) {
+  const isVideo = msg.callType === "video";
+  const isMissed = msg.callStatus === "missed";
+  const isDeclined = msg.callStatus === "declined";
+  const isCompleted = msg.callStatus === "completed";
+  const wasCaller = msg.senderId === currentUserId;
+
+  const icon = isVideo ? "🎥" : "📞";
+  const durationLabel = isCompleted && msg.callDuration && msg.callDuration > 0
+    ? `${Math.floor(msg.callDuration / 60)}:${String(msg.callDuration % 60).padStart(2, "0")}`
+    : null;
+
+  let label: string;
+  let colorClass: string;
+  if (isCompleted) {
+    label = `${isVideo ? "Video" : "Voice"} call · ${durationLabel}`;
+    colorClass = "text-emerald-400";
+  } else if (isMissed) {
+    label = wasCaller ? `No answer` : `Missed ${isVideo ? "video" : "voice"} call`;
+    colorClass = "text-rose-400";
+  } else {
+    label = wasCaller ? `Call declined` : `Declined call`;
+    colorClass = "text-brand-500";
+  }
+
+  return (
+    <div className="flex justify-center my-2 select-none">
+      <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-white/8 bg-slate-900/60 backdrop-blur-sm text-xs">
+        <span className="text-base leading-none">{icon}</span>
+        <span className={`font-semibold ${colorClass}`}>{label}</span>
+        {msg.createdAt && (
+          <>
+            <span className="text-brand-700">·</span>
+            <span className="text-brand-600 text-[10px]">{formatRelative(msg.createdAt)}</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Empty-state illustration ─────────────────────────────────────────────────
 
 function EmptyInbox({ onSearch }: { onSearch: () => void }) {
@@ -381,30 +428,21 @@ export default function NsgramMessagesPage() {
     if (id) setSelectedConversationId(id);
   }, [searchParams]);
 
-  // ── Scroll Lock: Prevent entire page scroll on mobile to avoid keyboard shifts ──
-  useEffect(() => {
-    const originalBodyOverflow = document.body.style.overflow;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
-    const originalBodyHeight = document.body.style.height;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.height = "100%";
-
-    return () => {
-      document.body.style.overflow = originalBodyOverflow;
-      document.documentElement.style.overflow = originalHtmlOverflow;
-      document.body.style.height = originalBodyHeight;
-    };
-  }, []);
+  // NOTE: We intentionally do NOT lock body/html overflow here.
+  // Doing so fights Android Chrome's dynamic viewport resize when the keyboard
+  // opens, causing the header to scroll off-screen. The layout is instead
+  // contained by the parent h-dvh overflow-hidden wrapper in layout.tsx.
 
   const handleInputFocus = useCallback(() => {
-    // Force reset browser window viewport scroll shift
+    // Scroll the messages container to the bottom smoothly when keyboard appears
     setTimeout(() => {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 150);
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: "smooth"
+        });
+      }
+    }, 200);
   }, []);
 
 
@@ -722,9 +760,9 @@ export default function NsgramMessagesPage() {
     prevMsgCountRef.current = messages.length;
   }, [messages]);
 
-  // ── Focus input when chat opens ────────────────────────────────────────────
+  // ── Focus input when chat opens (only on desktop/large screens) ────────────
   useEffect(() => {
-    if (selectedConversationId) {
+    if (selectedConversationId && typeof window !== "undefined" && window.innerWidth >= 1024) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [selectedConversationId]);
@@ -997,8 +1035,10 @@ export default function NsgramMessagesPage() {
 
   if (!profile) return null;
 
-  // Height: 100vh - 56px NSGram header (pt-14 = 56px)
-  const panelHeight = "h-[calc(100vh-56px)] md:h-[calc(100vh-56px)]";
+  // Use h-dvh (dynamic viewport height) so the panel resizes when Android
+  // Chrome's address bar appears/hides, keeping the header always visible.
+  // md:h-[calc(100dvh-0px)] is inherited via parent overflow-hidden wrapper.
+  const panelHeight = "h-full w-full min-h-0";
 
   return (
     <div
@@ -1069,7 +1109,7 @@ export default function NsgramMessagesPage() {
 
       {/* ── Chat Panel ────────────────────────────────────────────────────── */}
       <div
-        className={`flex flex-col flex-1 bg-slate-950 min-w-0 ${selectedConversationId ? "flex" : "hidden lg:flex"
+        className={`flex flex-col flex-1 bg-slate-950 min-w-0 min-h-0 ${selectedConversationId ? "flex" : "hidden lg:flex"
           }`}
       >
         {selectedConversation && selectedChatUser ? (
@@ -1234,6 +1274,14 @@ export default function NsgramMessagesPage() {
                 const isLastMine =
                   isMine &&
                   idx === messages.map((m, i) => m.senderId === profile.id ? i : -1).filter(i => i !== -1).at(-1);
+
+                // ── Call log entry: render as centered pill, not a chat bubble ──
+                if (msg.type === "call") {
+                  return (
+                    <CallLogBubble key={msg.id} msg={msg} currentUserId={profile.id} />
+                  );
+                }
+
                 return (
                   <div
                     key={msg.id}
