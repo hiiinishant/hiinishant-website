@@ -421,6 +421,8 @@ export default function NsgramMessagesPage() {
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordStreamRef = useRef<MediaStream | null>(null);
   const isMockRecordingRef = useRef(false);
+  // Communicates send-vs-cancel decision to the async onstop handler
+  const shouldSendRef = useRef(false);
 
   // ── Sync convoId from URL ──────────────────────────────────────────────────
   useEffect(() => {
@@ -860,6 +862,7 @@ export default function NsgramMessagesPage() {
 
   const startRecording = async () => {
     isMockRecordingRef.current = false;
+    shouldSendRef.current = false;
     audioChunksRef.current = [];
     setRecordingDuration(0);
 
@@ -867,13 +870,69 @@ export default function NsgramMessagesPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       recordStreamRef.current = stream;
 
-      const mediaRecorder = new MediaRecorder(stream);
+      // Pick the best MIME type the browser actually supports
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
+            ? "audio/ogg;codecs=opus"
+            : "";
+
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
+      };
+
+      // onstop fires AFTER all ondataavailable events complete — this is the only
+      // correct place to assemble and send the final audio blob.
+      mediaRecorder.onstop = () => {
+        // Always release the microphone on stop
+        if (recordStreamRef.current) {
+          recordStreamRef.current.getTracks().forEach((track) => track.stop());
+          recordStreamRef.current = null;
+        }
+
+        if (!shouldSendRef.current) return; // User cancelled — discard
+
+        const chunks = audioChunksRef.current;
+        if (chunks.length === 0) return;
+
+        const blobType = mimeType || "audio/webm";
+        const audioBlob = new Blob(chunks, { type: blobType });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const base64Audio = reader.result as string;
+          if (socket && profile && selectedConversation) {
+            const tempId = `temp-${Date.now()}`;
+            const optimisticVoiceMsg: Message = {
+              id: tempId,
+              senderId: profile.id,
+              text: "🎤 Voice note",
+              audioUrl: base64Audio,
+              createdAt: new Date().toISOString(),
+              read: false,
+            };
+            setMessages((prev) => deduplicateMessages([...prev, optimisticVoiceMsg]));
+
+            socket.emit("send-message", {
+              conversationId: selectedConversation.id,
+              text: "🎤 Voice note",
+              audioUrl: base64Audio,
+              senderId: profile.id,
+              recipientId: selectedChatUser?.id ?? "",
+              tempId,
+            });
+          }
+        };
       };
 
       mediaRecorder.start();
@@ -883,7 +942,7 @@ export default function NsgramMessagesPage() {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
     } catch (err) {
-      console.warn("Microphone access denied or unavailable, using voice note fallback mode:", err);
+      console.warn("Microphone access denied or unavailable, using fallback mode:", err);
       isMockRecordingRef.current = true;
       setIsRecording(true);
 
@@ -901,41 +960,35 @@ export default function NsgramMessagesPage() {
 
     setIsRecording(false);
 
-    if (!mediaRecorderRef.current) return;
-
-    if (shouldSend && audioChunksRef.current.length > 0) {
-      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
-      reader.onloadend = () => {
-        const base64Audio = reader.result as string;
-        if (socket && profile && selectedConversation) {
-          // ── OPTIMISTIC UI for voice notes ───────────────────────────────
-          // Show the voice note immediately for the sender before the server confirms.
-          // The tempId lets onSnapshot dedup correctly replace this placeholder.
-          const tempId = `temp-${Date.now()}`;
-          const optimisticVoiceMsg: Message = {
-            id: tempId,
-            senderId: profile.id,
-            text: "🎤 Voice note",
-            audioUrl: base64Audio,
-            createdAt: new Date().toISOString(),
-            read: false,
-          };
-          setMessages((prev) => deduplicateMessages([...prev, optimisticVoiceMsg]));
-
-          socket.emit("send-message", {
-            conversationId: selectedConversation.id,
-            text: "🎤 Voice note",
-            audioUrl: base64Audio,
-            senderId: profile.id,
-            recipientId: selectedChatUser?.id ?? "",
-            tempId, // server echoes this back in message-sent so onSnapshot can swap it
-          });
-        }
-      };
+    // Mock / fallback mode (microphone was unavailable)
+    if (isMockRecordingRef.current) {
+      isMockRecordingRef.current = false;
+      // Stop any lingering stream just in case
+      if (recordStreamRef.current) {
+        recordStreamRef.current.getTracks().forEach((t) => t.stop());
+        recordStreamRef.current = null;
+      }
+      return;
     }
+
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") {
+      // Already stopped or never started — release stream
+      if (recordStreamRef.current) {
+        recordStreamRef.current.getTracks().forEach((t) => t.stop());
+        recordStreamRef.current = null;
+      }
+      return;
+    }
+
+    // Tell the onstop handler whether to send or discard the audio
+    shouldSendRef.current = shouldSend;
+
+    // stop() triggers the final ondataavailable flush, then fires onstop
+    recorder.stop();
+    mediaRecorderRef.current = null;
   };
+
   const cancelRecording = () => {
     stopRecording(false);
   };
@@ -1033,7 +1086,7 @@ export default function NsgramMessagesPage() {
 
   return (
     <div
-      className={`flex gap-0 lg:gap-4 overflow-hidden w-full ${panelHeight}`}
+      className={`flex gap-0 lg:gap-4 overflow-hidden overflow-x-hidden w-full ${panelHeight}`}
     >
       {/* ── Inbox Panel ───────────────────────────────────────────────────── */}
       <div
@@ -1285,16 +1338,20 @@ export default function NsgramMessagesPage() {
                     className={`flex flex-col gap-1 max-w-[75%] sm:max-w-[60%] relative group border border-transparent rounded-2xl p-0.5 transition-all duration-300 cursor-pointer ${isMine ? "ml-auto items-end" : "mr-auto items-start"
                       }`}
                   >
-                    {/* Hover controls (quick reactions + quote replies) */}
+                    {/* ── Contextual action menu ──────────────────────────────
+                         Desktop: floats beside the bubble via absolute positioning + group-hover.
+                         Mobile : sits in normal flow BELOW the bubble when activeMenuMessageId matches.
+                         This avoids off-screen clipping on narrow phone screens.             */}
+
+                    {/* Desktop floating menu (hidden on sm, visible md+) */}
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1.5 transition duration-150 z-30 ${isMine ? "right-full mr-3 flex-row-reverse" : "left-full ml-3 flex-row"
+                      className={`hidden md:flex absolute top-1/2 -translate-y-1/2 items-center gap-1.5 transition duration-150 z-30 ${isMine ? "right-full mr-3 flex-row-reverse" : "left-full ml-3 flex-row"
                         } ${activeMenuMessageId === msg.id
                           ? "opacity-100 pointer-events-auto"
                           : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
                         }`}
                     >
-                      {/* Reply/Quote Trigger */}
                       <button
                         onClick={() => {
                           setReplyingToMessage(msg);
@@ -1308,8 +1365,6 @@ export default function NsgramMessagesPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                         </svg>
                       </button>
-
-                      {/* Reactions Picker */}
                       <div className="flex items-center gap-0.5 rounded-full bg-slate-900 border border-white/10 px-1 py-0.5 shadow-lg select-none">
                         {["❤️", "😂", "👍", "🔥", "😮", "😢"].map((emoji) => (
                           <button
@@ -1333,6 +1388,50 @@ export default function NsgramMessagesPage() {
                       </div>
                     </div>
 
+                    {/* Mobile inline action bar (visible only on sm screens, shown on tap) */}
+                    {activeMenuMessageId === msg.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`md:hidden flex items-center gap-1.5 mb-1 transition-all duration-150 ${isMine ? "justify-end" : "justify-start"}`}
+                      >
+                        {/* Reply button */}
+                        <button
+                          onClick={() => {
+                            setReplyingToMessage(msg);
+                            setActiveMenuMessageId(null);
+                          }}
+                          type="button"
+                          className="flex items-center justify-center w-7 h-7 rounded-full bg-white/8 border border-white/10 text-brand-300 active:scale-95 transition shadow-sm"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                        </button>
+                        {/* Emoji reactions */}
+                        <div className="flex items-center gap-0.5 rounded-full bg-slate-900/90 backdrop-blur-sm border border-white/10 px-2 py-1 shadow-xl select-none">
+                          {["❤️", "😂", "👍", "🔥", "😮", "😢"].map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => {
+                                if (socket && profile && selectedConversation) {
+                                  socket.emit("react-message", {
+                                    conversationId: selectedConversation.id,
+                                    messageId: msg.id,
+                                    userId: profile.id,
+                                    reaction: emoji,
+                                  });
+                                  setActiveMenuMessageId(null);
+                                }
+                              }}
+                              className="active:scale-125 transition text-base px-0.5 leading-none"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Replies quoted header preview bubble */}
                     {msg.replyTo && (
                       <div
@@ -1346,6 +1445,7 @@ export default function NsgramMessagesPage() {
                         {msg.replyTo.text}
                       </div>
                     )}
+
 
                     <div
                       className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm relative ${isMine

@@ -12,6 +12,37 @@ export type IncomingCallInfo = {
   callType: CallType;
 };
 
+// Robust helper to acquire media stream with safe fallbacks and HTTPS/secure context diagnostics.
+async function acquireMediaStream(constraints: MediaStreamConstraints): Promise<MediaStream> {
+  if (typeof window !== "undefined" && (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
+    throw { name: "SecurityError", message: "Secure context (HTTPS) required" };
+  }
+
+  try {
+    return await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (err: any) {
+    // If it failed because of strict video constraints, try falling back
+    if ((err.name === "OverconstrainedError" || err.name === "ConstraintNotSatisfiedError") && constraints.video) {
+      console.warn("Overconstrained camera settings. Retrying with basic user facing constraints...");
+      const fallbackConstraints: MediaStreamConstraints = {
+        audio: true,
+        video: { facingMode: "user" }
+      };
+      try {
+        return await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+      } catch (err2: any) {
+        console.warn("Failed second fallback. Trying basic video=true...");
+        const basicConstraints: MediaStreamConstraints = {
+          audio: true,
+          video: true
+        };
+        return await navigator.mediaDevices.getUserMedia(basicConstraints);
+      }
+    }
+    throw err;
+  }
+}
+
 export function useVoiceCall(
   socket: any,
   profile: UserProfile | null,
@@ -41,6 +72,10 @@ export function useVoiceCall(
   const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ringAudioCtxRef = useRef<AudioContext | null>(null);
   const ringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Tracking call status & duration to save call log like Instagram
+  const isCallerRef = useRef(false);
+  const durationRef = useRef(0);
 
   // ── Ring tone helpers (Web Audio API — no external file needed) ─────────────
   const stopRinging = useCallback(() => {
@@ -145,15 +180,32 @@ export function useVoiceCall(
     setIsMuted(false);
     setIsCameraOn(false);
     setCallType("voice");
+
+    // Reset tracking refs
+    durationRef.current = 0;
+    isCallerRef.current = false;
   }, []);
 
   // End Call handler
   const endCall = useCallback(() => {
     if (activePartnerIdRef.current && socket) {
       socket.emit("call-ended", { targetId: activePartnerIdRef.current });
+
+      // Only the caller writes the call log to prevent duplicates
+      if (isCallerRef.current && selectedConversationId && selectedChatUser && profile) {
+        const status = callState === "in-call" ? "completed" : "missed";
+        socket.emit("save-call-log", {
+          conversationId: selectedConversationId,
+          callerId: profile.id,
+          calleeId: selectedChatUser.id,
+          callType,
+          status,
+          duration: durationRef.current,
+        });
+      }
     }
     cleanupCall();
-  }, [cleanupCall, stopRinging]);
+  }, [cleanupCall, socket, selectedConversationId, selectedChatUser, profile, callState, callType, stopRinging]);
 
   // Decline Call handler
   const declineCall = useCallback(() => {
@@ -270,7 +322,7 @@ export function useVoiceCall(
         audio: true,
         video: acceptedCallType === "video" ? { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } : false,
       };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await acquireMediaStream(constraints);
       localStreamRef.current = stream;
       setLocalStream(stream);
 
@@ -279,8 +331,13 @@ export function useVoiceCall(
 
       // Start call duration timer
       setCallDuration(0);
+      durationRef.current = 0;
       callDurationIntervalRef.current = setInterval(() => {
-        setCallDuration((prev) => prev + 1);
+        setCallDuration((prev) => {
+          const next = prev + 1;
+          durationRef.current = next;
+          return next;
+        });
       }, 1000);
     } catch (err: any) {
       console.error("Media access error:", err.name, err.message, err);
@@ -313,6 +370,8 @@ export function useVoiceCall(
     setIsCameraOn(type === "video");
     setConnectionStatus("Calling...");
     activePartnerIdRef.current = selectedChatUser.id;
+    isCallerRef.current = true; // Mark as caller
+    durationRef.current = 0;
 
     // Start outgoing ring sound immediately for User A (caller feedback)
     startRinging("outgoing");
@@ -324,7 +383,7 @@ export function useVoiceCall(
       };
 
       // Get media FIRST so tracks are ready before we create the peer connection on call-accepted
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await acquireMediaStream(constraints);
       localStreamRef.current = stream;
       setLocalStream(stream);
 
@@ -398,6 +457,8 @@ export function useVoiceCall(
         socket.emit("call-declined", { callerId: data.callerId, reason: "busy" });
         return;
       }
+      isCallerRef.current = false; // We are callee
+      durationRef.current = 0;
       setIncomingCallInfo(data);
       setCallType(data.callType);
       setIsCameraOn(data.callType === "video");
@@ -438,8 +499,13 @@ export function useVoiceCall(
 
         // Start call duration timer
         setCallDuration(0);
+        durationRef.current = 0;
         callDurationIntervalRef.current = setInterval(() => {
-          setCallDuration((prev) => prev + 1);
+          setCallDuration((prev) => {
+            const next = prev + 1;
+            durationRef.current = next;
+            return next;
+          });
         }, 1000);
       } catch (err) {
         console.error("Failed to create offer:", err);
@@ -461,12 +527,39 @@ export function useVoiceCall(
       } else {
         setCallErrorMessage("Call declined.");
       }
+
+      // Save call log as caller when remote partner declines
+      if (isCallerRef.current && selectedConversationId && selectedChatUser && profile) {
+        const status = data.reason === "timeout" ? "missed" : "declined";
+        socket.emit("save-call-log", {
+          conversationId: selectedConversationId,
+          callerId: profile.id,
+          calleeId: selectedChatUser.id,
+          callType,
+          status,
+          duration: 0,
+        });
+      }
+
       cleanupCall();
     };
 
     // 4. Call Ended
     const onCallEnded = () => {
       console.log("Call ended by remote partner");
+
+      // Save call log as caller when call session ends
+      if (isCallerRef.current && selectedConversationId && selectedChatUser && profile) {
+        socket.emit("save-call-log", {
+          conversationId: selectedConversationId,
+          callerId: profile.id,
+          calleeId: selectedChatUser.id,
+          callType,
+          status: "completed",
+          duration: durationRef.current,
+        });
+      }
+
       cleanupCall();
     };
 
