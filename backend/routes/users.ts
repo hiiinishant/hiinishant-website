@@ -96,7 +96,9 @@ router.post('/profile', requireFirebaseAuth, async (req: Request, res: Response)
  */
 router.get('/profile/:uid', async (req: Request, res: Response) => {
   try {
-    const { uid } = req.params;
+    const uid = Array.isArray(req.params.uid)
+      ? req.params.uid[0]
+      : req.params.uid;
     if (!uid) {
       res.status(400).json({ error: 'UID is required.' });
       return;

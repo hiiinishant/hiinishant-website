@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { firestore } from '../lib/firebaseAdmin';
 import { sendEmail } from '../lib/mail';
-
+import { requireAuth } from '../middleware/auth';
 const router = Router();
 
 router.post('/', async (req, res) => {

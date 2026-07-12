@@ -225,6 +225,68 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Save Call Log ─────────────────────────────────────────────────────────
+  // Writes a call record message to Firestore when a call ends/is declined/missed.
+  // Both participants in the conversation room receive the call-log message in real-time.
+  socket.on('save-call-log', async (data: {
+    conversationId: string;
+    callerId: string;
+    calleeId: string;
+    callType: 'voice' | 'video';
+    status: 'completed' | 'missed' | 'declined';
+    duration: number; // seconds
+  }) => {
+    const { conversationId, callerId, calleeId, callType, status, duration } = data;
+    if (!conversationId || !callerId || !calleeId || !firestore) return;
+
+    try {
+      const timestamp = new Date();
+      const durationLabel = duration > 0
+        ? `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')}`
+        : null;
+
+      const callLogText = status === 'completed'
+        ? `${callType === 'video' ? '🎥' : '📞'} ${callType === 'video' ? 'Video' : 'Voice'} call · ${durationLabel}`
+        : status === 'missed'
+          ? `${callType === 'video' ? '🎥' : '📞'} Missed ${callType} call`
+          : `${callType === 'video' ? '🎥' : '📞'} ${callType === 'video' ? 'Video' : 'Voice'} call declined`;
+
+      const messageData = {
+        senderId: callerId,
+        text: callLogText,
+        type: 'call',
+        callType,
+        callStatus: status,
+        callDuration: duration,
+        createdAt: timestamp.toISOString(),
+        read: false,
+        reactions: {},
+      };
+
+      const convoRef = firestore.collection('conversations').doc(conversationId);
+      const [msgRef] = await Promise.all([
+        convoRef.collection('messages').add(messageData),
+        convoRef.set({
+          participants: [callerId, calleeId].sort(),
+          lastMessage: callLogText,
+          lastMessageAt: timestamp.toISOString(),
+          lastMessageBy: callerId,
+          lastMessageRead: false,
+        }, { merge: true }),
+      ]);
+
+      // Broadcast to the entire conversation room (both caller & callee)
+      io.to(conversationId).emit('receive-message', {
+        id: msgRef.id,
+        ...messageData,
+      });
+
+      console.log(`[save-call-log] Saved call log for conversation ${conversationId}: ${callLogText}`);
+    } catch (err) {
+      console.error('[save-call-log] Error saving call log:', err);
+    }
+  });
+
   socket.on('webrtc-offer', (data: { senderId: string; targetId: string; offer: any }) => {
     const targetSocketId = getUserSocketId(data.targetId);
     if (targetSocketId) {
