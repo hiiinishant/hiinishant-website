@@ -271,10 +271,11 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
               const net = (status.finance?.income || 0) - (status.finance?.expense || 0);
 
               return (
-                <article
+                <div
                   key={status.id}
-                  className="rounded-2xl border border-white/8 bg-zinc-900/20 hover:border-white/15 hover:bg-zinc-900/30 transition-all duration-300 overflow-hidden"
+                  className="relative p-[1px] rounded-3xl bg-gradient-to-b from-white/12 via-white/5 to-transparent hover:from-accent/30 hover:via-white/12 hover:to-transparent transition-all duration-500 shadow-xl shadow-black/40 group/card"
                 >
+                  <article className="bg-[#09090b]/90 backdrop-blur-xl rounded-[23px] overflow-hidden">
                   {/* ── Card Header ── */}
                   <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/5 bg-white/2">
                     <div className="flex items-center gap-2">
@@ -287,7 +288,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                           {moodEmoji(status.mood)} {status.mood}/10
                         </span>
                       )}
-                      <span className="text-[10px] text-brand-600 font-mono">{formatTime(status.updatedAt)}</span>
+                      <span className="text-[10px] text-zinc-400 font-mono shrink-0">{formatTime(status.updatedAt)}</span>
                     </div>
                   </div>
 
@@ -502,6 +503,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                     )}
                   </div>
                 </article>
+              </div>
               );
             })
           )}
