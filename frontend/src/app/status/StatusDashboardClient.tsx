@@ -302,152 +302,193 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                     )}
 
                     {!structured ? (
-                      /* Legacy: plain task list */
+                      /* Legacy view: plain task list */
                       status.tasks && status.tasks.length > 0 && (
-                        <ul className="space-y-1.5">
+                        <ul className="space-y-1.5 pl-1">
                           {status.tasks.map((task, i) => (
-                            <li key={i} className="flex items-start gap-2 text-xs text-brand-300">
-                              <span className="text-brand-600 mt-0.5 shrink-0">•</span>
+                            <li key={i} className="flex items-start gap-2.5 text-xs text-brand-300">
+                              <span className="text-brand-600 mt-1 select-none">▪</span>
                               <span className="leading-relaxed">{task}</span>
                             </li>
                           ))}
                         </ul>
                       )
                     ) : (
-                      /* Structured: clean section rows */
-                      <div className="space-y-3.5">
-
-                        {/* Study */}
-                        {status.study && (
-                          <SectionRow
-                            icon={<BookOpen className="w-3.5 h-3.5 text-violet-400" />}
-                            label="Study"
-                            color="bg-violet-500/10"
-                          >
-                            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                              <span className="text-sm font-bold text-white">{status.study.hours}h</span>
-                              <span className="text-sm text-brand-200">{status.study.subject || "—"}</span>
-                              <span className="text-xs text-brand-500">{status.study.questions} Qs solved</span>
-                              {status.study.mock && status.study.mock !== "N/A" && status.study.mock !== "" && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-400/8 border border-amber-400/15 px-2 py-0.5 rounded-full">
-                                  <Trophy className="w-3 h-3" /> Mock: {status.study.mock}
+                      /* Modern Premium dashboard view */
+                      <div className="space-y-4">
+                        
+                        {/* ── The 3 Key Trackers Grid (Study, Project, Content) ── */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          
+                          {/* Study Widget */}
+                          {status.study && (
+                            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-violet-500/10 hover:border-violet-500/20 transition-all space-y-3 relative overflow-hidden group">
+                              <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/5 blur-2xl rounded-full group-hover:bg-violet-500/10 transition-colors pointer-events-none" />
+                              
+                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
+                                  <BookOpen className="w-3.5 h-3.5" /> Study Tracker
                                 </span>
-                              )}
-                            </div>
-                          </SectionRow>
-                        )}
-
-                        {/* Project */}
-                        {status.project && (
-                          <SectionRow
-                            icon={<Terminal className="w-3.5 h-3.5 text-cyan-400" />}
-                            label="Startup Dev"
-                            color="bg-cyan-500/10"
-                          >
-                            <div className="space-y-1.5">
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-sm font-bold text-white">{status.project.hours}h</span>
-                                <span className="text-xs text-brand-500">coding / building</span>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-violet-500/10 text-violet-300">
+                                  {status.study.hours} hrs
+                                </span>
                               </div>
-                              {status.project.tasks && status.project.tasks.length > 0 && (
-                                <ul className="space-y-1 mt-1">
-                                  {status.project.tasks.map((t, i) => (
-                                    <li key={i} className="flex items-start gap-2 text-xs text-brand-300">
-                                      <span className="text-cyan-600 shrink-0 mt-0.5">▸</span>
-                                      <span className="leading-relaxed">{t}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          </SectionRow>
-                        )}
 
-                        {/* Content */}
-                        {status.content && (
-                          <SectionRow
-                            icon={<Video className="w-3.5 h-3.5 text-rose-400" />}
-                            label="Content"
-                            color="bg-rose-500/10"
-                          >
-                            <div className="flex items-center gap-4 text-sm">
-                              <span>
-                                <span className="font-bold text-white">{status.content.videos ?? 0}</span>
-                                <span className="text-brand-400 text-xs ml-1">videos</span>
-                              </span>
-                              <span>
-                                <span className="font-bold text-white">{status.content.posts ?? 0}</span>
-                                <span className="text-brand-400 text-xs ml-1">posts</span>
-                              </span>
+                              <div className="space-y-2">
+                                <div>
+                                  <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Subject</div>
+                                  <div className="text-xs font-bold text-white truncate">{status.study.subject || "—"}</div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Solved</div>
+                                    <div className="text-xs font-bold text-brand-200">{status.study.questions} Qs</div>
+                                  </div>
+                                  {status.study.mock && status.study.mock !== "N/A" && status.study.mock !== "" && (
+                                    <div>
+                                      <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Mock Score</div>
+                                      <div className="text-xs font-bold text-amber-400 truncate">{status.study.mock}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          </SectionRow>
-                        )}
+                          )}
 
-                        {/* Health */}
-                        {status.health && (
-                          <SectionRow
-                            icon={<Moon className="w-3.5 h-3.5 text-orange-400" />}
-                            label="Health & Habit"
-                            color="bg-orange-500/10"
-                          >
-                            <div className="flex items-center gap-5 text-sm">
-                              <span>
-                                <span className="font-bold text-white">{status.health.sleep}h</span>
-                                <span className="text-brand-400 text-xs ml-1">sleep</span>
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Utensils className="w-3 h-3 text-brand-500" />
-                                <span className="text-amber-400 font-mono text-sm tracking-tight">
-                                  {eatStars(status.health.healthyEating || 5)}
+                          {/* Project Widget */}
+                          {status.project && (
+                            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-cyan-500/10 hover:border-cyan-500/20 transition-all space-y-3 relative overflow-hidden group">
+                              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 blur-2xl rounded-full group-hover:bg-cyan-500/10 transition-colors pointer-events-none" />
+                              
+                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                                  <Terminal className="w-3.5 h-3.5" /> Startup Dev
                                 </span>
-                              </span>
-                            </div>
-                          </SectionRow>
-                        )}
-
-                        {/* Finance */}
-                        {status.finance && (
-                          <SectionRow
-                            icon={<IndianRupee className="w-3.5 h-3.5 text-emerald-400" />}
-                            label="Finance"
-                            color="bg-emerald-500/10"
-                          >
-                            <div className="flex items-center gap-5 text-sm">
-                              <span>
-                                <span className="font-bold text-emerald-400">+₹{status.finance.income || 0}</span>
-                                <span className="text-brand-500 text-xs ml-1">earned</span>
-                              </span>
-                              <span>
-                                <span className="font-bold text-red-400">−₹{status.finance.expense || 0}</span>
-                                <span className="text-brand-500 text-xs ml-1">spent</span>
-                              </span>
-                              <span>
-                                <span className={`font-bold text-sm ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                                  {net >= 0 ? "+" : ""}₹{net}
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-300">
+                                  {status.project.hours} hrs
                                 </span>
-                                <span className="text-brand-500 text-xs ml-1">net</span>
-                              </span>
-                            </div>
-                          </SectionRow>
-                        )}
+                              </div>
 
-                        {/* Reflection */}
+                              <div className="space-y-1.5">
+                                <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Tasks Completed</div>
+                                {status.project.tasks && status.project.tasks.length > 0 ? (
+                                  <ul className="space-y-1">
+                                    {status.project.tasks.slice(0, 3).map((t, idx) => (
+                                      <li key={idx} className="text-xs text-brand-300 truncate flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-cyan-400 shrink-0" />
+                                        {t}
+                                      </li>
+                                    ))}
+                                    {status.project.tasks.length > 3 && (
+                                      <li className="text-[10px] text-brand-500 font-mono pl-2.5">
+                                        + {status.project.tasks.length - 3} more logs
+                                      </li>
+                                    )}
+                                  </ul>
+                                ) : (
+                                  <div className="text-xs text-brand-500 italic">No task description logged</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Content Widget */}
+                          {status.content && (
+                            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-rose-500/10 hover:border-rose-500/20 transition-all space-y-3 relative overflow-hidden group">
+                              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 blur-2xl rounded-full group-hover:bg-rose-500/10 transition-colors pointer-events-none" />
+                              
+                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                <span className="text-[10px] font-bold text-rose-400 uppercase tracking-widest flex items-center gap-1.5">
+                                  <Video className="w-3.5 h-3.5" /> Media Push
+                                </span>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/10 text-rose-300">
+                                  {((status.content.videos || 0) + (status.content.posts || 0))} items
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 pt-1">
+                                <div className="text-center p-2 rounded-xl bg-white/2 border border-white/5">
+                                  <div className="text-xs font-bold text-white">{status.content.videos || 0}</div>
+                                  <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Videos</div>
+                                </div>
+                                <div className="text-center p-2 rounded-xl bg-white/2 border border-white/5">
+                                  <div className="text-xs font-bold text-white">{status.content.posts || 0}</div>
+                                  <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Posts</div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                        </div>
+
+                        {/* ── Habits & Finance (Horizontal Split) ── */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          
+                          {/* Habits Card */}
+                          {status.health && (
+                            <div className="p-4 rounded-2xl bg-zinc-950/30 border border-white/5 flex flex-col justify-between gap-3">
+                              <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <Moon className="w-3.5 h-3.5" /> Habits & Rest
+                              </span>
+                              <div className="grid grid-cols-2 gap-4 pt-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="text-sm font-bold text-white">{status.health.sleep} hrs</div>
+                                  <div className="text-[10px] text-brand-500">Sleep</div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-amber-400 text-xs font-mono">{eatStars(status.health.healthyEating || 5)}</span>
+                                  <div className="text-[10px] text-brand-500">Eating</div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Ledger Card */}
+                          {status.finance && (
+                            <div className="p-4 rounded-2xl bg-zinc-950/30 border border-white/5 flex flex-col justify-between gap-3">
+                              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <IndianRupee className="w-3.5 h-3.5" /> Finance Ledger
+                              </span>
+                              <div className="flex items-center justify-between pt-1">
+                                <div className="flex gap-4">
+                                  <div>
+                                    <div className="text-[8px] text-brand-500 uppercase tracking-wider font-mono">Income</div>
+                                    <div className="text-xs font-bold text-emerald-400">+₹{status.finance.income || 0}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-[8px] text-brand-500 uppercase tracking-wider font-mono">Expense</div>
+                                    <div className="text-xs font-bold text-red-400">−₹{status.finance.expense || 0}</div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-[8px] text-brand-500 uppercase tracking-wider font-mono">Net Flow</div>
+                                  <div className={`text-xs font-black ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                    {net >= 0 ? "+" : ""}₹{net}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                        </div>
+
+                        {/* ── Reflections (Best Moment & Lesson Learned) ── */}
                         {(status.bestMoment || status.lessonLearned) && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-white/5">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-white/5">
                             {status.bestMoment && (
-                              <div className="space-y-1">
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest text-brand-500">
-                                  <Star className="w-3 h-3 text-amber-400" /> Best Moment
+                              <div className="p-3.5 rounded-2xl bg-white/2 border border-white/5 space-y-1">
+                                <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-amber-400 uppercase tracking-widest font-mono">
+                                  <Star className="w-3 h-3" /> Best Moment
                                 </span>
-                                <p className="text-xs text-brand-200 leading-relaxed">
+                                <p className="text-xs text-brand-200 leading-relaxed font-medium italic">
                                   &ldquo;{status.bestMoment}&rdquo;
                                 </p>
                               </div>
                             )}
                             {status.lessonLearned && (
-                              <div className="space-y-1">
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest text-brand-500">
-                                  <Lightbulb className="w-3 h-3 text-sky-400" /> Lesson
+                              <div className="p-3.5 rounded-2xl bg-white/2 border border-white/5 space-y-1">
+                                <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-sky-400 uppercase tracking-widest font-mono">
+                                  <Lightbulb className="w-3 h-3" /> Lesson Learned
                                 </span>
                                 <p className="text-xs text-brand-300 leading-relaxed italic">
                                   {status.lessonLearned}
@@ -456,6 +497,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                             )}
                           </div>
                         )}
+
                       </div>
                     )}
                   </div>
