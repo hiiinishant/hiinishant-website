@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -317,7 +317,7 @@ export default function AdminPage() {
   // Fetch Public Logs (With Latency Ping)
   const fetchPublicLogs = useCallback(async () => {
     const start = performance.now();
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
 
     // 1. Fetch statuses first for fast, non-blocking render of the timeline logs
     const statusPromise = fetch(`${backendUrl}/api/status`)
