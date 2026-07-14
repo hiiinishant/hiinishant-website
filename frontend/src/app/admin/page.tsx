@@ -1070,6 +1070,41 @@ export default function AdminPage() {
     }
   };
 
+  const formatTime = (isoString: string) => {
+    if (!isoString) return "";
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }) + " IST";
+    } catch {
+      return "";
+    }
+  };
+
+  const isStructured = (s: DailyStatus) =>
+    !!(s.study || s.project || s.content || s.health || s.finance || s.bestMoment || s.lessonLearned);
+
+  const renderEatStars = (r: number) => {
+    const active = Math.min(Math.max(0, r), 5);
+    const inactive = 5 - active;
+    return (
+      <span className="inline-flex items-center leading-none select-none text-[13px] tracking-tight">
+        <span className="text-amber-400">{"★".repeat(active)}</span>
+        <span className="text-zinc-700">{"★".repeat(inactive)}</span>
+      </span>
+    );
+  };
+
+  const moodEmoji = (m: number) => {
+    if (m >= 9) return "🔥";
+    if (m >= 7) return "😊";
+    if (m >= 5) return "😐";
+    return "😴";
+  };
+
   // 30 Days activity bar mapping
   const getUptimeBars = () => {
     const bars = [];
@@ -1254,7 +1289,7 @@ export default function AdminPage() {
         
         {/* PUBLIC CONSOLE READ-ONLY FEED */}
         {!unlocked && (
-          <div className="max-w-2xl mx-auto py-8 space-y-10 animate-fade-in relative z-10">
+          <div className="max-w-2xl mx-auto py-8 space-y-8 animate-fade-in relative z-10">
             {/* Top Controls Row */}
             <div className="flex items-center gap-2 sm:gap-4 border-b border-white/5 pb-6">
               {/* Date Search Input — grows to fill available space */}
@@ -1289,8 +1324,8 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Timeline logs */}
-            <div className="relative pl-6 border-l border-white/5 space-y-12">
+            {/* Day Log Cards Feed */}
+            <div className="space-y-6">
               {loading ? (
                 <div className="text-center py-12 font-mono">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent mx-auto mb-3" />
@@ -1302,43 +1337,169 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <>
-                  {filteredStatuses.slice(0, showAllLogs ? filteredStatuses.length : 5).map((status) => (
-                    <div key={status.id} className="relative group space-y-3">
-                      {/* Timeline Dot */}
-                      <div className="absolute -left-[29px] top-1.5 w-2 h-2 rounded-full bg-background flex items-center justify-center">
-                        <div className={`w-1.5 h-1.5 rounded-full ${getDotColor(status.statusText || "")}`} />
-                      </div>
+                  {filteredStatuses.slice(0, showAllLogs ? filteredStatuses.length : 5).map((status) => {
+                    const structured = isStructured(status);
+                    const net = (status.finance?.income || 0) - (status.finance?.expense || 0);
 
-                      {/* Date Header */}
-                      <div className="flex items-center justify-between text-[10px] font-mono font-bold tracking-wider uppercase text-brand-400">
-                        <span>{formatDate(status.date)}</span>
-                        <span className="text-[9px] text-brand-300 normal-case font-medium font-mono tracking-wide">
-                          {new Date(status.updatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} IST
-                        </span>
-                      </div>
+                    return (
+                      <div
+                        key={status.id}
+                        className="rounded-2xl border border-zinc-700/70 hover:border-zinc-500/80 bg-[#09090b]/90 backdrop-blur-xl transition-all duration-300 shadow-lg shadow-black/50 overflow-hidden text-left"
+                      >
+                        <article>
+                          {/* ── Card Header ── */}
+                          <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/5 bg-white/2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-white">{formatDate(status.date)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {status.mood != null && (
+                                <span className="text-xs font-semibold text-amber-400">
+                                  {moodEmoji(status.mood)} {status.mood}/10
+                                </span>
+                              )}
+                              <span className="text-[10px] text-zinc-300 font-mono shrink-0">{formatTime(status.updatedAt)}</span>
+                            </div>
+                          </div>
 
-                      {/* Focus / Activity */}
-                      <div className="text-[13px] font-semibold text-white tracking-tight leading-snug">
-                        {status.statusText}
-                      </div>
+                          {/* ── Card Body ── */}
+                          <div className="px-5 py-4 space-y-4">
+                            {/* Focus summary */}
+                            {status.statusText && (
+                              <p className="text-sm text-white font-medium leading-snug border-l-2 border-accent/50 pl-3">
+                                {status.statusText}
+                              </p>
+                            )}
 
-                      {/* Task Details */}
-                      {status.tasks && status.tasks.length > 0 && (
-                        <div className="space-y-1.5 pl-0.5 mt-2">
-                          {status.tasks.map((task, idx, arr) => {
-                            const isLast = idx === arr.length - 1;
-                            return (
-                              <div key={idx} className="flex items-start gap-2 text-xs font-mono text-brand-300">
-                                <span className="text-brand-600 select-none">{isLast ? "└─" : "├─"}</span>
-                                {getTaskPrefix(task)}
-                                <span className="leading-relaxed">{task}</span>
+                            {!structured ? (
+                              /* Legacy plain task list */
+                              status.tasks && status.tasks.length > 0 && (
+                                <ul className="space-y-1.5 pl-1">
+                                  {status.tasks.map((task, i) => (
+                                    <li key={i} className="flex items-start gap-2.5 text-xs text-brand-300">
+                                      <span className="text-brand-600 mt-1 select-none">▪</span>
+                                      <span className="leading-relaxed">{task}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )
+                            ) : (
+                              /* Clean flat rows */
+                              <div className="divide-y divide-white/[0.06]">
+                                {/* Study */}
+                                {status.study && (
+                                  <div className="py-2.5 grid grid-cols-[6.5rem_0.75rem_1fr] gap-x-2 gap-y-0 items-center">
+                                    <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                                      📚 Study
+                                    </span>
+                                    <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center">→</span>
+                                    <div className="text-xs text-zinc-300 flex flex-wrap gap-x-3 items-center leading-normal">
+                                      <span className="font-bold text-white">{status.study.hours}h</span>
+                                      <span>Subject - <span className="text-white uppercase font-semibold">{status.study.subject || "—"}</span></span>
+                                      {status.study.questions > 0 && (
+                                        <span>Practice Qs - <span className="text-white">{status.study.questions} Qs</span></span>
+                                      )}
+                                      {status.study.mock && status.study.mock !== "N/A" && status.study.mock !== "" && (
+                                        <span className="text-amber-400 font-mono font-semibold">Mock: {status.study.mock}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Project */}
+                                {status.project && (
+                                  <div className="py-2.5 grid grid-cols-[6.5rem_0.75rem_1fr] gap-x-2 gap-y-0 items-center">
+                                    <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                                      💻 Dev
+                                    </span>
+                                    <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center">→</span>
+                                    <div className="text-xs text-zinc-300 flex flex-wrap gap-x-3 items-center leading-normal">
+                                      <span className="font-bold text-white">{status.project.hours}h</span>
+                                      {status.project.tasks && status.project.tasks.length > 0 && (
+                                        <span className="text-zinc-400 flex flex-wrap gap-x-2.5 items-center">
+                                          {status.project.tasks.slice(0, 3).map((t, i) => (
+                                            <span key={i} className="inline-flex items-center gap-1">
+                                              <span className="text-cyan-400 font-bold">▸</span> {t}
+                                            </span>
+                                          ))}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Content */}
+                                {status.content && (
+                                  <div className="py-2.5 grid grid-cols-[6.5rem_0.75rem_1fr] gap-x-2 gap-y-0 items-center">
+                                    <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                                      🎥 Content
+                                    </span>
+                                    <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center">→</span>
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300 leading-normal">
+                                      <span>Youtube video - <span className="font-bold text-white">{status.content.videos || 0}</span></span>
+                                      <span>Blog - <span className="font-bold text-white">0</span></span>
+                                      <span>Insta post - <span className="font-bold text-white">{status.content.posts || 0}</span></span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Health */}
+                                {status.health && (
+                                  <div className="py-2.5 grid grid-cols-[6.5rem_0.75rem_1fr] gap-x-2 gap-y-0 items-center">
+                                    <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                                      😴 Health
+                                    </span>
+                                    <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center">→</span>
+                                    <div className="flex items-center gap-4 text-xs">
+                                      <span><span className="font-bold text-white">{status.health.sleep}h</span> <span className="text-zinc-500">sleep</span></span>
+                                      <span className="flex items-center gap-1.5 text-zinc-400">Healthy Diet - {renderEatStars(status.health.healthyEating || 5)}</span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Finance */}
+                                {status.finance && (
+                                  <div className="py-2.5 grid grid-cols-[6.5rem_0.75rem_1fr] gap-x-2 gap-y-0 items-center">
+                                    <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                                      💸 Finance
+                                    </span>
+                                    <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center">→</span>
+                                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+                                      <span className="text-zinc-400">Income <span className="font-bold text-emerald-400">+₹{status.finance.income || 0}</span></span>
+                                      <span className="text-zinc-400">Expense <span className="font-bold text-red-400">−₹{status.finance.expense || 0}</span></span>
+                                      <span className="text-zinc-400">Net <span className={`font-bold ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>{net >= 0 ? "+" : ""}₹{net}</span></span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Best Moment */}
+                                {status.bestMoment && (
+                                  <div className="py-2.5 grid grid-cols-[6.5rem_0.75rem_1fr] gap-x-2 gap-y-0 items-start">
+                                    <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono flex items-center gap-1 pt-0.5">
+                                      ⭐ Best Moments
+                                    </span>
+                                    <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center pt-0.5">→</span>
+                                    <p className="text-xs text-zinc-300 leading-relaxed italic">&ldquo;{status.bestMoment}&rdquo;</p>
+                                  </div>
+                                )}
+
+                                {/* Lesson */}
+                                {status.lessonLearned && (
+                                  <div className="py-2.5 grid grid-cols-[6.5rem_0.75rem_1fr] gap-x-2 gap-y-0 items-start">
+                                    <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono flex items-center gap-1 pt-0.5">
+                                      💡 Lesson
+                                    </span>
+                                    <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center pt-0.5">→</span>
+                                    <p className="text-xs text-zinc-400 leading-relaxed italic">{status.lessonLearned}</p>
+                                  </div>
+                                )}
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                            )}
+                          </div>
+                        </article>
+                      </div>
+                    );
+                  })}
 
                   {!showAllLogs && filteredStatuses.length > 5 && (
                     <div className="text-center pt-4">
