@@ -376,7 +376,7 @@ export default function AdminPage() {
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
       const [updRes, msgRes, blogRes] = await Promise.all([
         fetch(`${backendUrl}/api/updates`, { headers: getAuthHeaders() }),
         fetch(`${backendUrl}/api/contact`, { headers: getAuthHeaders() }),
@@ -499,7 +499,7 @@ export default function AdminPage() {
   // Handle Admin Auth
   const handleLogin = async (pw: string) => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
       const res = await fetch(`${backendUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

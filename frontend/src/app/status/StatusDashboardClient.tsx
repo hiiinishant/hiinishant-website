@@ -181,7 +181,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-accent/3 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse-slow" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.005)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.005)_1px,transparent_1px)] bg-[size:72px_72px] pointer-events-none -z-20 opacity-30" />
 
-      <div className="max-w-3xl mx-auto px-5 relative z-10 space-y-10">
+      <div className="max-w-xl mx-auto px-5 relative z-10 space-y-8">
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5">
@@ -199,14 +199,6 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => fetchLatest(true)}
-              disabled={refreshing}
-              className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3 py-2 rounded-xl transition-all font-semibold disabled:opacity-50 cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-accent" : ""}`} />
-              {refreshing ? "Syncing…" : "Refresh"}
-            </button>
             <Link
               href="/admin"
               className="inline-flex items-center gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-4 py-2 rounded-xl transition-all font-semibold hover:border-accent/30"
@@ -217,33 +209,6 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
           </div>
         </div>
 
-        {/* ── Aggregate Stats ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatPill
-            icon={<BookOpen className="w-3.5 h-3.5 text-violet-400" />}
-            label="Study Hrs"
-            value={`${totalStudyHours}h`}
-            color="border-violet-500/15"
-          />
-          <StatPill
-            icon={<Terminal className="w-3.5 h-3.5 text-cyan-400" />}
-            label="Dev Hrs"
-            value={`${totalDevHours}h`}
-            color="border-cyan-500/15"
-          />
-          <StatPill
-            icon={<Moon className="w-3.5 h-3.5 text-orange-400" />}
-            label="Avg Sleep"
-            value={`${avgSleep}h`}
-            color="border-orange-500/15"
-          />
-          <StatPill
-            icon={<Smile className="w-3.5 h-3.5 text-amber-400" />}
-            label="Avg Mood"
-            value={`${avgMood}/10`}
-            color="border-amber-500/15"
-          />
-        </div>
 
         {/* ── Search ── */}
         <div className="relative">
@@ -273,9 +238,9 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
               return (
                 <div
                   key={status.id}
-                  className="relative p-[1px] rounded-3xl bg-gradient-to-b from-white/12 via-white/5 to-transparent hover:from-accent/30 hover:via-white/12 hover:to-transparent transition-all duration-500 shadow-xl shadow-black/40 group/card"
+                  className="rounded-2xl border border-zinc-700/70 hover:border-zinc-500/80 bg-[#09090b]/90 backdrop-blur-xl transition-all duration-300 shadow-lg shadow-black/50 overflow-hidden"
                 >
-                  <article className="bg-[#09090b]/90 backdrop-blur-xl rounded-[23px] overflow-hidden">
+                  <article>
                   {/* ── Card Header ── */}
                   <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/5 bg-white/2">
                     <div className="flex items-center gap-2">
@@ -288,7 +253,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                           {moodEmoji(status.mood)} {status.mood}/10
                         </span>
                       )}
-                      <span className="text-[10px] text-zinc-400 font-mono shrink-0">{formatTime(status.updatedAt)}</span>
+                      <span className="text-[10px] text-zinc-300 font-mono shrink-0">{formatTime(status.updatedAt)}</span>
                     </div>
                   </div>
 
@@ -315,187 +280,102 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                         </ul>
                       )
                     ) : (
-                      /* Modern Premium dashboard view */
-                      <div className="space-y-4">
-                        
-                        {/* ── The 3 Key Trackers Grid (Study, Project, Content) ── */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          
-                          {/* Study Widget */}
-                          {status.study && (
-                            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-violet-500/10 hover:border-violet-500/20 transition-all space-y-3 relative overflow-hidden group">
-                              <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/5 blur-2xl rounded-full group-hover:bg-violet-500/10 transition-colors pointer-events-none" />
-                              
-                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
-                                  <BookOpen className="w-3.5 h-3.5" /> Study Tracker
-                                </span>
-                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-violet-500/10 text-violet-300">
-                                  {status.study.hours} hrs
-                                </span>
-                              </div>
+                      /* Clean flat rows — no inner boxes */
+                      <div className="divide-y divide-white/[0.06]">
 
-                              <div className="space-y-2">
-                                <div>
-                                  <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Subject</div>
-                                  <div className="text-xs font-bold text-white truncate">{status.study.subject || "—"}</div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Solved</div>
-                                    <div className="text-xs font-bold text-brand-200">{status.study.questions} Qs</div>
-                                  </div>
-                                  {status.study.mock && status.study.mock !== "N/A" && status.study.mock !== "" && (
-                                    <div>
-                                      <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Mock Score</div>
-                                      <div className="text-xs font-bold text-amber-400 truncate">{status.study.mock}</div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+                        {/* Study */}
+                        {status.study && (
+                          <div className="py-2.5 grid grid-cols-[4.5rem_1fr] gap-3 items-start">
+                            <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono flex items-center gap-1 pt-0.5">
+                              <BookOpen className="w-3 h-3 shrink-0" /> Study
+                            </span>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                              <span className="font-bold text-white">{status.study.hours}h</span>
+                              <span className="text-zinc-300">{status.study.subject || "—"}</span>
+                              <span className="text-zinc-500">{status.study.questions} Qs</span>
+                              {status.study.mock && status.study.mock !== "N/A" && status.study.mock !== "" && (
+                                <span className="text-amber-400 font-mono">Mock: {status.study.mock}</span>
+                              )}
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                          {/* Project Widget */}
-                          {status.project && (
-                            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-cyan-500/10 hover:border-cyan-500/20 transition-all space-y-3 relative overflow-hidden group">
-                              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 blur-2xl rounded-full group-hover:bg-cyan-500/10 transition-colors pointer-events-none" />
-                              
-                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
-                                  <Terminal className="w-3.5 h-3.5" /> Startup Dev
-                                </span>
-                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-300">
-                                  {status.project.hours} hrs
-                                </span>
-                              </div>
-
-                              <div className="space-y-1.5">
-                                <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Tasks Completed</div>
-                                {status.project.tasks && status.project.tasks.length > 0 ? (
-                                  <ul className="space-y-1">
-                                    {status.project.tasks.slice(0, 3).map((t, idx) => (
-                                      <li key={idx} className="text-xs text-brand-300 truncate flex items-center gap-1.5">
-                                        <span className="w-1 h-1 rounded-full bg-cyan-400 shrink-0" />
-                                        {t}
-                                      </li>
-                                    ))}
-                                    {status.project.tasks.length > 3 && (
-                                      <li className="text-[10px] text-brand-500 font-mono pl-2.5">
-                                        + {status.project.tasks.length - 3} more logs
-                                      </li>
-                                    )}
-                                  </ul>
-                                ) : (
-                                  <div className="text-xs text-brand-500 italic">No task description logged</div>
-                                )}
-                              </div>
+                        {/* Project */}
+                        {status.project && (
+                          <div className="py-2.5 grid grid-cols-[4.5rem_1fr] gap-3 items-start">
+                            <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono flex items-center gap-1 pt-0.5">
+                              <Terminal className="w-3 h-3 shrink-0" /> Dev
+                            </span>
+                            <div>
+                              <span className="text-xs font-bold text-white">{status.project.hours}h</span>
+                              {status.project.tasks && status.project.tasks.length > 0 && (
+                                <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+                                  {status.project.tasks.slice(0, 3).map((t, i) => (
+                                    <span key={i} className="text-xs text-zinc-400">▸ {t}</span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                          {/* Content Widget */}
-                          {status.content && (
-                            <div className="p-4 rounded-2xl bg-zinc-950/40 border border-rose-500/10 hover:border-rose-500/20 transition-all space-y-3 relative overflow-hidden group">
-                              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 blur-2xl rounded-full group-hover:bg-rose-500/10 transition-colors pointer-events-none" />
-                              
-                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                <span className="text-[10px] font-bold text-rose-400 uppercase tracking-widest flex items-center gap-1.5">
-                                  <Video className="w-3.5 h-3.5" /> Media Push
-                                </span>
-                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/10 text-rose-300">
-                                  {((status.content.videos || 0) + (status.content.posts || 0))} items
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-3 pt-1">
-                                <div className="text-center p-2 rounded-xl bg-white/2 border border-white/5">
-                                  <div className="text-xs font-bold text-white">{status.content.videos || 0}</div>
-                                  <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Videos</div>
-                                </div>
-                                <div className="text-center p-2 rounded-xl bg-white/2 border border-white/5">
-                                  <div className="text-xs font-bold text-white">{status.content.posts || 0}</div>
-                                  <div className="text-[9px] text-brand-500 uppercase tracking-wider font-mono">Posts</div>
-                                </div>
-                              </div>
+                        {/* Content */}
+                        {status.content && (
+                          <div className="py-2.5 grid grid-cols-[4.5rem_1fr] gap-3 items-center">
+                            <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                              <Video className="w-3 h-3 shrink-0" /> Content
+                            </span>
+                            <div className="flex items-center gap-4 text-xs">
+                              <span><span className="font-bold text-white">{status.content.videos || 0}</span> <span className="text-zinc-500">videos</span></span>
+                              <span><span className="font-bold text-white">{status.content.posts || 0}</span> <span className="text-zinc-500">posts</span></span>
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                        </div>
-
-                        {/* ── Habits & Finance (Horizontal Split) ── */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          
-                          {/* Habits Card */}
-                          {status.health && (
-                            <div className="p-4 rounded-2xl bg-zinc-950/30 border border-white/5 flex flex-col justify-between gap-3">
-                              <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
-                                <Moon className="w-3.5 h-3.5" /> Habits & Rest
-                              </span>
-                              <div className="grid grid-cols-2 gap-4 pt-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="text-sm font-bold text-white">{status.health.sleep} hrs</div>
-                                  <div className="text-[10px] text-brand-500">Sleep</div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-amber-400 text-xs font-mono">{eatStars(status.health.healthyEating || 5)}</span>
-                                  <div className="text-[10px] text-brand-500">Eating</div>
-                                </div>
-                              </div>
+                        {/* Health */}
+                        {status.health && (
+                          <div className="py-2.5 grid grid-cols-[4.5rem_1fr] gap-3 items-center">
+                            <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                              <Moon className="w-3 h-3 shrink-0" /> Health
+                            </span>
+                            <div className="flex items-center gap-4 text-xs">
+                              <span><span className="font-bold text-white">{status.health.sleep}h</span> <span className="text-zinc-500">sleep</span></span>
+                              <span className="text-amber-400 font-mono">{eatStars(status.health.healthyEating || 5)}</span>
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                          {/* Ledger Card */}
-                          {status.finance && (
-                            <div className="p-4 rounded-2xl bg-zinc-950/30 border border-white/5 flex flex-col justify-between gap-3">
-                              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
-                                <IndianRupee className="w-3.5 h-3.5" /> Finance Ledger
-                              </span>
-                              <div className="flex items-center justify-between pt-1">
-                                <div className="flex gap-4">
-                                  <div>
-                                    <div className="text-[8px] text-brand-500 uppercase tracking-wider font-mono">Income</div>
-                                    <div className="text-xs font-bold text-emerald-400">+₹{status.finance.income || 0}</div>
-                                  </div>
-                                  <div>
-                                    <div className="text-[8px] text-brand-500 uppercase tracking-wider font-mono">Expense</div>
-                                    <div className="text-xs font-bold text-red-400">−₹{status.finance.expense || 0}</div>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-[8px] text-brand-500 uppercase tracking-wider font-mono">Net Flow</div>
-                                  <div className={`text-xs font-black ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                                    {net >= 0 ? "+" : ""}₹{net}
-                                  </div>
-                                </div>
-                              </div>
+                        {/* Finance */}
+                        {status.finance && (
+                          <div className="py-2.5 grid grid-cols-[4.5rem_1fr] gap-3 items-center">
+                            <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                              <IndianRupee className="w-3 h-3 shrink-0" /> Finance
+                            </span>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                              <span><span className="font-bold text-emerald-400">+₹{status.finance.income || 0}</span> <span className="text-zinc-500">in</span></span>
+                              <span><span className="font-bold text-red-400">−₹{status.finance.expense || 0}</span> <span className="text-zinc-500">out</span></span>
+                              <span><span className={`font-bold ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>{net >= 0 ? "+" : ""}₹{net}</span> <span className="text-zinc-500">net</span></span>
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                        </div>
+                        {/* Best Moment */}
+                        {status.bestMoment && (
+                          <div className="py-2.5 grid grid-cols-[4.5rem_1fr] gap-3 items-start">
+                            <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono flex items-center gap-1 pt-0.5">
+                              <Star className="w-3 h-3 shrink-0" /> Best
+                            </span>
+                            <p className="text-xs text-zinc-300 leading-relaxed italic">&ldquo;{status.bestMoment}&rdquo;</p>
+                          </div>
+                        )}
 
-                        {/* ── Reflections (Best Moment & Lesson Learned) ── */}
-                        {(status.bestMoment || status.lessonLearned) && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-white/5">
-                            {status.bestMoment && (
-                              <div className="p-3.5 rounded-2xl bg-white/2 border border-white/5 space-y-1">
-                                <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-amber-400 uppercase tracking-widest font-mono">
-                                  <Star className="w-3 h-3" /> Best Moment
-                                </span>
-                                <p className="text-xs text-brand-200 leading-relaxed font-medium italic">
-                                  &ldquo;{status.bestMoment}&rdquo;
-                                </p>
-                              </div>
-                            )}
-                            {status.lessonLearned && (
-                              <div className="p-3.5 rounded-2xl bg-white/2 border border-white/5 space-y-1">
-                                <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-sky-400 uppercase tracking-widest font-mono">
-                                  <Lightbulb className="w-3 h-3" /> Lesson Learned
-                                </span>
-                                <p className="text-xs text-brand-300 leading-relaxed italic">
-                                  {status.lessonLearned}
-                                </p>
-                              </div>
-                            )}
+                        {/* Lesson */}
+                        {status.lessonLearned && (
+                          <div className="py-2.5 grid grid-cols-[4.5rem_1fr] gap-3 items-start">
+                            <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-widest font-mono flex items-center gap-1 pt-0.5">
+                              <Lightbulb className="w-3 h-3 shrink-0" /> Lesson
+                            </span>
+                            <p className="text-xs text-zinc-400 leading-relaxed italic">{status.lessonLearned}</p>
                           </div>
                         )}
 

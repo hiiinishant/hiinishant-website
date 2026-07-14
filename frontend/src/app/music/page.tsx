@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 async function fetchMusicSettings(): Promise<MusicSettings> {
   const backendUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+    process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
   try {
     const res = await fetch(`${backendUrl}/api/music`, {
       next: { revalidate: 300 }, // cache for 5 minutes

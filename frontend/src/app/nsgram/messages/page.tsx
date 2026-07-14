@@ -1277,7 +1277,7 @@ export default function NsgramMessagesPage() {
               <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-[11px] font-medium px-4 py-2 flex items-center justify-between shrink-0 select-none animate-pulse">
                 <span className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-                  <span>Offline / Connecting to chat server... (Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000"})</span>
+                  <span>Offline / Connecting to chat server... (Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com"})</span>
                 </span>
               </div>
             )}

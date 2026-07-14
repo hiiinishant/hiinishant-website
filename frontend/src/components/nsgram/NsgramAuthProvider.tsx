@@ -102,7 +102,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
     console.log("Connecting to socket backend:", backendUrl);
     const socketClient = io(backendUrl, {
       transports: ["websocket", "polling"],
