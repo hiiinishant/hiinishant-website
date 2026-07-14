@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import StatusDashboardClient from "./StatusDashboardClient";
 import { apiUrl } from "@/lib/api";
 
-export const revalidate = 10;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Live Status Dashboard",
