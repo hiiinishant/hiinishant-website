@@ -21,11 +21,38 @@ router.get('/', async (req, res) => {
 
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { date, statusText, tasks } = req.body;
+    const { 
+      date, 
+      statusText, 
+      tasks,
+      study,
+      project,
+      content,
+      health,
+      finance,
+      mood,
+      bestMoment,
+      lessonLearned
+    } = req.body;
+
     const docRef = firestore.collection('dailyStatus').doc(date);
-    await docRef.set({
-      date, statusText, tasks, updatedAt: new Date().toISOString()
-    }, { merge: true });
+    const updateData: any = {
+      date,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (statusText !== undefined) updateData.statusText = statusText;
+    if (tasks !== undefined) updateData.tasks = tasks;
+    if (study !== undefined) updateData.study = study;
+    if (project !== undefined) updateData.project = project;
+    if (content !== undefined) updateData.content = content;
+    if (health !== undefined) updateData.health = health;
+    if (finance !== undefined) updateData.finance = finance;
+    if (mood !== undefined) updateData.mood = mood;
+    if (bestMoment !== undefined) updateData.bestMoment = bestMoment;
+    if (lessonLearned !== undefined) updateData.lessonLearned = lessonLearned;
+
+    await docRef.set(updateData, { merge: true });
     const doc = await docRef.get();
     res.status(201).json({ id: doc.id, ...doc.data() });
   } catch (error: any) {

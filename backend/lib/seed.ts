@@ -123,18 +123,72 @@ export const seedDatabase = async () => {
           "Updated Live Status dashboard with real-time logs and automated database seeders.",
           "Refined animations and hover effects on cards for a smoother, premium browsing experience."
         ],
+        study: {
+          hours: 6,
+          subject: "Algorithms & Data Structures",
+          questions: 15,
+          mock: "N/A"
+        },
+        project: {
+          hours: 4,
+          tasks: [
+            "Refactored homepage Hero section top spacing",
+            "Optimized profile card sticky position with custom overflow-clip updates"
+          ]
+        },
+        content: {
+          videos: 1,
+          posts: 2
+        },
+        health: {
+          sleep: 7.5,
+          healthyEating: 4
+        },
+        finance: {
+          expense: 450,
+          income: 1200
+        },
+        mood: 9,
+        bestMoment: "Reached 100K+ students milestone across the platform updates!",
+        lessonLearned: "Keep inputs modular and structured to easily parse dashboard cards dynamically.",
         updatedAt: "2026-06-29T11:30:00.000Z"
       });
-      await firestore.collection('dailyStatus').doc('2026-06-11').set({
-        date: "2026-06-11",
+      await firestore.collection('dailyStatus').doc('2026-06-28').set({
+        date: "2026-06-28",
         statusText: "Building Live & Refactoring Animations 🚀",
         tasks: [
           "Refactored homepage Hero section top spacing to remove navbar gaps.",
-          "Optimized profile card sticky position with custom overflow-clip updates.",
-          "Implemented floating quote background movements and animations.",
-          "Started building the Live Current Status dashboard for users to track daily work logs."
+          "Implemented floating quote background movements and animations."
         ],
-        updatedAt: "2026-06-11T20:30:00.000Z"
+        study: {
+          hours: 8,
+          subject: "Operating Systems (GATE)",
+          questions: 20,
+          mock: "GATE Full Mock Exam #3 (Score: 78/100)"
+        },
+        project: {
+          hours: 5,
+          tasks: [
+            "Implemented floating quote animations",
+            "Set up new WebRTC voice signaling"
+          ]
+        },
+        content: {
+          videos: 0,
+          posts: 1
+        },
+        health: {
+          sleep: 8,
+          healthyEating: 5
+        },
+        finance: {
+          expense: 150,
+          income: 0
+        },
+        mood: 8,
+        bestMoment: "Finished a full length Sunday mock series with high marks!",
+        lessonLearned: "Early morning routines allow higher focus blocks without distraction.",
+        updatedAt: "2026-06-28T20:30:00.000Z"
       });
     }
 

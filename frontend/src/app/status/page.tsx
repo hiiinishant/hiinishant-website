@@ -24,8 +24,33 @@ interface FuturePlan {
 interface DailyStatus {
   id: string;
   date: string;
-  statusText: string;
-  tasks: string[];
+  statusText?: string;
+  tasks?: string[];
+  study?: {
+    hours: number;
+    subject: string;
+    questions: number;
+    mock?: string;
+  };
+  project?: {
+    hours: number;
+    tasks: string[];
+  };
+  content?: {
+    videos?: number;
+    posts?: number;
+  };
+  health?: {
+    sleep: number;
+    healthyEating: number; // 1-5 rating
+  };
+  finance?: {
+    expense: number;
+    income: number;
+  };
+  mood?: number; // 1-10 rating
+  bestMoment?: string;
+  lessonLearned?: string;
   updatedAt: string;
 }
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -40,8 +40,33 @@ interface ContactMessage {
 interface DailyStatus {
   id: string;
   date: string;
-  statusText: string;
-  tasks: string[];
+  statusText?: string;
+  tasks?: string[];
+  study?: {
+    hours: number;
+    subject: string;
+    questions: number;
+    mock?: string;
+  };
+  project?: {
+    hours: number;
+    tasks: string[];
+  };
+  content?: {
+    videos?: number;
+    posts?: number;
+  };
+  health?: {
+    sleep: number;
+    healthyEating: number;
+  };
+  finance?: {
+    expense: number;
+    income: number;
+  };
+  mood?: number;
+  bestMoment?: string;
+  lessonLearned?: string;
   updatedAt: string;
 }
 
@@ -211,42 +236,15 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
-  const [plans, setPlans] = useState<FuturePlan[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("cached_plans");
-        return cached ? JSON.parse(cached) : [];
-      } catch (e) {
-        console.error("Failed to parse cached plans:", e);
-        return [];
-      }
-    }
-    return [];
-  });
+  const [plans, setPlans] = useState<FuturePlan[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
-  const [statuses, setStatuses] = useState<DailyStatus[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("cached_statuses");
-        return cached ? JSON.parse(cached) : [];
-      } catch (e) {
-        console.error("Failed to parse cached statuses:", e);
-        return [];
-      }
-    }
-    return [];
-  });
+  const [statuses, setStatuses] = useState<DailyStatus[]>([]);
   const [blogs, setBlogs] = useState<any[]>([]);
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [resumeForm, setResumeForm] = useState({ title: "" });
   const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(() => {
-    if (typeof window !== "undefined") {
-      return !localStorage.getItem("cached_statuses");
-    }
-    return true;
-  });
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [confirm, setConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -295,14 +293,25 @@ export default function AdminPage() {
   const [editingBlogSlug, setEditingBlogSlug] = useState<string | null>(null);
 
   // Daily Status Form
-  const [statusForm, setStatusForm] = useState<{
-    date: string;
-    statusText: string;
-    tasksText: string;
-  }>({
+  const [statusForm, setStatusForm] = useState({
     date: new Date().toISOString().split("T")[0],
     statusText: "",
     tasksText: "",
+    studyHours: "0",
+    studySubject: "",
+    studyQuestions: "0",
+    studyMock: "",
+    projectHours: "0",
+    projectTasksText: "",
+    contentVideos: "0",
+    contentPosts: "0",
+    healthSleep: "7",
+    healthEating: "5",
+    financeExpense: "0",
+    financeIncome: "0",
+    mood: "8",
+    bestMoment: "",
+    lessonLearned: "",
   });
 
   // Fetch Public Logs (With Latency Ping)
@@ -442,6 +451,21 @@ export default function AdminPage() {
 
   // On Mount: Load public statuses and session
   useEffect(() => {
+    // Hydrate from localStorage cache immediately (client-only, avoids hydration mismatch)
+    try {
+      const cachedStatuses = localStorage.getItem("cached_statuses");
+      if (cachedStatuses) {
+        setStatuses(JSON.parse(cachedStatuses));
+        setLoading(false);
+      }
+      const cachedPlans = localStorage.getItem("cached_plans");
+      if (cachedPlans) {
+        setPlans(JSON.parse(cachedPlans));
+      }
+    } catch (e) {
+      console.warn("Failed to hydrate from localStorage cache:", e);
+    }
+
     fetchPublicLogs();
 
     const token = sessionStorage.getItem("admin_token");
@@ -743,17 +767,54 @@ export default function AdminPage() {
         .map((t) => t.trim())
         .filter((t) => t.length > 0);
 
+      const projectTasks = statusForm.projectTasksText
+        .split("\n")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/status`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
           date: statusForm.date,
-          statusText: statusForm.statusText,
+          statusText: statusForm.statusText.trim(),
           tasks,
+          study: {
+            hours: parseFloat(statusForm.studyHours) || 0,
+            subject: statusForm.studySubject.trim(),
+            questions: parseInt(statusForm.studyQuestions) || 0,
+            mock: statusForm.studyMock.trim() || "N/A"
+          },
+          project: {
+            hours: parseFloat(statusForm.projectHours) || 0,
+            tasks: projectTasks
+          },
+          content: {
+            videos: parseInt(statusForm.contentVideos) || 0,
+            posts: parseInt(statusForm.contentPosts) || 0
+          },
+          health: {
+            sleep: parseFloat(statusForm.healthSleep) || 0,
+            healthyEating: parseInt(statusForm.healthEating) || 5
+          },
+          finance: {
+            expense: parseFloat(statusForm.financeExpense) || 0,
+            income: parseFloat(statusForm.financeIncome) || 0
+          },
+          mood: parseInt(statusForm.mood) || 8,
+          bestMoment: statusForm.bestMoment.trim(),
+          lessonLearned: statusForm.lessonLearned.trim()
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to save daily log.");
+      if (!res.ok) {
+        let errMsg = `Save failed (${res.status})`;
+        try {
+          const errData = await res.json();
+          errMsg = errData.error || errMsg;
+        } catch {}
+        throw new Error(errMsg);
+      }
       const updatedItem = await res.json();
 
       setStatuses((prev) => {
@@ -773,6 +834,21 @@ export default function AdminPage() {
         date: new Date().toISOString().split("T")[0],
         statusText: "",
         tasksText: "",
+        studyHours: "0",
+        studySubject: "",
+        studyQuestions: "0",
+        studyMock: "",
+        projectHours: "0",
+        projectTasksText: "",
+        contentVideos: "0",
+        contentPosts: "0",
+        healthSleep: "7",
+        healthEating: "5",
+        financeExpense: "0",
+        financeIncome: "0",
+        mood: "8",
+        bestMoment: "",
+        lessonLearned: "",
       });
 
       showToast("Workspace commit published successfully!", "success");
@@ -1007,7 +1083,7 @@ export default function AdminPage() {
         date: dateStr,
         hasStatus: !!statusForDay,
         statusText: statusForDay ? statusForDay.statusText : "No logs recorded",
-        tasksCount: statusForDay ? statusForDay.tasks.length : 0,
+        tasksCount: statusForDay ? (statusForDay.tasks?.length || 0) : 0,
       });
     }
     return bars;
@@ -1053,6 +1129,7 @@ export default function AdminPage() {
     } else {
       setSearchQuery(bar.date);
     }
+    setShowAllLogs(false); // reset pagination when filtering by bar
   };
 
   // Categorize log tasks dynamically for terminal aesthetic
@@ -1229,7 +1306,7 @@ export default function AdminPage() {
                     <div key={status.id} className="relative group space-y-3">
                       {/* Timeline Dot */}
                       <div className="absolute -left-[29px] top-1.5 w-2 h-2 rounded-full bg-background flex items-center justify-center">
-                        <div className={`w-1.5 h-1.5 rounded-full ${getDotColor(status.statusText)}`} />
+                        <div className={`w-1.5 h-1.5 rounded-full ${getDotColor(status.statusText || "")}`} />
                       </div>
 
                       {/* Date Header */}
@@ -1246,10 +1323,10 @@ export default function AdminPage() {
                       </div>
 
                       {/* Task Details */}
-                      {status.tasks.length > 0 && (
+                      {status.tasks && status.tasks.length > 0 && (
                         <div className="space-y-1.5 pl-0.5 mt-2">
-                          {status.tasks.map((task, idx) => {
-                            const isLast = idx === status.tasks.length - 1;
+                          {status.tasks.map((task, idx, arr) => {
+                            const isLast = idx === arr.length - 1;
                             return (
                               <div key={idx} className="flex items-start gap-2 text-xs font-mono text-brand-300">
                                 <span className="text-brand-600 select-none">{isLast ? "└─" : "├─"}</span>
@@ -1711,35 +1788,199 @@ export default function AdminPage() {
                     <p className="text-[10px] text-brand-400">Post what you worked on today. It will update the status timeline instantly.</p>
                   </div>
 
-                  <form onSubmit={handleStatusSubmit} className="space-y-5 glass-strong border border-white/10 rounded-2xl p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <InputField
-                        label="Log Date"
-                        name="date"
-                        value={statusForm.date}
-                        onChange={(e) => setStatusForm((p) => ({ ...p, date: e.target.value }))}
-                        type="date"
-                        required
-                      />
-                      <InputField
-                        label="Workspace Focus Vibe"
-                        name="statusText"
-                        value={statusForm.statusText}
-                        onChange={(e) => setStatusForm((p) => ({ ...p, statusText: e.target.value }))}
-                        placeholder="e.g. Coding workspace dashboard... 🚀"
-                        required
-                      />
+                  <form onSubmit={handleStatusSubmit} className="space-y-6 glass-strong border border-white/10 rounded-2xl p-6">
+                    {/* General Metadata */}
+                    <div className="border-b border-white/5 pb-4">
+                      <h3 className="text-xs font-bold text-accent uppercase tracking-widest font-mono mb-3">1. General Metadata</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <InputField
+                          label="Log Date"
+                          name="date"
+                          value={statusForm.date}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, date: e.target.value }))}
+                          type="date"
+                          required
+                        />
+                        <div className="flex flex-col gap-1.5 font-mono">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-brand-400">Mood (1 - 10)</label>
+                          <select
+                            value={statusForm.mood}
+                            onChange={(e) => setStatusForm((p) => ({ ...p, mood: e.target.value }))}
+                            className="bg-zinc-950/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 focus:bg-zinc-950/70 transition-all"
+                          >
+                            {Array.from({ length: 10 }, (_, i) => String(10 - i)).map((v) => (
+                              <option key={v} value={v}>{v}/10</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
 
-                    <TextAreaField
-                      label="Event Commits (One entry per line)"
-                      name="tasksText"
-                      value={statusForm.tasksText}
-                      onChange={(e) => setStatusForm((p) => ({ ...p, tasksText: e.target.value }))}
-                      placeholder="e.g. Refactored homepage CSS layout&#10;Integrated public system status dashboard&#10;Gated editing CRUD options under password"
-                      required
-                      rows={6}
-                    />
+                    {/* Study Stats */}
+                    <div className="border-b border-white/5 pb-4">
+                      <h3 className="text-xs font-bold text-violet-400 uppercase tracking-widest font-mono mb-3">2. Study Tracker (📚)</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
+                        <InputField
+                          label="Study Hours"
+                          name="studyHours"
+                          value={statusForm.studyHours}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, studyHours: e.target.value }))}
+                          type="number"
+                          placeholder="0"
+                        />
+                        <InputField
+                          label="Study Subject"
+                          name="studySubject"
+                          value={statusForm.studySubject}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, studySubject: e.target.value }))}
+                          placeholder="e.g. Operating Systems"
+                        />
+                        <InputField
+                          label="Questions Solved"
+                          name="studyQuestions"
+                          value={statusForm.studyQuestions}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, studyQuestions: e.target.value }))}
+                          type="number"
+                          placeholder="0"
+                        />
+                        <InputField
+                          label="Sunday Mock Log"
+                          name="studyMock"
+                          value={statusForm.studyMock}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, studyMock: e.target.value }))}
+                          placeholder="e.g. Score: 78/100"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Project & Startup Stats */}
+                    <div className="border-b border-white/5 pb-4">
+                      <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest font-mono mb-3">3. Startup Project Tracker (💻)</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
+                        <div className="sm:col-span-1">
+                          <InputField
+                            label="Project Hours"
+                            name="projectHours"
+                            value={statusForm.projectHours}
+                            onChange={(e) => setStatusForm((p) => ({ ...p, projectHours: e.target.value }))}
+                            type="number"
+                            placeholder="0"
+                          />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <TextAreaField
+                            label="Project Tasks Completed (One per line)"
+                            name="projectTasksText"
+                            value={statusForm.projectTasksText}
+                            onChange={(e) => setStatusForm((p) => ({ ...p, projectTasksText: e.target.value }))}
+                            placeholder="e.g. Refactored layout&#10;Integrated daily logs card"
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Content & Social Media */}
+                    <div className="border-b border-white/5 pb-4">
+                      <h3 className="text-xs font-bold text-rose-400 uppercase tracking-widest font-mono mb-3">4. Content published (🎥)</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <InputField
+                          label="YouTube Videos Published"
+                          name="contentVideos"
+                          value={statusForm.contentVideos}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, contentVideos: e.target.value }))}
+                          type="number"
+                          placeholder="0"
+                        />
+                        <InputField
+                          label="Instagram Posts Published"
+                          name="contentPosts"
+                          value={statusForm.contentPosts}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, contentPosts: e.target.value }))}
+                          type="number"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Health & Finance */}
+                    <div className="border-b border-white/5 pb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {/* Health Column */}
+                        <div className="space-y-4">
+                          <h3 className="text-xs font-bold text-orange-400 uppercase tracking-widest font-mono">5. Health & Habit (🏃)</h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <InputField
+                              label="Sleep Hours"
+                              name="healthSleep"
+                              value={statusForm.healthSleep}
+                              onChange={(e) => setStatusForm((p) => ({ ...p, healthSleep: e.target.value }))}
+                              type="number"
+                              placeholder="7"
+                            />
+                            <div className="flex flex-col gap-1.5 font-mono">
+                              <label className="text-[10px] font-bold uppercase tracking-widest text-brand-400">Eating Quality (1-5)</label>
+                              <select
+                                value={statusForm.healthEating}
+                                onChange={(e) => setStatusForm((p) => ({ ...p, healthEating: e.target.value }))}
+                                className="bg-zinc-950/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-all font-mono"
+                              >
+                                <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                                <option value="4">⭐⭐⭐⭐ Good</option>
+                                <option value="3">⭐⭐⭐ Normal</option>
+                                <option value="2">⭐⭐ Poor</option>
+                                <option value="1">⭐ Bad</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Finance Column */}
+                        <div className="space-y-4">
+                          <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest font-mono">6. Finance ledger (💰)</h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <InputField
+                              label="Daily Expense (₹)"
+                              name="financeExpense"
+                              value={statusForm.financeExpense}
+                              onChange={(e) => setStatusForm((p) => ({ ...p, financeExpense: e.target.value }))}
+                              type="number"
+                              placeholder="0"
+                            />
+                            <InputField
+                              label="Daily Income (₹)"
+                              name="financeIncome"
+                              value={statusForm.financeIncome}
+                              onChange={(e) => setStatusForm((p) => ({ ...p, financeIncome: e.target.value }))}
+                              type="number"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Highlights: Best Moment & Lesson Learned */}
+                    <div className="border-b border-white/5 pb-4">
+                      <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest font-mono mb-3">7. Highlights & Reflection (⭐)</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <InputField
+                          label="Best Moment of the Day"
+                          name="bestMoment"
+                          value={statusForm.bestMoment}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, bestMoment: e.target.value }))}
+                          placeholder="e.g. Reached a major milestone!"
+                        />
+                        <InputField
+                          label="Lesson Learned"
+                          name="lessonLearned"
+                          value={statusForm.lessonLearned}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, lessonLearned: e.target.value }))}
+                          placeholder="e.g. Planning ahead saves coding time."
+                        />
+                      </div>
+                    </div>
+
 
                     <div className="flex items-center gap-3 pt-2 font-mono">
                       <button
@@ -1755,6 +1996,21 @@ export default function AdminPage() {
                           date: new Date().toISOString().split("T")[0],
                           statusText: "",
                           tasksText: "",
+                          studyHours: "0",
+                          studySubject: "",
+                          studyQuestions: "0",
+                          studyMock: "",
+                          projectHours: "0",
+                          projectTasksText: "",
+                          contentVideos: "0",
+                          contentPosts: "0",
+                          healthSleep: "7",
+                          healthEating: "5",
+                          financeExpense: "0",
+                          financeIncome: "0",
+                          mood: "8",
+                          bestMoment: "",
+                          lessonLearned: "",
                         })}
                         className="px-5 py-3.5 rounded-xl bg-white/5 border border-white/10 text-xs text-brand-300 hover:text-white transition-all cursor-pointer font-bold uppercase tracking-wider"
                       >
@@ -1776,24 +2032,93 @@ export default function AdminPage() {
                         {statuses.map((item) => (
                           <div key={item.id} className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 p-5 rounded-xl border border-white/5 bg-white/2 hover:bg-white/4 transition-all group">
                             <div className="space-y-2 flex-1">
-                              <div className="flex items-center gap-2">
+                              {/* Date + Summary */}
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-xs text-accent font-semibold">{item.date}</span>
                                 <span className="text-brand-500">•</span>
-                                <span className="text-xs font-bold text-white">{item.statusText}</span>
+                                <span className="text-xs font-bold text-white">
+                                  {item.statusText || <span className="text-brand-600 italic font-normal">No summary text</span>}
+                                </span>
                               </div>
-                              <ul className="list-disc pl-4 text-[10px] text-brand-400 space-y-1">
-                                {item.tasks.map((task, idx) => (
-                                  <li key={idx} className="leading-relaxed">{task}</li>
-                                ))}
-                              </ul>
+
+                              {/* All Metric Badges */}
+                              <div className="flex flex-wrap gap-1.5">
+                                {item.study && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold text-violet-400 bg-violet-400/5 rounded border border-violet-500/10">📚 {item.study.hours || 0}h Study</span>
+                                )}
+                                {item.project && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold text-cyan-400 bg-cyan-400/5 rounded border border-cyan-500/10">💻 {item.project.hours || 0}h Dev</span>
+                                )}
+                                {item.health && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold text-orange-400 bg-orange-400/5 rounded border border-orange-500/10">😴 {item.health.sleep || 0}h Sleep</span>
+                                )}
+                                {item.health && item.health.healthyEating > 0 && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold text-teal-400 bg-teal-400/5 rounded border border-teal-500/10">🥗 Eat Q: {item.health.healthyEating}/5</span>
+                                )}
+                                {item.mood != null && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold text-amber-400 bg-amber-400/5 rounded border border-amber-500/10">😊 Mood {item.mood}/10</span>
+                                )}
+                                {item.content && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold text-rose-400 bg-rose-400/5 rounded border border-rose-500/10">
+                                    🎥 {item.content.videos || 0} vid · 📸 {item.content.posts || 0} post
+                                  </span>
+                                )}
+                                {item.finance && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold text-emerald-400 bg-emerald-400/5 rounded border border-emerald-500/10">
+                                    💰 ₹{item.finance.income || 0} in / ₹{item.finance.expense || 0} out
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Detail rows */}
+                              <div className="text-[10px] text-brand-400 space-y-0.5 pl-1">
+                                {item.study && (
+                                  <p>Subject: <span className="text-white">{item.study.subject || "N/A"}</span> | Solved: <span className="text-white">{item.study.questions || 0} Qs</span></p>
+                                )}
+                                {item.project && item.project.tasks && item.project.tasks.length > 0 && (
+                                  <p>Dev Commits: <span className="text-white">{item.project.tasks.join(" | ")}</span></p>
+                                )}
+                                {item.bestMoment && (
+                                  <p className="italic text-brand-500">Best moment: &ldquo;{item.bestMoment}&rdquo;</p>
+                                )}
+                                {item.lessonLearned && (
+                                  <p className="italic text-brand-500 font-medium">Lesson: &ldquo;{item.lessonLearned}&rdquo;</p>
+                                )}
+                                {item.tasks && item.tasks.length > 0 && (
+                                  <ul className="list-disc pl-4 space-y-0.5">
+                                    {item.tasks.map((task, idx) => (
+                                      <li key={idx} className="leading-relaxed">{task}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
                             </div>
+
                             <div className="flex items-center gap-2 shrink-0">
                               <button
-                                onClick={() => setStatusForm({
-                                  date: item.date,
-                                  statusText: item.statusText,
-                                  tasksText: item.tasks.join("\n"),
-                                })}
+                                onClick={() => {
+                                  setStatusForm({
+                                    date: item.date,
+                                    statusText: item.statusText || "",
+                                    tasksText: (item.tasks || []).join("\n"),
+                                    studyHours: String(item.study?.hours ?? 0),
+                                    studySubject: item.study?.subject ?? "",
+                                    studyQuestions: String(item.study?.questions ?? 0),
+                                    studyMock: item.study?.mock ?? "",
+                                    projectHours: String(item.project?.hours ?? 0),
+                                    projectTasksText: (item.project?.tasks ?? []).join("\n"),
+                                    contentVideos: String(item.content?.videos ?? 0),
+                                    contentPosts: String(item.content?.posts ?? 0),
+                                    healthSleep: String(item.health?.sleep ?? 7),
+                                    healthEating: String(item.health?.healthyEating ?? 5),
+                                    financeExpense: String(item.finance?.expense ?? 0),
+                                    financeIncome: String(item.finance?.income ?? 0),
+                                    mood: String(item.mood ?? 8),
+                                    bestMoment: item.bestMoment ?? "",
+                                    lessonLearned: item.lessonLearned ?? "",
+                                  });
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                }}
                                 className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-brand-300 text-[10px] font-bold hover:text-white hover:border-white/20 transition-all cursor-pointer uppercase tracking-wider"
                               >
                                 Edit
