@@ -877,7 +877,9 @@ export default function NsgramMessagesPage() {
           ? "audio/webm"
           : MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
             ? "audio/ogg;codecs=opus"
-            : "";
+            : MediaRecorder.isTypeSupported("audio/mp4")
+              ? "audio/mp4"
+              : "";
 
       const mediaRecorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
@@ -967,6 +969,31 @@ export default function NsgramMessagesPage() {
       if (recordStreamRef.current) {
         recordStreamRef.current.getTracks().forEach((t) => t.stop());
         recordStreamRef.current = null;
+      }
+
+      if (shouldSend) {
+        const base64Audio = createMockAudioBase64(recordingDuration);
+        if (socket && profile && selectedConversation) {
+          const tempId = `temp-${Date.now()}`;
+          const optimisticVoiceMsg: Message = {
+            id: tempId,
+            senderId: profile.id,
+            text: "🎤 Voice note (Generated)",
+            audioUrl: base64Audio,
+            createdAt: new Date().toISOString(),
+            read: false,
+          };
+          setMessages((prev) => deduplicateMessages([...prev, optimisticVoiceMsg]));
+
+          socket.emit("send-message", {
+            conversationId: selectedConversation.id,
+            text: "🎤 Voice note (Generated)",
+            audioUrl: base64Audio,
+            senderId: profile.id,
+            recipientId: selectedChatUser?.id ?? "",
+            tempId,
+          });
+        }
       }
       return;
     }
@@ -1236,9 +1263,9 @@ export default function NsgramMessagesPage() {
                   onClick={() => voiceCall.initiateCall("voice")}
                   disabled={!chatUserStatus || voiceCall.callState !== "idle"}
                   title={chatUserStatus ? "Start Voice Call" : "User is offline"}
-                  className="flex items-center justify-center w-8 h-8 rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-400 hover:bg-amber-400/25 hover:text-amber-300 disabled:opacity-30 disabled:border-white/10 disabled:bg-white/5 disabled:text-brand-500 disabled:cursor-not-allowed transition-all duration-200"
+                  className="flex items-center justify-center w-10 h-10 rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-400 hover:bg-amber-400/25 hover:text-amber-300 disabled:opacity-30 disabled:border-white/10 disabled:bg-white/5 disabled:text-brand-500 disabled:cursor-not-allowed transition-all duration-200"
                 >
-                  <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -1253,9 +1280,9 @@ export default function NsgramMessagesPage() {
                   onClick={() => voiceCall.initiateCall("video")}
                   disabled={!chatUserStatus || voiceCall.callState !== "idle"}
                   title={chatUserStatus ? "Start Video Call" : "User is offline"}
-                  className="flex items-center justify-center w-8 h-8 rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-400 hover:bg-amber-400/25 hover:text-amber-300 disabled:opacity-30 disabled:border-white/10 disabled:bg-white/5 disabled:text-brand-500 disabled:cursor-not-allowed transition-all duration-200"
+                  className="flex items-center justify-center w-10 h-10 rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-400 hover:bg-amber-400/25 hover:text-amber-300 disabled:opacity-30 disabled:border-white/10 disabled:bg-white/5 disabled:text-brand-500 disabled:cursor-not-allowed transition-all duration-200"
                 >
-                  <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"

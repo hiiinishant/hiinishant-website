@@ -130,8 +130,19 @@ export function useVoiceCall(
         }
       };
 
-      playRingCycle();
-      ringIntervalRef.current = setInterval(playRingCycle, 2000);
+      // Mobile browsers (iOS Safari, Chrome Android) start AudioContext in
+      // "suspended" state — must call resume() before scheduling any audio nodes.
+      // Without this, incoming ring tones are completely silent on phones.
+      const start = () => {
+        playRingCycle();
+        ringIntervalRef.current = setInterval(playRingCycle, 2000);
+      };
+
+      if (ctx.state === "suspended") {
+        ctx.resume().then(start).catch(start); // fallback even if resume rejects
+      } else {
+        start();
+      }
     } catch {
       // AudioContext not supported — silently skip
     }
@@ -219,6 +230,9 @@ export function useVoiceCall(
   const playRemoteAudio = (stream: MediaStream) => {
     if (!audioRef.current) {
       const audio = new Audio();
+      // playsInline is critical on iOS: without it, Safari routes audio to the
+      // earpiece instead of the speaker during calls.
+      (audio as any).playsInline = true;
       audio.srcObject = stream;
       audio.autoplay = true;
       audioRef.current = audio;

@@ -135,10 +135,9 @@ export function ActiveCallOverlay({
   const isVideoCall = callType === "video";
   const showRemoteVideo = isVideoCall && callState === "in-call" && remoteStream;
   const showLocalVideo = isVideoCall && localStream && isCameraOn;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md px-4">
-      <div className="relative w-full max-w-sm h-[600px] overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl flex flex-col justify-between p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md px-0 sm:px-4">
+      <div className="relative w-full h-full lg:max-w-sm lg:h-[600px] overflow-hidden lg:rounded-3xl border border-white/10 bg-slate-900 shadow-2xl flex flex-col justify-between p-6 pb-[calc(env(safe-area-inset-bottom,16px)+24px)] pt-[calc(env(safe-area-inset-top,16px)+24px)]">
 
         {/* Full-screen Remote Video for Video calls */}
         {showRemoteVideo ? (
@@ -164,7 +163,7 @@ export function ActiveCallOverlay({
 
         {/* Floating Local Camera Preview (Picture in Picture) */}
         {showLocalVideo && (
-          <div className="absolute bottom-28 right-6 w-24 h-36 rounded-2xl border border-white/15 bg-slate-950 object-cover shadow-xl overflow-hidden z-20">
+          <div className="absolute bottom-32 right-6 w-24 h-36 rounded-2xl border border-white/15 bg-slate-950 object-cover shadow-xl overflow-hidden z-20">
             <VideoRenderer stream={localStream} muted className="w-full h-full object-cover" />
           </div>
         )}
@@ -191,14 +190,14 @@ export function ActiveCallOverlay({
           {/* Mute Mic */}
           <button
             onClick={onToggleMute}
-            className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition duration-200 shadow-md bg-slate-900/80 backdrop-blur-sm ${isMuted
+            className={`flex h-14 w-14 items-center justify-center rounded-2xl border transition duration-200 shadow-md bg-slate-900/80 backdrop-blur-sm ${isMuted
               ? "border-amber-400/30 text-amber-300 bg-amber-400/10"
-              : "border-white/10 text-white hover:bg-white/10"
+              : "border-white/10 text-white hover:bg-white/10 active:scale-95"
               }`}
             title={isMuted ? "Unmute mic" : "Mute mic"}
           >
             {isMuted ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -208,7 +207,7 @@ export function ActiveCallOverlay({
                 <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" />
               </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -223,14 +222,14 @@ export function ActiveCallOverlay({
           {isVideoCall && (
             <button
               onClick={onToggleCamera}
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition duration-200 shadow-md bg-slate-900/80 backdrop-blur-sm ${!isCameraOn
+              className={`flex h-14 w-14 items-center justify-center rounded-2xl border transition duration-200 shadow-md bg-slate-900/80 backdrop-blur-sm ${!isCameraOn
                 ? "border-rose-400/30 text-rose-300 bg-rose-400/10"
-                : "border-white/10 text-white hover:bg-white/10"
+                : "border-white/10 text-white hover:bg-white/10 active:scale-95"
                 }`}
               title={isCameraOn ? "Turn Camera Off" : "Turn Camera On"}
             >
               {isCameraOn ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -239,7 +238,7 @@ export function ActiveCallOverlay({
                   />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -255,10 +254,10 @@ export function ActiveCallOverlay({
           {/* End Call */}
           <button
             onClick={onEndCall}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500 hover:bg-rose-600 text-white transition duration-200 shadow-md hover:scale-105"
+            className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500 hover:bg-rose-600 text-white transition duration-200 shadow-md hover:scale-105 active:scale-95"
             title="End call"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -268,7 +267,6 @@ export function ActiveCallOverlay({
             </svg>
           </button>
         </div>
-
       </div>
     </div>
   );

@@ -54,6 +54,7 @@ interface DailyStatus {
   };
   content?: {
     videos?: number;
+    blogs?: number;
     posts?: number;
   };
   health?: {
@@ -304,6 +305,7 @@ export default function AdminPage() {
     projectHours: "0",
     projectTasksText: "",
     contentVideos: "0",
+    contentBlogs: "0",
     contentPosts: "0",
     healthSleep: "7",
     healthEating: "5",
@@ -791,6 +793,7 @@ export default function AdminPage() {
           },
           content: {
             videos: parseInt(statusForm.contentVideos) || 0,
+            blogs: parseInt(statusForm.contentBlogs) || 0,
             posts: parseInt(statusForm.contentPosts) || 0
           },
           health: {
@@ -841,6 +844,7 @@ export default function AdminPage() {
         projectHours: "0",
         projectTasksText: "",
         contentVideos: "0",
+        contentBlogs: "0",
         contentPosts: "0",
         healthSleep: "7",
         healthEating: "5",
@@ -1437,7 +1441,7 @@ export default function AdminPage() {
                                     <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center">→</span>
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300 leading-normal">
                                       <span>Youtube video - <span className="font-bold text-white">{status.content.videos || 0}</span></span>
-                                      <span>Blog - <span className="font-bold text-white">0</span></span>
+                                      <span>Blog - <span className="font-bold text-white">{status.content.blogs || 0}</span></span>
                                       <span>Insta post - <span className="font-bold text-white">{status.content.posts || 0}</span></span>
                                     </div>
                                   </div>
@@ -2044,12 +2048,20 @@ export default function AdminPage() {
                     {/* Content & Social Media */}
                     <div className="border-b border-white/5 pb-4">
                       <h3 className="text-xs font-bold text-rose-400 uppercase tracking-widest font-mono mb-3">4. Content published (🎥)</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                         <InputField
                           label="YouTube Videos Published"
                           name="contentVideos"
                           value={statusForm.contentVideos}
                           onChange={(e) => setStatusForm((p) => ({ ...p, contentVideos: e.target.value }))}
+                          type="number"
+                          placeholder="0"
+                        />
+                        <InputField
+                          label="Blog Posts Published"
+                          name="contentBlogs"
+                          value={statusForm.contentBlogs}
+                          onChange={(e) => setStatusForm((p) => ({ ...p, contentBlogs: e.target.value }))}
                           type="number"
                           placeholder="0"
                         />
@@ -2164,6 +2176,7 @@ export default function AdminPage() {
                           projectHours: "0",
                           projectTasksText: "",
                           contentVideos: "0",
+                          contentBlogs: "0",
                           contentPosts: "0",
                           healthSleep: "7",
                           healthEating: "5",
@@ -2221,7 +2234,7 @@ export default function AdminPage() {
                                 )}
                                 {item.content && (
                                   <span className="px-1.5 py-0.5 text-[9px] font-bold text-rose-400 bg-rose-400/5 rounded border border-rose-500/10">
-                                    🎥 {item.content.videos || 0} vid · 📸 {item.content.posts || 0} post
+                                    🎥 {item.content.videos || 0} vid · 📝 {item.content.blogs || 0} blog · 📸 {item.content.posts || 0} post
                                   </span>
                                 )}
                                 {item.finance && (
@@ -2269,6 +2282,7 @@ export default function AdminPage() {
                                     projectHours: String(item.project?.hours ?? 0),
                                     projectTasksText: (item.project?.tasks ?? []).join("\n"),
                                     contentVideos: String(item.content?.videos ?? 0),
+                                    contentBlogs: String(item.content?.blogs ?? 0),
                                     contentPosts: String(item.content?.posts ?? 0),
                                     healthSleep: String(item.health?.sleep ?? 7),
                                     healthEating: String(item.health?.healthyEating ?? 5),

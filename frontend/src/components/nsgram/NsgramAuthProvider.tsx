@@ -71,23 +71,41 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
       });
     });
 
-    const unsubscribeUsers = onSnapshot(collection(db!, "users"), (snapshot) => {
-      const latestUsers = snapshot.docs
-        .map((docSnap) => ({
-          id: docSnap.id,
-          uid: docSnap.id,
-          ...(docSnap.data() as Omit<UserProfile, "id" | "uid">),
-        }))
-        .filter((user) => user.isActivated === true) as UserProfile[];
-      setUsers(latestUsers);
-    });
-
     return () => {
       unsubscribeAuth();
       unsubscribeProfile?.();
-      unsubscribeUsers();
     };
   }, []);
+
+  // Listen to users collection only after the user is authenticated, email verified, and profile activated.
+  // This prevents Permission Denied errors for guests or unverified users.
+  useEffect(() => {
+    if (!db || !authUser || !authUser.emailVerified || !profile || !profile.isActivated) {
+      setUsers([]);
+      return;
+    }
+
+    const unsubscribeUsers = onSnapshot(
+      collection(db, "users"),
+      (snapshot) => {
+        const latestUsers = snapshot.docs
+          .map((docSnap) => ({
+            id: docSnap.id,
+            uid: docSnap.id,
+            ...(docSnap.data() as Omit<UserProfile, "id" | "uid">),
+          }))
+          .filter((user) => user.isActivated === true) as UserProfile[];
+        setUsers(latestUsers);
+      },
+      (error) => {
+        console.error("Error listening to users collection:", error);
+      }
+    );
+
+    return () => {
+      unsubscribeUsers();
+    };
+  }, [authUser, authUser?.emailVerified, profile, profile?.isActivated]);
 
   const profileId = profile?.id;
 

@@ -38,6 +38,7 @@ interface DailyStatus {
   };
   content?: {
     videos?: number;
+    blogs?: number;
     posts?: number;
   };
   health?: {
@@ -342,7 +343,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                             <span className="text-zinc-600 font-bold text-sm leading-none flex items-center justify-center">→</span>
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-300 leading-normal">
                               <span>Youtube video - <span className="font-bold text-white">{status.content.videos || 0}</span></span>
-                              <span>Blog - <span className="font-bold text-white">0</span></span>
+                              <span>Blog - <span className="font-bold text-white">{status.content.blogs || 0}</span></span>
                               <span>Insta post - <span className="font-bold text-white">{status.content.posts || 0}</span></span>
                             </div>
                           </div>
