@@ -387,3 +387,48 @@ html.light .hover\:text-white:hover { color: #0f172a; }
   animation: ray-sweep 2s 3 linear forwards;
 }
 
+/* ─── TIPTAP WRITER & RICH TEXT STYLES ────────────────────────── */
+.tiptap p.is-editor-empty:first-child::before {
+  color: #475569;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Content Image Sizing Utilities */
+.img-width-small {
+  max-width: 300px !important;
+  width: 100% !important;
+}
+.img-width-medium {
+  max-width: 500px !important;
+  width: 100% !important;
+}
+.img-width-large {
+  max-width: 700px !important;
+  width: 100% !important;
+}
+.img-width-full {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Content Image Alignment Utilities */
+.img-align-left {
+  float: left !important;
+  margin-right: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+.img-align-right {
+  float: right !important;
+  margin-left: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+.img-align-center {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: block !important;
+}
+
+

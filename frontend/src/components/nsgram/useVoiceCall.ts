@@ -12,33 +12,55 @@ export type IncomingCallInfo = {
   callType: CallType;
 };
 
+// Detect iOS/iPadOS devices (needed for constraint fallback priority)
+function isIOSDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 // Robust helper to acquire media stream with safe fallbacks and HTTPS/secure context diagnostics.
 async function acquireMediaStream(constraints: MediaStreamConstraints): Promise<MediaStream> {
   if (typeof window !== "undefined" && (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
     throw { name: "SecurityError", message: "Secure context (HTTPS) required" };
   }
 
+  // On iOS, use simpler video constraints — requesting exact width/height causes NotAllowedError
+  // even when the user has granted permission, because the hardware can't satisfy the constraints.
+  if (isIOSDevice() && constraints.video && typeof constraints.video === "object") {
+    constraints = {
+      audio: constraints.audio,
+      video: { facingMode: (constraints.video as MediaTrackConstraints).facingMode ?? "user" },
+    };
+  }
+
   try {
     return await navigator.mediaDevices.getUserMedia(constraints);
   } catch (err: any) {
-    // If it failed because of strict video constraints, try falling back
+    // OverconstrainedError / ConstraintNotSatisfied → relax video constraints progressively
     if ((err.name === "OverconstrainedError" || err.name === "ConstraintNotSatisfiedError") && constraints.video) {
-      console.warn("Overconstrained camera settings. Retrying with basic user facing constraints...");
-      const fallbackConstraints: MediaStreamConstraints = {
-        audio: true,
-        video: { facingMode: "user" }
-      };
+      console.warn("[acquireMedia] Overconstrained. Retrying with facingMode only...");
       try {
-        return await navigator.mediaDevices.getUserMedia(fallbackConstraints);
-      } catch (err2: any) {
-        console.warn("Failed second fallback. Trying basic video=true...");
-        const basicConstraints: MediaStreamConstraints = {
-          audio: true,
-          video: true
-        };
-        return await navigator.mediaDevices.getUserMedia(basicConstraints);
+        return await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: "user" } });
+      } catch {
+        console.warn("[acquireMedia] Still failing. Trying video=true...");
+        try {
+          return await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        } catch {
+          // Final fallback: audio-only if video keeps failing
+          if (!constraints.audio) throw err;
+          console.warn("[acquireMedia] Video failed entirely. Falling back to audio-only.");
+          return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        }
       }
     }
+
+    // NotFoundError: device not found. If we wanted video but it's not present, try audio-only
+    if (err.name === "NotFoundError" && constraints.video) {
+      console.warn("[acquireMedia] No camera found. Falling back to audio-only.");
+      return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    }
+
     throw err;
   }
 }
@@ -331,10 +353,10 @@ export function useVoiceCall(
     });
 
     try {
-      // Use acceptedCallType (from incomingCallInfo) — NOT the stale callType state
-      const constraints = {
+      // Use simpler video constraints — iOS Safari rejects ideal width/height with NotAllowedError
+      const constraints: MediaStreamConstraints = {
         audio: true,
-        video: acceptedCallType === "video" ? { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+        video: acceptedCallType === "video" ? { facingMode: "user" } : false,
       };
       const stream = await acquireMediaStream(constraints);
       localStreamRef.current = stream;
@@ -354,23 +376,29 @@ export function useVoiceCall(
         });
       }, 1000);
     } catch (err: any) {
-      console.error("Media access error:", err.name, err.message, err);
+      console.error("[acceptCall] Media access error:", err.name, err.message, err);
 
-      let message = "Unable to access camera or microphone.";
+      let message = "Unable to access microphone.";
 
-      if (err.name === "NotAllowedError") {
-        message = "Permission denied. Please allow Camera & Microphone.";
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        message = isIOSDevice()
+          ? "Microphone access denied. Go to Settings → Safari → Microphone and allow access."
+          : "Microphone access denied. Please allow it in your browser settings and try again.";
       } else if (err.name === "NotFoundError") {
-        message = "No camera or microphone found.";
+        message = "No microphone found on this device.";
       } else if (err.name === "NotReadableError") {
-        message = "Camera or microphone is already being used by another application.";
+        message = "Microphone is in use by another app. Close it and try again.";
       } else if (err.name === "OverconstrainedError") {
-        message = "The requested camera settings are not supported.";
+        message = "Your device camera doesn't support the required settings.";
       } else if (err.name === "SecurityError") {
-        message = "Camera access requires HTTPS.";
+        message = "Microphone access requires HTTPS. Please use a secure connection.";
       }
 
       setCallErrorMessage(message);
+      // Notify caller that we couldn't answer due to media issues
+      if (incomingCallInfo && socket) {
+        socket.emit("call-declined", { callerId: incomingCallInfo.callerId, reason: "mic_error" });
+      }
       cleanupCall();
     }
   }, [incomingCallInfo, socket, profile, createPeerConnection, cleanupCall, stopRinging]);
@@ -391,9 +419,10 @@ export function useVoiceCall(
     startRinging("outgoing");
 
     try {
-      const constraints = {
+      // Use simpler video constraints — iOS Safari rejects ideal width/height with NotAllowedError
+      const constraints: MediaStreamConstraints = {
         audio: true,
-        video: type === "video" ? { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+        video: type === "video" ? { facingMode: "user" } : false,
       };
 
       // Get media FIRST so tracks are ready before we create the peer connection on call-accepted
@@ -419,20 +448,22 @@ export function useVoiceCall(
         endCall();
       }, 30000);
     } catch (err: any) {
-      console.error("Media access error:", err.name, err.message, err);
+      console.error("[initiateCall] Media access error:", err.name, err.message, err);
 
-      let message = "Unable to access camera or microphone.";
+      let message = "Unable to access microphone.";
 
-      if (err.name === "NotAllowedError") {
-        message = "Permission denied. Please allow Camera & Microphone.";
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        message = isIOSDevice()
+          ? "Microphone access denied. Go to Settings → Safari → Microphone and allow access."
+          : "Microphone access denied. Please allow it in your browser settings and try again.";
       } else if (err.name === "NotFoundError") {
-        message = "No camera or microphone found.";
+        message = "No microphone found on this device.";
       } else if (err.name === "NotReadableError") {
-        message = "Camera or microphone is already being used by another application.";
+        message = "Microphone is in use by another app. Close it and try again.";
       } else if (err.name === "OverconstrainedError") {
-        message = "The requested camera settings are not supported.";
+        message = "Your device camera doesn't support the required settings.";
       } else if (err.name === "SecurityError") {
-        message = "Camera access requires HTTPS.";
+        message = "Microphone access requires HTTPS. Please use a secure connection.";
       }
 
       setCallErrorMessage(message);

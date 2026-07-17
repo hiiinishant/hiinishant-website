@@ -3,6 +3,7 @@ import { Inter, Caveat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import FooterWrapper from "@/components/layout/FooterWrapper";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import SpotlightCursorLoader from "@/components/SpotlightCursorLoader";
@@ -236,7 +237,7 @@ export default function RootLayout({
           <SpotlightCursorLoader />
           <Navbar />
           <PageWrapper>{children}</PageWrapper>
-          <Footer />
+          <FooterWrapper />
         </ThemeProvider>
       </body>
     </html>

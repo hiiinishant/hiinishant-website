@@ -22,15 +22,34 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ── Upload inline content image (used by rich-text editor) ──
+router.post('/upload-image', requireAuth, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'No image file provided.' });
+      return;
+    }
+    const uploadResult = await uploadBuffer(req.file.buffer, {
+      folder: 'hiiinishant/blog/content',
+      quality: 'auto',
+      fetch_format: 'auto',
+    });
+    res.status(200).json({ url: uploadResult.secureUrl, publicId: uploadResult.publicId });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to upload image.' });
+  }
+});
+
+
 router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   try {
-    const { slug, title, excerpt, date, readTime, tags, featured, content } = req.body;
+    const { slug, title, excerpt, date, readTime, tags, featured, content, writtenBy, category, contentType, seoTitle } = req.body;
     if (!slug || !title || !content) { res.status(400).json({ error: "Slug, title, and content are required." }); return; }
     
     let imageUrl = '';
     let imagePath = '';
     
-    // Upload image to Cloudinary if provided
+    // Upload cover image to Cloudinary if provided
     if (req.file) {
       const uploadResult = await uploadBuffer(req.file.buffer, {
         folder: 'hiiinishant/blog',
@@ -43,7 +62,18 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
     
     const id = slug;
     await firestore.collection('blogs').doc(id).set({
-      slug, title, excerpt, date: date || new Date().toISOString().split('T')[0], readTime: readTime || '1 min read', tags: tags || [], featured: !!featured, content, imageUrl, imagePath
+      slug, title, excerpt,
+      date: date || new Date().toISOString().split('T')[0],
+      readTime: readTime || '1 min read',
+      tags: tags || [],
+      featured: !!featured,
+      content,
+      contentType: contentType || 'markdown',
+      writtenBy: writtenBy || 'Nishant Kumar',
+      category: category || 'General',
+      seoTitle: seoTitle || '',
+      imageUrl,
+      imagePath
     });
     res.status(201).json({ success: true, slug });
   } catch (error: any) {
@@ -53,7 +83,7 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
 
 router.put('/', requireAuth, upload.single('image'), async (req, res) => {
   try {
-    const { slug, title, excerpt, date, readTime, tags, featured, content, originalSlug } = req.body;
+    const { slug, title, excerpt, date, readTime, tags, featured, content, originalSlug, writtenBy, category, contentType, seoTitle } = req.body;
     if (!slug || !title || !content) {
       res.status(400).json({ error: "Slug, title, and content are required." });
       return;
@@ -112,6 +142,10 @@ router.put('/', requireAuth, upload.single('image'), async (req, res) => {
       tags: tagsArray,
       featured: typeof featured === 'boolean' ? featured : featured === 'true',
       content,
+      contentType: contentType || currentData.contentType || 'markdown',
+      writtenBy: writtenBy || currentData.writtenBy || 'Nishant Kumar',
+      category: category || currentData.category || 'General',
+      seoTitle: seoTitle || currentData.seoTitle || '',
       imageUrl,
       imagePath
     };

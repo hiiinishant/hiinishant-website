@@ -870,16 +870,32 @@ export default function NsgramMessagesPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       recordStreamRef.current = stream;
 
-      // Pick the best MIME type the browser actually supports
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
-            ? "audio/ogg;codecs=opus"
-            : MediaRecorder.isTypeSupported("audio/mp4")
-              ? "audio/mp4"
-              : "";
+      // Pick the best MIME type, prioritizing mp4 formats for iOS/Apple devices
+      const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      const mimeTypesToTry = isAppleMobile
+        ? [
+            "audio/mp4;codecs=mp4a.40.2",
+            "audio/mp4",
+            "audio/webm;codecs=opus",
+            "audio/webm"
+          ]
+        : [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/ogg;codecs=opus",
+            "audio/mp4;codecs=mp4a.40.2",
+            "audio/mp4"
+          ];
+
+      let mimeType = "";
+      for (const type of mimeTypesToTry) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          break;
+        }
+      }
 
       const mediaRecorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
@@ -937,7 +953,9 @@ export default function NsgramMessagesPage() {
         };
       };
 
-      mediaRecorder.start();
+      // Use 250ms timeslice to force mobile Safari and Chrome to emit data chunks regularly,
+      // avoiding WebKit bugs that cause silent/empty recordings on stop.
+      mediaRecorder.start(250);
       setIsRecording(true);
 
       recordingIntervalRef.current = setInterval(() => {

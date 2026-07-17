@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { isConfigured as isFirebaseConfigured } from "@/lib/firebase";
+import BlogEditor from "@/components/admin/BlogEditor";
 import type { GalleryPhoto } from "@/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -289,9 +290,21 @@ export default function AdminPage() {
 
   // Blog Form
   const [blogForm, setBlogForm] = useState({
-    slug: "", title: "", excerpt: "", date: new Date().toISOString().split("T")[0], readTime: "5 min read", tags: "", featured: false, content: ""
+    slug: "",
+    title: "",
+    excerpt: "",
+    date: new Date().toISOString().split("T")[0],
+    readTime: "5 min read",
+    tags: "",
+    featured: false,
+    content: "",
+    writtenBy: "Nishant Kumar",
+    category: "All",
+    contentType: "tiptap" as "markdown" | "tiptap",
+    seoTitle: ""
   });
   const [editingBlogSlug, setEditingBlogSlug] = useState<string | null>(null);
+  const [selectedBlogCoverFile, setSelectedBlogCoverFile] = useState<File | null>(null);
 
   // Daily Status Form
   const [statusForm, setStatusForm] = useState({
@@ -623,16 +636,54 @@ export default function AdminPage() {
     try {
       const tagsArray = blogForm.tags.split(",").map(t => t.trim()).filter(t => t);
       const isEdit = !!editingBlogSlug;
+
+      const formData = new FormData();
+      formData.append("slug", blogForm.slug);
+      formData.append("title", blogForm.title);
+      formData.append("seoTitle", blogForm.seoTitle || "");
+      formData.append("excerpt", blogForm.excerpt);
+      formData.append("date", blogForm.date);
+      formData.append("readTime", blogForm.readTime);
+      formData.append("tags", JSON.stringify(tagsArray));
+      formData.append("featured", String(blogForm.featured));
+      formData.append("content", blogForm.content);
+      formData.append("writtenBy", blogForm.writtenBy);
+      formData.append("category", blogForm.category);
+      formData.append("contentType", blogForm.contentType);
+
+      if (selectedBlogCoverFile) {
+        formData.append("image", selectedBlogCoverFile);
+      }
+      if (isEdit) {
+        formData.append("originalSlug", editingBlogSlug || "");
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/blog`, {
         method: isEdit ? "PUT" : "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ ...blogForm, tags: tagsArray, originalSlug: editingBlogSlug }),
+        headers: getAuthOnlyHeaders(),
+        body: formData,
       });
       if (!res.ok) throw new Error(isEdit ? "Failed to update blog." : "Failed to publish blog.");
       showToast(isEdit ? "Blog updated successfully!" : "Blog published successfully!", "success");
       fetchAdminData();
       setActiveTab("manage-blogs");
-      setBlogForm({ slug: "", title: "", excerpt: "", date: new Date().toISOString().split("T")[0], readTime: "5 min read", tags: "", featured: false, content: "" });
+      setBlogForm({
+        slug: "",
+        title: "",
+        seoTitle: "",
+        excerpt: "",
+        date: new Date().toISOString().split("T")[0],
+        readTime: "5 min read",
+        tags: "",
+        featured: false,
+        content: "",
+        writtenBy: "Nishant Kumar",
+        category: "All",
+        contentType: "tiptap"
+      });
+      setSelectedBlogCoverFile(null);
+      const coverInput = document.getElementById("blog-cover-file-input") as HTMLInputElement;
+      if (coverInput) coverInput.value = "";
       setEditingBlogSlug(null);
     } catch (err: any) {
       showToast(err.message, "error");
@@ -2336,12 +2387,108 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <input type="checkbox" id="featured" checked={blogForm.featured} onChange={(e) => setBlogForm((p) => ({ ...p, featured: e.target.checked }))} className="rounded bg-zinc-900 border-white/10" />
-                      <label htmlFor="featured" className="text-xs font-bold text-white">Featured Post</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <InputField label="Written By" name="writtenBy" value={blogForm.writtenBy} onChange={(e) => setBlogForm((p) => ({ ...p, writtenBy: e.target.value }))} placeholder="e.g. Nishant Kumar" required />
+                      <SelectField
+                        label="Category"
+                        name="category"
+                        value={blogForm.category}
+                        onChange={(e) => setBlogForm((p) => ({ ...p, category: e.target.value }))}
+                        required
+                        options={[
+                          { value: "All", label: "All" },
+                          { value: "Learning", label: "Learning" },
+                          { value: "Lifestyle", label: "Lifestyle" },
+                          { value: "Guides", label: "Guides" },
+                          { value: "Technology", label: "Technology" },
+                          { value: "Thoughts", label: "Thoughts" }
+                        ]}
+                      />
                     </div>
 
-                    <TextAreaField label="Markdown Content" name="content" value={blogForm.content} onChange={(e) => setBlogForm((p) => ({ ...p, content: e.target.value }))} placeholder="# Header&#10;Write your markdown here..." required rows={12} />
+                    {/* SEO & Media */}
+                    <div className="border-t border-white/5 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <InputField
+                        label="SEO Title (Optional)"
+                        name="seoTitle"
+                        value={blogForm.seoTitle || ""}
+                        onChange={(e) => setBlogForm((p) => ({ ...p, seoTitle: e.target.value }))}
+                        placeholder="Custom HTML search engine page title..."
+                      />
+                      
+                      <div className="flex flex-col gap-1.5 font-mono">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-brand-400">
+                          Cover Image (Featured Image)
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            id="blog-cover-file-input"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                setSelectedBlogCoverFile(e.target.files[0]);
+                              }
+                            }}
+                            className="flex-1 bg-zinc-950/40 border border-white/5 rounded-xl px-4 py-2 text-xs text-white file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-accent/10 file:text-accent file:cursor-pointer hover:file:bg-accent/20 cursor-pointer"
+                          />
+                          {selectedBlogCoverFile && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBlogCoverFile(null);
+                                const el = document.getElementById("blog-cover-file-input") as HTMLInputElement;
+                                if (el) el.value = "";
+                              }}
+                              className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center gap-3">
+                        <input type="checkbox" id="featured" checked={blogForm.featured} onChange={(e) => setBlogForm((p) => ({ ...p, featured: e.target.checked }))} className="rounded bg-zinc-900 border-white/10" />
+                        <label htmlFor="featured" className="text-xs font-bold text-white">Featured Post</label>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 font-mono text-[10px] text-brand-400">
+                        <span>Editor Format:</span>
+                        <select
+                          value={blogForm.contentType}
+                          onChange={(e) => setBlogForm((p) => ({ ...p, contentType: e.target.value as any }))}
+                          className="bg-zinc-950/40 border border-white/5 rounded px-2 py-1 text-[10px] text-white focus:outline-none"
+                        >
+                          <option value="tiptap">Rich Text (Tiptap)</option>
+                          <option value="markdown">Markdown (Legacy)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-brand-400 font-mono">
+                        Article Content
+                      </label>
+                      {blogForm.contentType === "tiptap" ? (
+                        <BlogEditor
+                          value={blogForm.content}
+                          onChange={(val) => setBlogForm((p) => ({ ...p, content: val }))}
+                        />
+                      ) : (
+                        <TextAreaField
+                          label="Markdown Content"
+                          name="content"
+                          value={blogForm.content}
+                          onChange={(e) => setBlogForm((p) => ({ ...p, content: e.target.value }))}
+                          placeholder="# Header&#10;Write your markdown here..."
+                          required
+                          rows={12}
+                        />
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-3 pt-2 font-mono">
                       <button type="submit" disabled={submitting}
@@ -2349,7 +2496,26 @@ export default function AdminPage() {
                       >
                         {submitting ? (editingBlogSlug ? "Updating…" : "Publishing…") : (editingBlogSlug ? "Update Blog" : "Publish Blog")}
                       </button>
-                      <button type="button" onClick={() => { setBlogForm({ slug: "", title: "", excerpt: "", date: new Date().toISOString().split("T")[0], readTime: "5 min read", tags: "", featured: false, content: "" }); setEditingBlogSlug(null); }}
+                      <button type="button" onClick={() => {
+                        setBlogForm({
+                          slug: "",
+                          title: "",
+                          seoTitle: "",
+                          excerpt: "",
+                          date: new Date().toISOString().split("T")[0],
+                          readTime: "5 min read",
+                          tags: "",
+                          featured: false,
+                          content: "",
+                          writtenBy: "Nishant Kumar",
+                          category: "All",
+                          contentType: "tiptap"
+                        });
+                        setSelectedBlogCoverFile(null);
+                        const coverInput = document.getElementById("blog-cover-file-input") as HTMLInputElement;
+                        if (coverInput) coverInput.value = "";
+                        setEditingBlogSlug(null);
+                      }}
                         className="px-5 py-3.5 rounded-xl bg-white/5 border border-white/10 text-xs text-brand-300 hover:text-white transition-all cursor-pointer font-bold uppercase tracking-wider"
                       >
                         {editingBlogSlug ? "Cancel Edit" : "Clear Form"}
@@ -2402,7 +2568,14 @@ export default function AdminPage() {
                                   tags: blog.tags.join(", "),
                                   featured: blog.featured,
                                   content: blog.content ? blog.content.join("\n\n") : "",
+                                  writtenBy: blog.writtenBy || "Nishant Kumar",
+                                  category: blog.category || "All",
+                                  contentType: blog.contentType || "markdown",
+                                  seoTitle: blog.seoTitle || ""
                                 });
+                                setSelectedBlogCoverFile(null);
+                                const coverInput = document.getElementById("blog-cover-file-input") as HTMLInputElement;
+                                if (coverInput) coverInput.value = "";
                                 setEditingBlogSlug(blog.slug);
                                 setActiveTab("write-blog");
                               }}

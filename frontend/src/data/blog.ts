@@ -70,6 +70,109 @@ export function markdownToHtml(markdown: string): string {
   return html;
 }
 
+export interface TiptapNode {
+  type: string;
+  attrs?: Record<string, any>;
+  content?: TiptapNode[];
+  text?: string;
+  marks?: { type: string; attrs?: Record<string, any> }[];
+}
+
+export function tiptapToHtml(jsonStr: string): string {
+  try {
+    const doc = JSON.parse(jsonStr) as TiptapNode;
+    if (doc.type !== "doc" || !doc.content) return "";
+
+    const renderText = (node: TiptapNode): string => {
+      if (!node.text) return "";
+      let html = node.text;
+      if (node.marks) {
+        for (const mark of node.marks) {
+          if (mark.type === "bold") {
+            html = `<strong>${html}</strong>`;
+          } else if (mark.type === "italic") {
+            html = `<em>${html}</em>`;
+          } else if (mark.type === "strike") {
+            html = `<s>${html}</s>`;
+          } else if (mark.type === "code") {
+            html = `<code class="px-1.5 py-0.5 rounded bg-white/10 text-accent font-mono text-sm">${html}</code>`;
+          } else if (mark.type === "link") {
+            const href = mark.attrs?.href || "#";
+            html = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-accent underline hover:text-accent-light">${html}</a>`;
+          }
+        }
+      }
+      return html;
+    };
+
+    const renderNode = (node: TiptapNode): string => {
+      const childrenHtml = node.content ? node.content.map(renderNode).join("") : "";
+
+      switch (node.type) {
+        case "text":
+          return renderText(node);
+        case "paragraph":
+          return `<p class="text-brand-300 leading-relaxed text-lg mb-6">${childrenHtml || "<br/>"}</p>\n`;
+        case "heading": {
+          const level = node.attrs?.level || 1;
+          if (level === 1) {
+            return `<h1 class="text-3xl sm:text-4xl font-extrabold text-white mt-8 mb-4">${childrenHtml}</h1>\n`;
+          } else if (level === 2) {
+            return `<h2 class="text-2xl sm:text-3xl font-bold text-white mt-8 mb-4">${childrenHtml}</h2>\n`;
+          } else if (level === 3) {
+            return `<h3 class="text-xl sm:text-2xl font-bold text-white mt-6 mb-3">${childrenHtml}</h3>\n`;
+          }
+          return `<h4 class="text-lg sm:text-xl font-bold text-white mt-6 mb-2">${childrenHtml}</h4>\n`;
+        }
+        case "blockquote":
+          return `<blockquote class="border-l-4 border-accent bg-white/5 pl-4 py-2 my-4 text-brand-300 italic">${childrenHtml}</blockquote>\n`;
+        case "bulletList":
+          return `<ul class="list-disc pl-6 my-4 space-y-2 text-brand-300">${childrenHtml}</ul>\n`;
+        case "orderedList":
+          return `<ol class="list-decimal pl-6 my-4 space-y-2 text-brand-300">${childrenHtml}</ol>\n`;
+        case "listItem":
+          return `<li>${childrenHtml}</li>\n`;
+        case "codeBlock":
+          return `<pre class="bg-zinc-950/80 border border-white/5 rounded-xl p-4 my-6 font-mono text-sm text-brand-200 overflow-x-auto"><code>${childrenHtml}</code></pre>\n`;
+        case "image": {
+          const src = node.attrs?.src || "";
+          const alt = node.attrs?.alt || "";
+          const width = node.attrs?.width || "large";
+          const align = node.attrs?.align || "center";
+          const caption = node.attrs?.caption || "";
+
+          let widthClass = "max-w-3xl";
+          if (width === "small") widthClass = "max-w-sm";
+          else if (width === "medium") widthClass = "max-w-xl";
+          else if (width === "full") widthClass = "max-w-none w-full";
+
+          let alignClass = "mx-auto block";
+          if (align === "left") alignClass = "md:float-left md:mr-6 md:mb-4 mx-auto block";
+          else if (align === "right") alignClass = "md:float-right md:ml-6 md:mb-4 mx-auto block";
+
+          return `
+            <figure class="my-8 flex flex-col items-center clear-both w-full">
+              <div class="overflow-hidden rounded-xl bg-zinc-900 border border-white/5 ${widthClass} ${alignClass} w-full">
+                <img src="${src}" alt="${alt}" class="w-full h-auto object-cover" loading="lazy" />
+              </div>
+              ${caption ? `<figcaption class="mt-2 text-center text-xs text-brand-500 font-medium font-sans">${caption}</figcaption>` : ""}
+            </figure>
+          `;
+        }
+        case "hardBreak":
+          return "<br/>";
+        default:
+          return childrenHtml;
+      }
+    };
+
+    return doc.content.map(renderNode).join("");
+  } catch (e) {
+    console.error("Failed to parse tiptap JSON content:", e);
+    return "";
+  }
+}
+
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
   try {
     // Avoid caching so blogs update immediately
@@ -80,7 +183,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
     return blogs.map((b: any) => ({
       ...b,
       content: [b.content],
-      html: markdownToHtml(b.content)
+      html: b.contentType === "tiptap" ? tiptapToHtml(b.content) : markdownToHtml(b.content)
     }));
   } catch (error) {
     console.error("Error reading blog posts:", error);

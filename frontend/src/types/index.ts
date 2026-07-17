@@ -52,6 +52,12 @@ export interface BlogPost {
   featured?: boolean;
   content: string[];
   html?: string;
+  imageUrl?: string;
+  imagePath?: string;
+  writtenBy?: string;
+  category?: string;
+  contentType?: "markdown" | "tiptap";
+  seoTitle?: string;
 }
 
 export interface Resource {
