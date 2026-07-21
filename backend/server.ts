@@ -19,6 +19,8 @@ import galleryRoutes from './routes/gallery';
 import uploadRoutes from './routes/upload';
 import usersRoutes from './routes/users';
 import resumeRoutes from './routes/resume';
+import visitorsRoutes, { setVisitorsIo } from './routes/visitors';
+import quizRoutes from './routes/quiz';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -61,6 +63,8 @@ app.use('/api/gallery', galleryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/visitors', visitorsRoutes);
+app.use('/api/quiz', quizRoutes);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -75,6 +79,9 @@ const io = new Server(httpServer, {
     credentials: true,
   }
 });
+
+// Wire visitors route to Socket.IO for real-time broadcast
+setVisitorsIo(io);
 
 // Map to track online users: userId -> Set of socketIds
 // Fix #18 NOTE: This is stored in-memory. If server restarts (e.g. Render cold start),
