@@ -4,7 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { isConfigured as isFirebaseConfigured } from "@/lib/firebase";
 import BlogEditor from "@/components/admin/BlogEditor";
+import QuizManager from "@/components/admin/QuizManager";
 import type { GalleryPhoto } from "@/types";
+
+const getBackendUrl = () => {
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return "http://localhost:5000";
+  }
+  return process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
+};
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface UpdateItem {
@@ -219,7 +227,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "manage-resume";
+type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "manage-resume" | "quiz-management";
 
 interface ResumeItem {
   id: string;
@@ -244,6 +252,7 @@ export default function AdminPage() {
   const [blogs, setBlogs] = useState<any[]>([]);
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
   const [resumeForm, setResumeForm] = useState({ title: "" });
   const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
@@ -332,7 +341,7 @@ export default function AdminPage() {
   // Fetch Public Logs (With Latency Ping)
   const fetchPublicLogs = useCallback(async () => {
     const start = performance.now();
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
+    const backendUrl = getBackendUrl();
 
     // 1. Fetch statuses first for fast, non-blocking render of the timeline logs
     const statusPromise = fetch(`${backendUrl}/api/status`)
@@ -391,7 +400,7 @@ export default function AdminPage() {
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
+      const backendUrl = getBackendUrl();
       const [updRes, msgRes, blogRes] = await Promise.all([
         fetch(`${backendUrl}/api/updates`, { headers: getAuthHeaders() }),
         fetch(`${backendUrl}/api/contact`, { headers: getAuthHeaders() }),
@@ -426,7 +435,7 @@ export default function AdminPage() {
 
   const fetchResumeData = useCallback(async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/resume`, { headers: getAuthHeaders() });
+      const res = await fetch(`${getBackendUrl()}/api/resume`, { headers: getAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch resumes");
       const data = await res.json();
       setResumes(Array.isArray(data) ? data : []);
@@ -435,10 +444,21 @@ export default function AdminPage() {
     }
   }, []);
 
+  const fetchQuizData = useCallback(async () => {
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/quiz`, { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch quizzes");
+      const data = await res.json();
+      setQuizzes(Array.isArray(data) ? data : []);
+    } catch {
+      showToast("Failed to load quizzes.", "error");
+    }
+  }, []);
+
   const fetchGalleryData = useCallback(async () => {
     setLoading(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/gallery`);
       if (!res.ok) {
         throw new Error("Failed to fetch gallery photos");
@@ -454,7 +474,7 @@ export default function AdminPage() {
 
   const fetchMusicSettings = useCallback(async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/music`);
+      const res = await fetch(`${getBackendUrl()}/api/music`);
       if (!res.ok) throw new Error("Failed to load music settings");
       const data = await res.json();
       setMusicSettings(data);
@@ -485,7 +505,7 @@ export default function AdminPage() {
 
     const token = sessionStorage.getItem("admin_token");
     if (token) {
-      fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/auth/verify`, {
+      fetch(`${getBackendUrl()}/api/auth/verify`, {
         headers: { "Authorization": `Bearer ${token}` }
       })
       .then((res) => {
@@ -508,13 +528,14 @@ export default function AdminPage() {
       fetchGalleryData();
       fetchMusicSettings();
       fetchResumeData();
+      fetchQuizData();
     }
-  }, [unlocked, fetchAdminData, fetchGalleryData, fetchMusicSettings, fetchResumeData]);
+  }, [unlocked, fetchAdminData, fetchGalleryData, fetchMusicSettings, fetchResumeData, fetchQuizData]);
 
   // Handle Admin Auth
   const handleLogin = async (pw: string) => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -699,7 +720,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/updates`, {
+          const res = await fetch(`${getBackendUrl()}/api/updates`, {
             method: "DELETE",
             headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
@@ -721,7 +742,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/future-plans`, {
+          const res = await fetch(`${getBackendUrl()}/api/future-plans`, {
             method: "DELETE",
             headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
@@ -743,7 +764,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/blog`, {
+          const res = await fetch(`${getBackendUrl()}/api/blog`, {
             method: "DELETE",
             headers: getAuthHeaders(),
             body: JSON.stringify({ slug }),
@@ -765,7 +786,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/contact`, {
+          const res = await fetch(`${getBackendUrl()}/api/contact`, {
             method: "DELETE",
             headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
@@ -783,7 +804,7 @@ export default function AdminPage() {
   // ── Mark Message as Read ──
   const markAsRead = async (id: string) => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/contact`, {
+      await fetch(`${getBackendUrl()}/api/contact`, {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify({ id }),
@@ -797,7 +818,7 @@ export default function AdminPage() {
     const cycle: FuturePlan["status"][] = ["planned", "in-progress", "completed"];
     const next = cycle[(cycle.indexOf(plan.status) + 1) % cycle.length];
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/future-plans`, {
+      const res = await fetch(`${getBackendUrl()}/api/future-plans`, {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify({ id: plan.id, status: next }),
@@ -825,7 +846,7 @@ export default function AdminPage() {
         .map((t) => t.trim())
         .filter((t) => t.length > 0);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/status`, {
+      const res = await fetch(`${getBackendUrl()}/api/status`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -921,7 +942,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/status`, {
+          const res = await fetch(`${getBackendUrl()}/api/status`, {
             method: "DELETE",
             headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
@@ -952,7 +973,7 @@ export default function AdminPage() {
       formData.append("category", galleryForm.category);
       formData.append("date", galleryForm.date);
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      const backendUrl = getBackendUrl();
       const res = await fetch(`${backendUrl}/api/gallery`, {
         method: "POST",
         headers: getAuthOnlyHeaders(),
@@ -993,7 +1014,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+          const backendUrl = getBackendUrl();
           const res = await fetch(`${backendUrl}/api/gallery`, {
             method: "DELETE",
             headers: getAuthHeaders(),
@@ -1024,7 +1045,7 @@ export default function AdminPage() {
       const formData = new FormData();
       formData.append("resume", selectedResumeFile);
       formData.append("title", resumeForm.title.trim());
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/resume`, {
+      const res = await fetch(`${getBackendUrl()}/api/resume`, {
         method: "POST",
         headers: getAuthOnlyHeaders(),
         body: formData,
@@ -1051,7 +1072,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/resume`, {
+          const res = await fetch(`${getBackendUrl()}/api/resume`, {
             method: "DELETE",
             headers: getAuthHeaders(),
             body: JSON.stringify({ id }),
@@ -1074,7 +1095,7 @@ export default function AdminPage() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/music`, {
+      const res = await fetch(`${getBackendUrl()}/api/music`, {
         method: "PUT",
         headers: getAuthHeaders(),
         body: JSON.stringify({ playlistUrl: musicPlaylistUrl.trim() }),
@@ -1096,7 +1117,7 @@ export default function AdminPage() {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/music`, {
+          const res = await fetch(`${getBackendUrl()}/api/music`, {
             method: "DELETE",
             headers: getAuthHeaders(),
           });
@@ -1296,6 +1317,7 @@ export default function AdminPage() {
     { id: "gallery-management", label: "gallery_admin",   icon: "📸" },
     { id: "music-settings",     label: "music_corner",    icon: "🎵" },
     { id: "manage-resume",      label: "resume_mgmt",     icon: "📄" },
+    { id: "quiz-management",    label: "daily_quiz",      icon: "🧠" },
   ];
 
   return (
@@ -2954,6 +2976,14 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+              )}
+              {activeTab === "quiz-management" && (
+                <QuizManager
+                  quizzes={quizzes}
+                  onRefresh={fetchQuizData}
+                  showToast={showToast}
+                  setConfirm={setConfirm}
+                />
               )}
 
 

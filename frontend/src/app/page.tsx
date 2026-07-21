@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import AuroraBackground from "@/components/AuroraBackground";
+import DailyQuizCard from "@/components/sections/DailyQuizCard";
 
 export const metadata: Metadata = {
   title: "Nishant Kumar — Founder of 2 AM Study | Entrepreneur & Educator",
@@ -505,6 +506,7 @@ export default function Home() {
                 </svg>
               </div>
             </Link>
+            <DailyQuizCard />
           </div>
         </div>
       </section >

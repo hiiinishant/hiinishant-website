@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Newsletter from "@/components/Newsletter";
+import TodaysVisitors from "@/components/layout/TodaysVisitors";
 import { socialLinks } from "@/data/site";
 import type { SocialPlatform } from "@/types";
 
@@ -173,6 +174,11 @@ export default function Footer() {
                 </a>
               ))}
             </div>
+
+            {/* Inspirational Quote */}
+            <p className="mt-4 text-[12px] italic text-brand-300 leading-relaxed font-medium max-w-xs">
+              &ldquo;Success isn&apos;t just my dream; it&apos;s the <span className="text-amber-300 font-semibold not-italic">smile I want to see on my parents&apos; faces.</span>&rdquo;
+            </p>
           </div>
 
           {/* Pages + Explore — 2 columns on mobile, separate on desktop */}
@@ -235,6 +241,7 @@ export default function Footer() {
               <p className="text-[10px] text-brand-400 mt-2 text-center lg:text-left">
                 Join 2,000+ students &amp; builders. Unsubscribe anytime.
               </p>
+              <TodaysVisitors />
             </div>
           </div>
         </div>
