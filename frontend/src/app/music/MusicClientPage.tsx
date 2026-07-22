@@ -182,7 +182,7 @@ export default function MusicClientPage({
 
   if (!settings.playlistId) {
     return (
-      <main className="min-h-screen pt-24 pb-20">
+      <main className="min-h-screen pb-16">
         <PageHeader
           label="Music Corner"
           title={
@@ -205,7 +205,7 @@ export default function MusicClientPage({
   }
 
   return (
-    <main className="min-h-screen pt-24 pb-20">
+    <main className="min-h-screen pb-16">
       <PageHeader
         label="Music Corner"
         title={
@@ -312,16 +312,14 @@ export default function MusicClientPage({
                     <li key={track.videoId}>
                       <button
                         onClick={() => playAt(index)}
-                        className={`w-full flex items-center gap-3 px-6 sm:px-8 py-3 text-left transition-all cursor-pointer group ${
-                          isActive
+                        className={`w-full flex items-center gap-3 px-6 sm:px-8 py-3 text-left transition-all cursor-pointer group ${isActive
                             ? "bg-accent/10 border-l-2 border-accent"
                             : "hover:bg-white/3 border-l-2 border-transparent"
-                        }`}
+                          }`}
                       >
                         <span
-                          className={`w-6 text-center text-xs font-mono shrink-0 ${
-                            isActive ? "text-accent font-bold" : "text-brand-500"
-                          }`}
+                          className={`w-6 text-center text-xs font-mono shrink-0 ${isActive ? "text-accent font-bold" : "text-brand-500"
+                            }`}
                         >
                           {isActive && playing ? (
                             <span className="inline-flex gap-0.5 items-end h-3">
@@ -339,9 +337,8 @@ export default function MusicClientPage({
                           className="w-12 h-9 rounded-md object-cover shrink-0 border border-white/5"
                         />
                         <span
-                          className={`text-sm truncate ${
-                            isActive ? "text-white font-medium" : "text-brand-300 group-hover:text-white"
-                          }`}
+                          className={`text-sm truncate ${isActive ? "text-white font-medium" : "text-brand-300 group-hover:text-white"
+                            }`}
                         >
                           {track.title}
                         </span>

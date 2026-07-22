@@ -188,13 +188,13 @@ const platformConfig: Record<
 
 export default function SocialSection() {
   return (
-    <section id="social" className="py-16 lg:py-24 relative overflow-hidden bg-brand-900/10">
+    <section id="social" className="pt-10 sm:pt-14 pb-16 relative overflow-hidden bg-brand-900/10">
       {/* Decorative background glows */}
       <div className="absolute top-1/4 left-1/10 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none animate-pulse-slow" />
       <div className="absolute bottom-1/4 right-1/10 w-96 h-96 bg-emerald-500/3 rounded-full blur-3xl pointer-events-none animate-float" />
 
       <div className="max-w-6xl mx-auto px-5 sm:px-8 relative z-10">
-        <div className="text-center mb-16">
+        <div className="text-center mb-8 sm:mb-10">
           {/* Pulsing Live Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass border-white/5 mb-4 animate-float">
             <span className="relative flex h-2 w-2">

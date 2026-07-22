@@ -106,14 +106,14 @@ export default function ContactClientPage() {
   return (
     <>
       {/* ─── HERO ─── */}
-      <section className="pt-32 pb-12 relative overflow-hidden">
+      <section className="pt-10 sm:pt-14 pb-8 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-accent/4 rounded-full blur-[120px] pointer-events-none -z-10" />
         <div className="max-w-6xl mx-auto px-5 sm:px-8 text-center">
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/20 bg-accent/5 text-[11px] font-bold text-accent uppercase tracking-widest mb-6">
+          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/20 bg-accent/5 text-[11px] font-bold text-accent uppercase tracking-widest mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-slow" />
             Get In Touch
           </span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold mb-4">
+          <h1 className="text-4xl sm:text-5xl font-extrabold mb-3">
             Let&apos;s <span className="text-gradient">Connect</span>
           </h1>
           <p className="text-brand-400 max-w-xl mx-auto">
@@ -123,7 +123,7 @@ export default function ContactClientPage() {
       </section>
 
       {/* ─── CONTACT METHODS + FORM ─── */}
-      <section className="py-12 lg:py-20">
+      <section className="py-8 lg:py-14">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16">
             {/* Left: Contact Methods */}

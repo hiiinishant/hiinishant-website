@@ -6,7 +6,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({ label, title, description }: PageHeaderProps) {
   return (
-    <section className="relative py-4 lg:py-6 overflow-hidden noise">
+    <section className="relative pt-16 lg:pt-20 py-4 lg:py-6 overflow-hidden noise">
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-accent/8 blur-[120px]"></div>
       </div>

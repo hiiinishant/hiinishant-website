@@ -102,11 +102,13 @@ const socialIconMap: Record<SocialPlatform, React.ReactNode> = {
 
 const navPages = [
   { href: "/", label: "Home" },
-  { href: "/journey", label: "Journey" },
+  { href: "/resume", label: "Resume" },
   { href: "/blog", label: "Blog" },
   { href: "/gallery", label: "Gallery" },
-  { href: "/resume", label: "Resume" },
   { href: "/contact", label: "Contact" },
+  { href: "/journey", label: "Journey" },
+  { href: "/quiz", label: "Daily Quiz" },
+  { href: "/privacy", label: "Privacy Policy" },
 ];
 
 const navSections = [
@@ -152,12 +154,20 @@ export default function Footer() {
             </Link>
 
             <p className="text-sm text-brand-400 leading-relaxed max-w-xs mb-6">
-              Founder of <span className="text-white font-medium">2 AM Study</span> —
-              an educational initiative empowering students to learn smarter and achieve more.
+              Founder of{" "}
+              <a
+                href="https://2amstudy.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white font-medium hover:text-accent transition-colors duration-300"
+              >
+                2 AM Study
+              </a>{" "}
+              — an educational initiative empowering students to learn smarter and achieve more.
             </p>
 
             {/* Social icons row — filtered to footer-only platforms */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-4">
               {socialLinks
                 .filter((link) => footerPlatforms.includes(link.platform))
                 .map((link) => (
@@ -175,8 +185,29 @@ export default function Footer() {
               ))}
             </div>
 
+            {/* YouTube Callouts */}
+            <div className="space-y-1.5 mb-2">
+              <a
+                href="https://youtube.com/@hiiinishant"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-xs font-medium text-brand-300 hover:text-white transition-colors duration-300 group/yt max-w-xs block"
+              >
+                <span>🎥 Follow my life journey on YouTube — <span className="font-semibold text-white group-hover/yt:text-accent transition-colors">Hiii Nishant ❤️</span></span>
+              </a>
+
+              <a
+                href="https://youtube.com/@2amstudy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-xs font-medium text-brand-300 hover:text-white transition-colors duration-300 group/yt2 max-w-xs block"
+              >
+                <span>🎥 Follow for daily study motivation — <span className="font-semibold text-white group-hover/yt2:text-accent transition-colors">2 AM Study ❤️</span></span>
+              </a>
+            </div>
+
             {/* Inspirational Quote */}
-            <p className="mt-4 text-[12px] italic text-brand-300 leading-relaxed font-medium max-w-xs">
+            <p className="mt-2 text-[12px] italic text-brand-300 leading-relaxed font-medium max-w-xs">
               &ldquo;Success isn&apos;t just my dream; it&apos;s the <span className="text-amber-300 font-semibold not-italic">smile I want to see on my parents&apos; faces.</span>&rdquo;
             </p>
           </div>
@@ -251,11 +282,18 @@ export default function Footer() {
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* Copyright */}
-            <div className="flex items-center gap-3">
+            {/* Copyright & Legal */}
+            <div className="flex flex-wrap items-center gap-2.5">
               <p className="text-xs text-brand-500 text-center sm:text-left">
                 &copy; {year} Nishant Kumar. All rights reserved.
               </p>
+              <span className="text-brand-700 hidden sm:inline">·</span>
+              <Link
+                href="/privacy"
+                className="text-xs text-brand-400 hover:text-white transition-colors duration-300"
+              >
+                Privacy Policy
+              </Link>
               <span className="text-brand-700 hidden sm:inline">·</span>
               <p className="text-xs text-brand-600 hidden sm:block">
                 Designed &amp; built with purpose.
