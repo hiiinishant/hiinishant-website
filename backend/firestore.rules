@@ -1,23 +1,60 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.email_verified == true);
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update, delete: if request.auth != null && request.auth.uid == userId;
+
+    // ── Helper functions ────────────────────────────────────────────────────
+    // True if the caller is signed in
+    function isSignedIn() {
+      return request.auth != null;
     }
 
+    // True if the caller owns the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // True if the caller's email is verified in the token
+    // Note: email_verified claim updates after token refresh — so we check
+    // both the token claim and allow the user to read their own doc regardless.
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    // ── Users collection ─────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Allow a user to always read their own profile (even before token refresh)
+      // Allow other authenticated + verified users to read profiles (for directory listing)
+      allow read: if isSignedIn() && (isOwner(userId) || isEmailVerified());
+
+      // Only the owner can create / update / delete their profile
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    // ── Conversations ────────────────────────────────────────────────────────
     match /conversations/{conversationId} {
-      allow read: if request.auth != null && request.auth.token.email_verified == true && request.auth.uid in resource.data.participants;
-      allow create: if request.auth != null && request.auth.token.email_verified == true;
-      allow update: if request.auth != null && request.auth.token.email_verified == true && request.auth.uid in resource.data.participants;
+      allow read: if isSignedIn() && isEmailVerified()
+                  && request.auth.uid in resource.data.participants;
+
+      allow create: if isSignedIn() && isEmailVerified();
+
+      allow update: if isSignedIn() && isEmailVerified()
+                  && request.auth.uid in resource.data.participants;
+
       allow delete: if false;
 
+      // ── Messages (sub-collection) ─────────────────────────────────────────
       match /messages/{messageId} {
-        allow read: if request.auth != null && request.auth.token.email_verified == true && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-        allow create: if request.auth != null && request.auth.token.email_verified == true && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow read: if isSignedIn() && isEmailVerified()
+                    && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+
+        allow create: if isSignedIn() && isEmailVerified()
+                      && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+
         allow update, delete: if false;
       }
     }
   }
 }
+

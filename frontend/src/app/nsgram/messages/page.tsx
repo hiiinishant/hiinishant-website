@@ -475,7 +475,11 @@ export default function NsgramMessagesPage() {
         setConvoLoading(false);
       },
       (err) => {
-        console.error("Error listening to conversations:", err);
+        if (err.code === "permission-denied") {
+          console.warn("Conversations list read permission pending or denied:", err.message);
+        } else {
+          console.error("Error listening to conversations:", err);
+        }
         setConversations([]);
         setConvoLoading(false);
       }
@@ -513,8 +517,12 @@ export default function NsgramMessagesPage() {
         });
       },
       (err) => {
-        console.error("[onSnapshot] ERROR listening to messages:", err);
-        setFirestoreError(err.message);
+        if (err.code === "permission-denied") {
+          console.warn("[onSnapshot] Messages read permission pending or denied:", err.message);
+        } else {
+          console.error("[onSnapshot] ERROR listening to messages:", err);
+          setFirestoreError(err.message);
+        }
       }
     );
 

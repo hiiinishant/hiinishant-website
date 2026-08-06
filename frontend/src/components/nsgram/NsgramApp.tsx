@@ -91,7 +91,11 @@ export default function NsgramApp() {
           queueMicrotask(() => setLoading(false));
         },
         (error) => {
-          console.error("Error fetching user profile in NsgramApp:", error);
+          if (error.code === "permission-denied") {
+            console.warn("User profile snapshot permission pending or denied:", error.message);
+          } else {
+            console.error("Error fetching user profile in NsgramApp:", error);
+          }
           setProfile(null);
           clearTimeout(safetyTimer);
           queueMicrotask(() => setLoading(false));
@@ -471,20 +475,42 @@ export default function NsgramApp() {
         return;
       }
 
-      // Update lastLoginAt and activate profile via backend API
-      fetch(`${API_BASE}/api/users/profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uid: credential.user.uid,
-          email: credential.user.email,
-          isActivated: true,
-        }),
-      }).catch(err => console.warn('Failed to update lastLoginAt:', err));
+      // Update lastLoginAt and activate profile via backend API with ID token
+      try {
+        const idToken = await getIdToken(credential.user);
+        await fetch(`${API_BASE}/api/users/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            uid: credential.user.uid,
+            email: credential.user.email,
+            isActivated: true,
+          }),
+        });
+      } catch (err) {
+        console.warn('Failed to update profile activation:', err);
+      }
 
-      setNotice("Signed in successfully.");
+      setAuthUser(credential.user);
+
+      if (db) {
+        try {
+          const userRef = doc(db, "users", credential.user.uid);
+          const snapshot = await getDoc(userRef);
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data, isActivated: true } as UserProfile);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch profile snapshot:', err);
+        }
+      }
+
+      setNotice("Signed in successfully. Opening workspace...");
+      router.replace("/nsgram/home");
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string } | Error | unknown;
       console.warn("Signin error:", error);

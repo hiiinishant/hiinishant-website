@@ -79,7 +79,11 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
           queueMicrotask(() => setLoading(false));
         },
         (error) => {
-          console.error("Error listening to profile snapshot:", error);
+          if (error.code === "permission-denied") {
+            console.warn("Profile snapshot permission pending or denied:", error.message);
+          } else {
+            console.error("Error listening to profile snapshot:", error);
+          }
           setProfile(null);
           clearTimeout(safetyTimer);
           queueMicrotask(() => setLoading(false));
@@ -102,25 +106,41 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    const unsubscribeUsers = onSnapshot(
-      collection(db, "users"),
-      (snapshot) => {
-        const latestUsers = snapshot.docs
-          .map((docSnap) => ({
-            id: docSnap.id,
-            uid: docSnap.id,
-            ...(docSnap.data() as Omit<UserProfile, "id" | "uid">),
-          }))
-          .filter((user) => user.isActivated === true) as UserProfile[];
-        setUsers(latestUsers);
-      },
-      (error) => {
-        console.error("Error listening to users collection:", error);
-      }
-    );
+    let isCancelled = false;
+    let unsubscribeUsers: (() => void) | undefined;
+
+    // Refresh auth ID token to make sure email_verified claim is updated in Firebase Auth for Firestore security rules
+    authUser.getIdToken(true).then(() => {
+      if (isCancelled || !db) return;
+
+      unsubscribeUsers = onSnapshot(
+        collection(db, "users"),
+        (snapshot) => {
+          const latestUsers = snapshot.docs
+            .map((docSnap) => ({
+              id: docSnap.id,
+              uid: docSnap.id,
+              ...(docSnap.data() as Omit<UserProfile, "id" | "uid">),
+            }))
+            .filter((user) => user.isActivated === true) as UserProfile[];
+          setUsers(latestUsers);
+        },
+        (error) => {
+          if (error.code === "permission-denied") {
+            console.warn("Users collection read permission pending or denied:", error.message);
+          } else {
+            console.error("Error listening to users collection:", error);
+          }
+          setUsers([]);
+        }
+      );
+    }).catch((err) => {
+      console.warn("Failed to refresh ID token before users listener:", err);
+    });
 
     return () => {
-      unsubscribeUsers();
+      isCancelled = true;
+      unsubscribeUsers?.();
     };
   }, [authUser, authUser?.emailVerified, profile, profile?.isActivated]);
 
