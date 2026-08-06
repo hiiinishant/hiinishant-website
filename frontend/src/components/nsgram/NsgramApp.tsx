@@ -125,6 +125,8 @@ export default function NsgramApp() {
       const currentUser = auth.currentUser;
       if (currentUser?.emailVerified) {
         const idToken = await getIdToken(currentUser);
+        console.log("ID TOKEN:", idToken);
+        console.log("Sending Authorization header");
         await fetch(`${API_BASE}/api/users/profile`, {
           method: 'POST',
           headers: {
@@ -294,9 +296,9 @@ export default function NsgramApp() {
 
       if (!userSnap.exists()) {
         // Generate unique username
-        let baseUsername = credential.user.email?.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "") 
-                        || credential.user.displayName?.toLowerCase().replace(/[^a-z0-9]/g, "") 
-                        || "user";
+        let baseUsername = credential.user.email?.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "")
+          || credential.user.displayName?.toLowerCase().replace(/[^a-z0-9]/g, "")
+          || "user";
 
         if (baseUsername.length < 3) baseUsername = baseUsername + "123";
 
@@ -558,21 +560,19 @@ export default function NsgramApp() {
           <div className="mt-8 flex flex-wrap gap-3">
             <button
               onClick={() => setAuthMode("signup")}
-              className={`rounded-2xl px-6 py-3 font-bold text-sm transition duration-300 ${
-                authMode === "signup"
+              className={`rounded-2xl px-6 py-3 font-bold text-sm transition duration-300 ${authMode === "signup"
                   ? "bg-amber-400 text-slate-950 hover:bg-amber-300"
                   : "border border-white/10 text-white hover:bg-white/10"
-              }`}
+                }`}
             >
               Sign up
             </button>
             <button
               onClick={() => setAuthMode("login")}
-              className={`rounded-2xl px-6 py-3 font-bold text-sm transition duration-300 ${
-                authMode === "login"
+              className={`rounded-2xl px-6 py-3 font-bold text-sm transition duration-300 ${authMode === "login"
                   ? "bg-amber-400 text-slate-950 hover:bg-amber-300"
                   : "border border-white/10 text-white hover:bg-white/10"
-              }`}
+                }`}
             >
               Log in
             </button>
@@ -614,13 +614,13 @@ export default function NsgramApp() {
                   </button>
                 </form>
 
-                  <button
-                    type="button"
-                    onClick={() => { setForgotPassword(false); setNotice(""); setResetEmail(""); }}
-                    className="w-full rounded-2xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-brand-300 hover:text-white font-bold py-3 text-sm tracking-wide uppercase transition duration-300"
-                  >
-                    &larr; Back to Login
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => { setForgotPassword(false); setNotice(""); setResetEmail(""); }}
+                  className="w-full rounded-2xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-brand-300 hover:text-white font-bold py-3 text-sm tracking-wide uppercase transition duration-300"
+                >
+                  &larr; Back to Login
+                </button>
               </div>
             </>
           ) : authUser && !authUser.emailVerified ? (
@@ -725,11 +725,10 @@ export default function NsgramApp() {
                             key={avatar}
                             type="button"
                             onClick={() => setAuthForm((prev) => ({ ...prev, avatar }))}
-                            className={`flex-1 rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
-                              authForm.avatar === avatar
+                            className={`flex-1 rounded-2xl border px-3 py-3 text-sm font-semibold transition ${authForm.avatar === avatar
                                 ? "border-amber-400 bg-amber-400/20 text-amber-200"
                                 : "border-white/10 bg-white/5 text-brand-300 hover:border-white/20"
-                            }`}
+                              }`}
                           >
                             {avatar === "boy" ? "👦 Boy" : "👧 Girl"}
                           </button>
@@ -771,7 +770,7 @@ export default function NsgramApp() {
                     </button>
                   </div>
                 )}
-                
+
                 <button
                   disabled={authLoading}
                   className="w-full rounded-2xl bg-white hover:bg-slate-200 disabled:opacity-50 text-slate-950 font-bold py-3 text-sm tracking-wide uppercase transition duration-300"
