@@ -26,7 +26,7 @@ interface QuizManagerProps {
   setConfirm: (confirm: { message: string; onConfirm: () => void } | null) => void;
 }
 
-const getTodayIST = () =>
+const todayIST = () =>
   new Date(Date.now() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
 
 export default function QuizManager({

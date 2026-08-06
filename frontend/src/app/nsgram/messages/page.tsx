@@ -465,13 +465,21 @@ export default function NsgramMessagesPage() {
       where("participants", "array-contains", profile.id)
     );
 
-    const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map(
-        (d) => ({ id: d.id, ...d.data() } as Conversation)
-      );
-      setConversations(sortByRecent(list));
-      setConvoLoading(false);
-    });
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as Conversation)
+        );
+        setConversations(sortByRecent(list));
+        setConvoLoading(false);
+      },
+      (err) => {
+        console.error("Error listening to conversations:", err);
+        setConversations([]);
+        setConvoLoading(false);
+      }
+    );
 
     return () => unsub();
   }, [profile?.id]);

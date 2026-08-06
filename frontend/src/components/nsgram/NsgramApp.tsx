@@ -63,28 +63,44 @@ export default function NsgramApp() {
     }
 
     let unsubscribeProfile: (() => void) | undefined;
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
       if (!user) {
         setProfile(null);
+        clearTimeout(safetyTimer);
         setLoading(false);
         return;
       }
 
       const userRef = doc(db!, "users", user.uid);
       unsubscribeProfile?.();
-      unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
-        } else {
+      unsubscribeProfile = onSnapshot(
+        userRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
+          } else {
+            setProfile(null);
+          }
+          clearTimeout(safetyTimer);
+          queueMicrotask(() => setLoading(false));
+        },
+        (error) => {
+          console.error("Error fetching user profile in NsgramApp:", error);
           setProfile(null);
+          clearTimeout(safetyTimer);
+          queueMicrotask(() => setLoading(false));
         }
-        queueMicrotask(() => setLoading(false));
-      });
+      );
     });
 
     return () => {
+      clearTimeout(safetyTimer);
       unsubscribeAuth();
       unsubscribeProfile?.();
     };

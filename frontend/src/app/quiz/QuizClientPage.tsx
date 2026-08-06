@@ -165,32 +165,6 @@ export default function QuizClientPage() {
     })();
   }, [user, activeSubject]);
 
-  const loadQuiz = async (subject: string) => {
-    setQuizLoading(true);
-    setShowLoginPrompt(false);
-    const apiBase = getApiBase();
-    try {
-      if (subject === "Daily Challenge") {
-        const res = await fetch(`${apiBase}/api/quiz/today`, { signal: AbortSignal.timeout(8000) });
-        if (res.ok) {
-          const data = await res.json();
-          setQuizzes(data.quizzes || (data.quiz ? [data.quiz] : []));
-        }
-      } else {
-        const res = await fetch(`${apiBase}/api/quiz/subject/${encodeURIComponent(subject)}`, { signal: AbortSignal.timeout(8000) });
-        if (res.ok) {
-          const data = await res.json();
-          setQuizzes(data.quizzes || (data.quiz ? [data.quiz] : []));
-        }
-      }
-    } catch {
-      setQuizzes([]);
-    } finally {
-      setQuizLoading(false);
-      setLoading(false);
-    }
-  };
-
   const handleSubjectClick = (subject: string) => {
     setActiveSubject(subject);
     loadQuiz(subject);

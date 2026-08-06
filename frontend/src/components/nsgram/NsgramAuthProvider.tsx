@@ -51,28 +51,44 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
     }
 
     let unsubscribeProfile: (() => void) | undefined;
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
       if (!user) {
         setProfile(null);
+        clearTimeout(safetyTimer);
         setLoading(false);
         return;
       }
 
       const userRef = doc(db!, "users", user.uid);
       unsubscribeProfile?.();
-      unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data() as Partial<UserProfile>;
-          setProfile({ id: snapshot.id, uid: (data.uid as string) ?? snapshot.id, ...(data as object) } as UserProfile);
-        } else {
+      unsubscribeProfile = onSnapshot(
+        userRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data() as Partial<UserProfile>;
+            setProfile({ id: snapshot.id, uid: (data.uid as string) ?? snapshot.id, ...(data as object) } as UserProfile);
+          } else {
+            setProfile(null);
+          }
+          clearTimeout(safetyTimer);
+          queueMicrotask(() => setLoading(false));
+        },
+        (error) => {
+          console.error("Error listening to profile snapshot:", error);
           setProfile(null);
+          clearTimeout(safetyTimer);
+          queueMicrotask(() => setLoading(false));
         }
-        queueMicrotask(() => setLoading(false));
-      });
+      );
     });
 
     return () => {
+      clearTimeout(safetyTimer);
       unsubscribeAuth();
       unsubscribeProfile?.();
     };
