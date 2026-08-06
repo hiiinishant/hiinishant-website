@@ -72,13 +72,8 @@ app.use((0, cors_1.default)({
         // Allow server-to-server requests (no Origin header) and same-origin
         if (!origin)
             return callback(null, true);
-        // Allow exact matches
         if (ALLOWED_ORIGINS.has(origin))
             return callback(null, true);
-        // Allow all Vercel preview and production deployments
-        if (origin.endsWith(".vercel.app"))
-            return callback(null, true);
-        // Allow localhost on any port (development)
         if (/^http:\/\/localhost:\d+$/.test(origin))
             return callback(null, true);
         callback(new Error(`CORS: ${origin} not allowed`));

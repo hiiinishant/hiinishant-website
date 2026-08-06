@@ -12,7 +12,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   collection,
-  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -23,6 +22,7 @@ import { db } from "@/lib/firebase";
 import { useNsgramAuth } from "@/components/nsgram/NsgramAuthProvider";
 import { useVoiceCall } from "@/components/nsgram/useVoiceCall";
 import { IncomingCallModal, ActiveCallOverlay, CallErrorBanner } from "@/components/nsgram/VoiceCallUI";
+import { API_BASE } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +40,7 @@ type Message = {
   callType?: "voice" | "video";
   callStatus?: "completed" | "missed" | "declined";
   callDuration?: number; // seconds
+  tempId?: string;
 };
 
 type Conversation = {
@@ -111,7 +112,7 @@ function deduplicateMessages(msgs: Message[]): Message[] {
   // Collect all confirmed tempIds from database messages
   for (const m of msgs) {
     if (!m.id.startsWith("temp-")) {
-      const tId = (m as any).tempId;
+      const tId = m.tempId;
       if (tId) confirmedTempIds.add(tId);
     }
   }
@@ -167,7 +168,7 @@ function VoiceNotePlayer({ audioUrl }: { audioUrl: string }) {
     audio.addEventListener("ended", onEnded);
 
     if (audio.readyState >= 1) {
-      setDuration(audio.duration);
+      queueMicrotask(() => setDuration(audio.duration || 0));
     }
 
     return () => {
@@ -243,7 +244,7 @@ function VoiceNotePlayer({ audioUrl }: { audioUrl: string }) {
 function CallLogBubble({ msg, currentUserId }: { msg: Message; currentUserId: string }) {
   const isVideo = msg.callType === "video";
   const isMissed = msg.callStatus === "missed";
-  const isDeclined = msg.callStatus === "declined";
+  // const isDeclined = msg.callStatus === "declined"; // removed unused
   const isCompleted = msg.callStatus === "completed";
   const wasCaller = msg.senderId === currentUserId;
 
@@ -392,6 +393,7 @@ function ConvoCard({
 
 export default function NsgramMessagesPage() {
   const { profile, users, socket, socketConnected } = useNsgramAuth();
+  const profileId = profile?.id ?? null;
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -427,7 +429,7 @@ export default function NsgramMessagesPage() {
   // ── Sync convoId from URL ──────────────────────────────────────────────────
   useEffect(() => {
     const id = searchParams.get("convoId");
-    if (id) setSelectedConversationId(id);
+    if (id) queueMicrotask(() => setSelectedConversationId(id));
   }, [searchParams]);
 
   // NOTE: We intentionally do NOT lock body/html overflow here.
@@ -451,8 +453,10 @@ export default function NsgramMessagesPage() {
   // ── Firestore: real-time conversation list ─────────────────────────────────
   useEffect(() => {
     if (!db || !profile?.id) {
-      setConversations([]);
-      setConvoLoading(false);
+      queueMicrotask(() => {
+        setConversations([]);
+        setConvoLoading(false);
+      });
       return;
     }
 
@@ -475,7 +479,7 @@ export default function NsgramMessagesPage() {
   // ── Firestore: load historical messages and listen to updates in real-time ──
   useEffect(() => {
     if (!db || !selectedConversationId) {
-      setMessages([]);
+      queueMicrotask(() => setMessages([]));
       return;
     }
 
@@ -492,7 +496,7 @@ export default function NsgramMessagesPage() {
         console.log(`[onSnapshot] Fired for convo ${selectedConversationId}. Docs count: ${dbMsgs.length}. FromCache: ${snap.metadata.fromCache}. HasPendingWrites: ${snap.metadata.hasPendingWrites}`);
         setMessages((prev) => {
           const confirmedTempIds = new Set(
-            dbMsgs.map((m) => (m as any).tempId).filter(Boolean)
+            dbMsgs.map((m) => m.tempId).filter(Boolean)
           );
           const pendingTempMsgs = prev.filter(
             (m) => m.id.startsWith("temp-") && !confirmedTempIds.has(m.id)
@@ -512,18 +516,18 @@ export default function NsgramMessagesPage() {
   // ── markAsRead: emit socket event + optimistically flip local messages ─────
   const markAsRead = useCallback(
     (conversationId: string) => {
-      if (!socket || !profile?.id) return;
-      socket.emit("mark-as-read", { conversationId, userId: profile.id });
+      if (!socket || !profileId) return;
+      socket.emit("mark-as-read", { conversationId, userId: profileId });
       // Optimistically mark all incoming messages in this convo as read locally
       setMessages((prev) =>
         prev.map((m) =>
-          m.senderId !== profile.id ? { ...m, read: true } : m
+          m.senderId !== profileId ? { ...m, read: true } : m
         )
       );
       // Clear unread flag for this conversation immediately
       setReadConvoIds((prev) => new Set([...prev, conversationId]));
     },
-    [socket, profile?.id]
+    [socket, profileId]
   );
 
   // ── Socket.IO: join/leave room + receive incoming messages ─────────────────
@@ -537,8 +541,8 @@ export default function NsgramMessagesPage() {
       userId: profile.id,
     });
 
-    // Mark conversation as read the moment we join it
-    markAsRead(selectedConversationId);
+    // Mark conversation as read the moment we join it (deferred to avoid sync setState)
+    queueMicrotask(() => markAsRead(selectedConversationId));
 
     // Incoming message from other users in the room
     const onReceiveMessage = (msg: Message) => {
@@ -556,8 +560,7 @@ export default function NsgramMessagesPage() {
       socket.emit("leave-room", { conversationId: selectedConversationId });
       socket.off("receive-message", onReceiveMessage);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket, socketConnected, selectedConversationId, profile?.id]);
+  }, [socket, socketConnected, selectedConversationId, profile?.id, markAsRead]);
 
   // ── Socket.IO: messages-read — recipient read our messages (show "Seen") ───
   useEffect(() => {
@@ -575,8 +578,7 @@ export default function NsgramMessagesPage() {
     };
 
     socket.on("messages-read", onMessagesRead);
-    return () => socket.off("messages-read", onMessagesRead);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { socket.off("messages-read", onMessagesRead); };
   }, [socket, selectedConversationId, profile?.id]);
 
   // ── Socket.IO: own sent message confirmation (always fires, even if offline) ─
@@ -604,9 +606,7 @@ export default function NsgramMessagesPage() {
 
     socket.on("message-sent", onMessageSent);
 
-    return () => {
-      socket.off("message-sent", onMessageSent);
-    };
+    return () => { socket.off("message-sent", onMessageSent); };
   }, [socket]);
 
   // ── Socket.IO: message-reacted — updates reactions on messages ─────────────
@@ -622,9 +622,7 @@ export default function NsgramMessagesPage() {
     };
 
     socket.on("message-reacted", onMessageReacted);
-    return () => {
-      socket.off("message-reacted", onMessageReacted);
-    };
+    return () => { socket.off("message-reacted", onMessageReacted); };
   }, [socket]);
 
   // ── Socket.IO: global user online/offline status (now also carries lastSeen) ─
@@ -645,7 +643,7 @@ export default function NsgramMessagesPage() {
     };
 
     socket.on("user-status", onStatus);
-    return () => socket.off("user-status", onStatus);
+    return () => { socket.off("user-status", onStatus); };
   }, [socket]);
 
   // ── Socket.IO: query selected chat user's online status ────────────────────
@@ -707,7 +705,6 @@ export default function NsgramMessagesPage() {
     return () => {
       socket.off("connect", checkStatus);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, selectedChatUser?.id]);
 
   // ── Socket.IO: query status for all inbox conversations on load / reconnect ────
@@ -771,15 +768,15 @@ export default function NsgramMessagesPage() {
 
   // ── Typing emit: debounced, fires on every keystroke ─────────────────────
   const handleTyping = useCallback(() => {
-    if (!socket || !selectedConversationId || !profile?.id) return;
+    if (!socket || !selectedConversationId || !profileId) return;
     // Emit typing-start
-    socket.emit("typing-start", { conversationId: selectedConversationId, userId: profile.id });
+    socket.emit("typing-start", { conversationId: selectedConversationId, userId: profileId });
     // Clear previous timer and set a new 2s stop timer
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("typing-stop", { conversationId: selectedConversationId, userId: profile.id });
+      socket.emit("typing-stop", { conversationId: selectedConversationId, userId: profileId });
     }, 2000);
-  }, [socket, selectedConversationId, profile?.id]);
+  }, [socket, selectedConversationId, profileId]);
 
   // ── Scroll to Message highlight helper ─────────────────────────────────────
   const scrollToMessage = useCallback((msgId: string) => {
@@ -796,7 +793,7 @@ export default function NsgramMessagesPage() {
   // ── Typing indicator: listen for partner's typing events ──────────────────
   useEffect(() => {
     if (!socket || !selectedConversationId || !selectedChatUser?.id) {
-      setIsTyping(false);
+      queueMicrotask(() => setIsTyping(false));
       return;
     }
 
@@ -1069,7 +1066,13 @@ export default function NsgramMessagesPage() {
         }
         : undefined;
 
-      const payload: any = {
+      const payload: {
+        conversationId: string;
+        text: string;
+        senderId: string;
+        recipientId: string;
+        replyTo?: { id: string; text: string; senderId: string; senderName: string };
+      } = {
         conversationId: selectedConversation.id,
         text,
         senderId: profile.id,
@@ -1322,7 +1325,7 @@ export default function NsgramMessagesPage() {
               <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-[11px] font-medium px-4 py-2 flex items-center justify-between shrink-0 select-none animate-pulse">
                 <span className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-                  <span>Offline / Connecting to chat server... (Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com"})</span>
+                  <span>Offline / Connecting to chat server... (Backend URL: {API_BASE || "same origin"})</span>
                 </span>
               </div>
             )}

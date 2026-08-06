@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   latestUpdates,
   categories,
   type UpdateItem,
 } from "@/data/updates";
-
+import { apiUrl } from "@/lib/api";
 /* ────────────────────────────────────────────
    ICON COMPONENTS
    ──────────────────────────────────────────── */
@@ -69,10 +70,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   megaphone: MegaphoneIcon,
 };
 
-const categoryColors: Record<UpdateItem["category"], string> = {
-  video: "from-red-500/20 to-red-600/5 border-red-500/20 text-red-400",
-  instagram: "from-[#E1306C]/20 to-[#E1306C]/5 border-[#E1306C]/20 text-[#E1306C]",
-};
+// removed unused categoryColors to satisfy linting
 
 const categoryIconColors: Record<UpdateItem["category"], string> = {
   video: "bg-red-500/10 text-red-400 group-hover:bg-red-500/20",
@@ -226,10 +224,11 @@ function UpdateCard({ item, index }: { item: UpdateItem; index: number }) {
         {/* ── THUMBNAIL ── */}
         <div className="relative w-full aspect-video flex-shrink-0 overflow-hidden bg-gradient-to-br from-brand-800 to-brand-900 group/thumb">
           {item.thumbnail ? (
-            <img
+            <Image
               src={item.thumbnail}
               alt={item.title}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover/thumb:scale-105"
+              fill
+              className="object-cover transition-transform duration-700 group-hover/thumb:scale-105"
             />
           ) : (
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px]" />
@@ -269,10 +268,10 @@ function UpdateCard({ item, index }: { item: UpdateItem; index: number }) {
           </div>
 
           {/* Instagram handle badge */}
-          {isInstagram && (
+              {isInstagram && (
             <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-black/65 backdrop-blur-md rounded-full px-2.5 py-1 border border-white/10">
-              <div className="w-4 h-4 rounded-full overflow-hidden">
-                <img src="/profile.jpg" alt="hiiinishant" className="w-full h-full object-cover object-top" />
+              <div className="w-4 h-4 rounded-full overflow-hidden relative">
+                <Image src="/profile.jpg" alt="hiiinishant" fill className="object-cover object-top" />
               </div>
               <span className="text-[10px] font-semibold text-white font-mono">hiiinishant</span>
             </div>
@@ -372,16 +371,25 @@ export default function LatestUpdatesSection({ initialUpdates }: { initialUpdate
   const [updatesList, setUpdatesList] = useState<UpdateItem[]>(
     (initialUpdates && initialUpdates.length > 0) ? initialUpdates : latestUpdates
   );
-  const [filteredItems, setFilteredItems] = useState<UpdateItem[]>([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const { ref: sectionRef, isVisible: sectionVisible } = useScrollReveal(0.05);
   const { ref: statsRef, isVisible: statsVisible } = useScrollReveal(0.3);
+
+  const filteredItems = useMemo(() => {
+    const sorted = [...updatesList].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    return activeCategory === "all"
+      ? sorted
+      : sorted.filter((item) => item.category === activeCategory);
+  }, [activeCategory, updatesList]);
 
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const [tabStyle, setTabStyle] = useState<{ width: number; left: number }>({ width: 0, left: 0 });
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/updates`)
+    fetch(apiUrl("/api/updates"))
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) setUpdatesList(data);
@@ -390,18 +398,10 @@ export default function LatestUpdatesSection({ initialUpdates }: { initialUpdate
   }, []);
 
   useEffect(() => {
-    setIsTransitioning(true);
     const timer = setTimeout(() => {
-      const sorted = [...updatesList].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      if (activeCategory === "all") {
-        setFilteredItems(sorted);
-      } else {
-        setFilteredItems(sorted.filter((item) => item.category === activeCategory));
-      }
       setIsTransitioning(false);
     }, 280);
+
     return () => clearTimeout(timer);
   }, [activeCategory, updatesList]);
 
@@ -522,7 +522,10 @@ export default function LatestUpdatesSection({ initialUpdates }: { initialUpdate
                   <button
                     key={cat.id}
                     ref={(el) => { tabsRef.current[idx] = el; }}
-                    onClick={() => setActiveCategory(cat.id)}
+                    onClick={() => {
+                      setIsTransitioning(true);
+                      setActiveCategory(cat.id);
+                    }}
                     className={`relative z-10 flex items-center gap-2 px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-colors duration-300 ${isActive ? "text-black font-semibold" : "text-brand-300 hover:text-white"
                       }`}
                   >

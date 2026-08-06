@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { io as socketIO, Socket } from "socket.io-client";
+import { API_BASE } from "@/lib/api";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 const STORAGE_KEY = "visitor_pinged_date";
 
 interface VisitorData {

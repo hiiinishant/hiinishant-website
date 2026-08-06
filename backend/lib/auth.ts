@@ -3,12 +3,16 @@ import { Request } from "express";
 
 // SECURITY: Use a dedicated JWT_SECRET env var for token signing.
 // This must be separate from ADMIN_PASSWORD so a leaked token doesn't reveal the login password.
-// If JWT_SECRET is not set, warn loudly — the server still works but tokens are less secure.
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[Auth] JWT_SECRET environment variable is required in production for secure token signing.'
+    );
+  }
   console.warn(
     '[Auth] WARNING: JWT_SECRET environment variable is not set. ' +
-    'Set a strong, random JWT_SECRET in your .env.local for production security.'
+    'A random temporary secret will be used in development only.'
   );
 }
 const EFFECTIVE_SECRET = JWT_SECRET || crypto.randomBytes(32).toString('hex');

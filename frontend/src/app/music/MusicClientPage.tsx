@@ -70,23 +70,20 @@ export default function MusicClientPage({
   }, []);
 
   // Polls getPlaylist() until data is available (YouTube fills it async after CUED)
-  const tryLoadPlaylist = useCallback(
-    (player: YT.Player, attempts = 0) => {
-      if (tracksLoadedRef.current) return;
-      const playlist = player.getPlaylist();
-      if (playlist && playlist.length > 0) {
-        tracksLoadedRef.current = true;
-        console.log("Playlist loaded with", playlist.length, "tracks");
-        loadTrackTitles(playlist);
-      } else if (attempts < 20) {
-        // Retry every 500ms up to 10 seconds
-        setTimeout(() => tryLoadPlaylist(player, attempts + 1), 500);
-      } else {
-        console.warn("Could not load playlist tracks after retries");
-      }
-    },
-    [loadTrackTitles]
-  );
+  const tryLoadPlaylist = useCallback(function tryLoadPlaylist(player: YT.Player, attempts = 0) {
+    if (tracksLoadedRef.current) return;
+    const playlist = player.getPlaylist();
+    if (playlist && playlist.length > 0) {
+      tracksLoadedRef.current = true;
+      console.log("Playlist loaded with", playlist.length, "tracks");
+      loadTrackTitles(playlist);
+    } else if (attempts < 20) {
+      // Retry every 500ms up to 10 seconds
+      setTimeout(() => tryLoadPlaylist(player, attempts + 1), 500);
+    } else {
+      console.warn("Could not load playlist tracks after retries");
+    }
+  }, [loadTrackTitles]);
 
   const initPlayer = useCallback(
     async (playlistId: string) => {

@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { API_BASE } from "@/lib/api";
 import Link from "next/link";
 
 const getApiBase = () => {
   if (typeof window !== "undefined" && window.location.hostname === "localhost") {
     return "http://localhost:5000";
   }
-  return process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
+  return API_BASE || "http://localhost:5000";
 };
 
 interface Quiz {
@@ -100,6 +101,32 @@ export default function QuizClientPage() {
     fetchSubjects();
   }, []);
 
+  const loadQuiz = useCallback(async (subject: string) => {
+    setQuizLoading(true);
+    setShowLoginPrompt(false);
+    const apiBase = getApiBase();
+    try {
+      if (subject === "Daily Challenge") {
+        const res = await fetch(`${apiBase}/api/quiz/today`, { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          const data = await res.json();
+          setQuizzes(data.quizzes || (data.quiz ? [data.quiz] : []));
+        }
+      } else {
+        const res = await fetch(`${apiBase}/api/quiz/subject/${encodeURIComponent(subject)}`, { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          const data = await res.json();
+          setQuizzes(data.quizzes || (data.quiz ? [data.quiz] : []));
+        }
+      }
+    } catch {
+      setQuizzes([]);
+    } finally {
+      setQuizLoading(false);
+      setLoading(false);
+    }
+  }, []);
+
   // Fetch stats once auth resolves
   useEffect(() => {
     if (!user) { setStats(null); return; }
@@ -115,7 +142,7 @@ export default function QuizClientPage() {
   // Load default Daily Challenge on startup
   useEffect(() => {
     loadQuiz("Daily Challenge");
-  }, []);
+  }, [loadQuiz]);
 
   // Fetch responses whenever user or activeSubject changes
   useEffect(() => {

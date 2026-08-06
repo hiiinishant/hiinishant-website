@@ -1,13 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { API_BASE } from "@/lib/api";
 
-const getBackendUrl = () => {
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    return "http://localhost:5000";
-  }
-  return process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
-};
+const getBackendUrl = () => API_BASE;
 
 interface Quiz {
   id: string; // Publish Date
@@ -30,16 +26,15 @@ interface QuizManagerProps {
   setConfirm: (confirm: { message: string; onConfirm: () => void } | null) => void;
 }
 
+const getTodayIST = () =>
+  new Date(Date.now() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
+
 export default function QuizManager({
   quizzes,
   onRefresh,
   showToast,
   setConfirm,
 }: QuizManagerProps) {
-  // Generate today's date in IST (UTC+5:30) — must match backend's todayKeyIST()
-  const todayIST = () =>
-    new Date(Date.now() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
-
   const [form, setForm] = useState({
     id: "",
     subject: "",

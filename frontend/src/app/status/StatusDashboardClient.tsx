@@ -105,8 +105,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
   const fetchLatest = async (showIndicator = false) => {
     if (showIndicator) setRefreshing(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
-      const res = await fetch(`${backendUrl}/api/status`, { cache: "no-store" });
+      const res = await fetch(`/api/status`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) setStatuses(data);
@@ -119,8 +118,14 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
   };
 
   useEffect(() => {
-    fetchLatest();
-    const interval = setInterval(() => fetchLatest(), 30_000);
+    const loadLatest = async () => {
+      await fetchLatest();
+    };
+
+    loadLatest();
+    const interval = setInterval(() => {
+      void fetchLatest();
+    }, 30_000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

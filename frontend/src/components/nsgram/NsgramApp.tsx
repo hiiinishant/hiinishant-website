@@ -17,6 +17,7 @@ import {
 } from "firebase/auth";
 import { doc, onSnapshot, getDocs, query, collection, where, getDoc } from "firebase/firestore";
 import { auth, db, isConfigured } from "@/lib/firebase";
+import { API_BASE } from "@/lib/api";
 
 type AvatarType = "boy" | "girl";
 type AuthMode = "login" | "signup";
@@ -56,8 +57,8 @@ export default function NsgramApp() {
 
   useEffect(() => {
     if (!isConfigured || !auth || !db) {
-      setLoading(false);
-      setNotice("Connect Firebase to enable real-time authentication and chat.");
+      queueMicrotask(() => setLoading(false));
+      queueMicrotask(() => setNotice("Connect Firebase to enable real-time authentication and chat."));
       return;
     }
 
@@ -79,7 +80,7 @@ export default function NsgramApp() {
         } else {
           setProfile(null);
         }
-        setLoading(false);
+        queueMicrotask(() => setLoading(false));
       });
     });
 
@@ -104,8 +105,7 @@ export default function NsgramApp() {
       const currentUser = auth.currentUser;
       if (currentUser?.emailVerified) {
         const idToken = await getIdToken(currentUser);
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-        await fetch(`${backendUrl}/api/users/profile`, {
+        await fetch(`${API_BASE}/api/users/profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -149,9 +149,10 @@ export default function NsgramApp() {
     try {
       await sendEmailVerification(authUser);
       setNotice("Verification email resent successfully. Please check your inbox and spam folder.");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       console.warn("Resend verification error:", error);
-      setNotice(error?.message || "Failed to resend verification email. Please try again.");
+      setNotice(message || "Failed to resend verification email. Please try again.");
     } finally {
       setAuthLoading(false);
     }
@@ -167,8 +168,7 @@ export default function NsgramApp() {
       if (currentUser?.emailVerified) {
         // Activate profile on backend with Firebase ID token
         const idToken = await getIdToken(currentUser);
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-        await fetch(`${backendUrl}/api/users/profile`, {
+        await fetch(`${API_BASE}/api/users/profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -195,9 +195,10 @@ export default function NsgramApp() {
       } else {
         setNotice("Email is still not verified. Please check your inbox and spam folder.");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       console.warn("Check verification error:", error);
-      setNotice(error?.message || "Verification check failed. Please try again.");
+      setNotice(message || "Verification check failed. Please try again.");
     } finally {
       setAuthLoading(false);
     }
@@ -210,8 +211,10 @@ export default function NsgramApp() {
       await signOut(auth!);
       setAuthUser(null);
       setProfile(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       console.warn("Sign out error:", error);
+      setNotice(message || "Sign out failed.");
     } finally {
       setAuthLoading(false);
     }
@@ -234,14 +237,17 @@ export default function NsgramApp() {
       await sendPasswordResetEmail(auth, email);
       setNotice("Password reset link sent! Check your inbox and spam folder.");
       setResetEmail("");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string } | Error | unknown;
       console.warn("Password reset error:", error);
-      if (error?.code === "auth/user-not-found" || error?.code === "auth/invalid-email") {
+      const code = (err && typeof err === "object" && (err as { code?: string }).code) || undefined;
+      const message = err instanceof Error ? err.message : (err && typeof err === "object" ? (err as { message?: string }).message : String(err));
+      if (code === "auth/user-not-found" || code === "auth/invalid-email") {
         setNotice("No account found with that email address.");
-      } else if (error?.code === "auth/too-many-requests") {
+      } else if (code === "auth/too-many-requests") {
         setNotice("Too many requests. Please wait a moment and try again.");
       } else {
-        setNotice(error?.message || "Failed to send reset email. Please try again.");
+        setNotice(message || "Failed to send reset email. Please try again.");
       }
     } finally {
       setAuthLoading(false);
@@ -264,7 +270,7 @@ export default function NsgramApp() {
       const userRef = doc(db, "users", credential.user.uid);
       const userSnap = await getDoc(userRef);
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      const backendUrl = API_BASE;
 
       if (!userSnap.exists()) {
         // Generate unique username
@@ -337,18 +343,21 @@ export default function NsgramApp() {
       setAuthUser(credential.user);
       setNotice("Signed in successfully with Google.");
       router.replace("/nsgram/home");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string } | Error | unknown;
       console.warn("Google Sign-In error:", error);
-      if (error?.code === "auth/popup-closed-by-user") {
+      const code = (err && typeof err === "object" && (err as { code?: string }).code) || undefined;
+      const message = err instanceof Error ? err.message : (err && typeof err === "object" ? (err as { message?: string }).message : String(err));
+      if (code === "auth/popup-closed-by-user") {
         setNotice("Google Sign-In popup was closed before completing authentication.");
-      } else if (error?.code === "auth/popup-blocked") {
+      } else if (code === "auth/popup-blocked") {
         setNotice("Google Sign-In popup was blocked by your browser. Please allow popups for this site.");
-      } else if (error?.code === "auth/cancelled-popup-request") {
+      } else if (code === "auth/cancelled-popup-request") {
         setNotice("Sign-in request was cancelled. Please try again.");
-      } else if (error?.code === "auth/account-exists-with-different-credential") {
+      } else if (code === "auth/account-exists-with-different-credential") {
         setNotice("An account already exists with this email address but using a different sign-in method.");
       } else {
-        setNotice(error?.message || "Google Sign-In failed. Please try again.");
+        setNotice(message || "Google Sign-In failed. Please try again.");
       }
     } finally {
       setAuthLoading(false);
@@ -396,8 +405,7 @@ export default function NsgramApp() {
 
         // Create user profile via backend API (role defaults to 'user', isActivated defaults to false)
         const idToken = await getIdToken(credential.user);
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-        await fetch(`${backendUrl}/api/users/profile`, {
+        await fetch(`${API_BASE}/api/users/profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -416,16 +424,19 @@ export default function NsgramApp() {
 
         setNotice("Account created successfully. A verification link has been sent to your email. Please check your inbox and spam folder.");
         setAuthForm(emptyAuthForm);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { code?: string; message?: string } | Error | unknown;
         console.warn("Signup error:", error);
-        if (error?.code === "auth/weak-password") {
+        const code = (err && typeof err === "object" && (err as { code?: string }).code) || undefined;
+        const message = err instanceof Error ? err.message : (err && typeof err === "object" ? (err as { message?: string }).message : String(err));
+        if (code === "auth/weak-password") {
           setNotice("Password should be at least 6 characters.");
-        } else if (error?.code === "auth/email-already-in-use") {
+        } else if (code === "auth/email-already-in-use") {
           setNotice("This email address is already in use.");
-        } else if (error?.code === "auth/invalid-email") {
+        } else if (code === "auth/invalid-email") {
           setNotice("Please enter a valid email address.");
         } else {
-          setNotice(error?.message || "Signup failed. Please try again.");
+          setNotice(message || "Signup failed. Please try again.");
         }
       } finally {
         setAuthLoading(false);
@@ -445,8 +456,7 @@ export default function NsgramApp() {
       }
 
       // Update lastLoginAt and activate profile via backend API
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-      fetch(`${backendUrl}/api/users/profile`, {
+      fetch(`${API_BASE}/api/users/profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -459,14 +469,17 @@ export default function NsgramApp() {
       }).catch(err => console.warn('Failed to update lastLoginAt:', err));
 
       setNotice("Signed in successfully.");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string } | Error | unknown;
       console.warn("Signin error:", error);
-      if (error?.code === "auth/user-not-found" || error?.code === "auth/wrong-password" || error?.code === "auth/invalid-credential") {
+      const code = (err && typeof err === "object" && (err as { code?: string }).code) || undefined;
+      const message = err instanceof Error ? err.message : (err && typeof err === "object" ? (err as { message?: string }).message : String(err));
+      if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") {
         setNotice("Invalid email or password.");
-      } else if (error?.code === "auth/too-many-requests") {
+      } else if (code === "auth/too-many-requests") {
         setNotice("Access disabled temporarily due to too many failed attempts. Try again later.");
       } else {
-        setNotice(error?.message || "Invalid email or password.");
+        setNotice(message || "Invalid email or password.");
       }
     } finally {
       setAuthLoading(false);
@@ -539,7 +552,7 @@ export default function NsgramApp() {
 
               <div className="space-y-5">
                 <p className="text-sm text-brand-300 leading-relaxed">
-                  Enter your email address and we'll send you a secure link to reset your password.
+                  Enter your email address and we&apos;ll send you a secure link to reset your password.
                 </p>
 
                 <form className="space-y-4" onSubmit={handleForgotPassword}>
@@ -559,13 +572,13 @@ export default function NsgramApp() {
                   </button>
                 </form>
 
-                <button
-                  type="button"
-                  onClick={() => { setForgotPassword(false); setNotice(""); setResetEmail(""); }}
-                  className="w-full rounded-2xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-brand-300 hover:text-white font-bold py-3 text-sm tracking-wide uppercase transition duration-300"
-                >
-                  ← Back to Login
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotPassword(false); setNotice(""); setResetEmail(""); }}
+                    className="w-full rounded-2xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-brand-300 hover:text-white font-bold py-3 text-sm tracking-wide uppercase transition duration-300"
+                  >
+                    &larr; Back to Login
+                  </button>
               </div>
             </>
           ) : authUser && !authUser.emailVerified ? (
@@ -581,7 +594,7 @@ export default function NsgramApp() {
 
               <div className="space-y-6">
                 <p className="text-sm text-brand-300 leading-relaxed">
-                  We've sent a verification link to <strong className="text-white">{authUser.email}</strong>.
+                  We&apos;ve sent a verification link to <strong className="text-white">{authUser.email}</strong>.
                 </p>
                 <p className="text-sm text-brand-300 leading-relaxed font-semibold text-amber-300">
                   Please verify your email before logging in. Check your inbox and spam folder.

@@ -3,15 +3,16 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { isConfigured as isFirebaseConfigured } from "@/lib/firebase";
+import { API_BASE } from "@/lib/api";
 import BlogEditor from "@/components/admin/BlogEditor";
 import QuizManager from "@/components/admin/QuizManager";
-import type { GalleryPhoto } from "@/types";
+import type { BlogPost, GalleryPhoto } from "@/types";
 
 const getBackendUrl = () => {
   if (typeof window !== "undefined" && window.location.hostname === "localhost") {
     return "http://localhost:5000";
   }
-  return process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
+  return API_BASE || "http://localhost:5000";
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -80,6 +81,20 @@ interface DailyStatus {
   updatedAt: string;
 }
 
+interface QuizSummary {
+  id: string;
+  subject: string;
+  question: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctOption: "A" | "B" | "C" | "D";
+  publishDate: string;
+  status: "draft" | "published";
+  createdAt: string;
+}
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 // Admin password is now verified securely on the backend
 
@@ -116,8 +131,14 @@ function StatCard({ value, label, color, icon }: { value: number; label: string;
 }
 
 function InputField({ label, name, value, onChange, placeholder, required, type = "text", hint }: {
-  label: string; name: string; value: string; onChange: (e: any) => void;
-  placeholder?: string; required?: boolean; type?: string; hint?: string;
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  required?: boolean;
+  type?: string;
+  hint?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5 font-mono">
@@ -139,8 +160,12 @@ function InputField({ label, name, value, onChange, placeholder, required, type 
 }
 
 function SelectField({ label, name, value, onChange, options, required }: {
-  label: string; name: string; value: string; onChange: (e: any) => void;
-  options: { value: string; label: string }[]; required?: boolean;
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  options: { value: string; label: string }[];
+  required?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1.5 font-mono">
@@ -165,8 +190,13 @@ function SelectField({ label, name, value, onChange, options, required }: {
 }
 
 function TextAreaField({ label, name, value, onChange, placeholder, required, rows = 3 }: {
-  label: string; name: string; value: string; onChange: (e: any) => void;
-  placeholder?: string; required?: boolean; rows?: number;
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder?: string;
+  required?: boolean;
+  rows?: number;
 }) {
   return (
     <div className="flex flex-col gap-1.5 font-mono">
@@ -246,16 +276,39 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
-  const [plans, setPlans] = useState<FuturePlan[]>([]);
+  const [plans, setPlans] = useState<FuturePlan[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = localStorage.getItem("cached_plans");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [messages, setMessages] = useState<ContactMessage[]>([]);
-  const [statuses, setStatuses] = useState<DailyStatus[]>([]);
-  const [blogs, setBlogs] = useState<any[]>([]);
+  const [statuses, setStatuses] = useState<DailyStatus[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = localStorage.getItem("cached_statuses");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
-  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
   const [resumeForm, setResumeForm] = useState({ title: "" });
   const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return !localStorage.getItem("cached_statuses");
+    } catch {
+      return true;
+    }
+  });
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [confirm, setConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -265,6 +318,12 @@ export default function AdminPage() {
   const [showAllLogs, setShowAllLogs] = useState(false);
 
   const showToast = (message: string, type: "success" | "error") => setToast({ message, type });
+
+  const getErrorMessage = (error: unknown, fallback = "An error occurred") => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    return fallback;
+  };
 
   // Gallery Form
   const [galleryForm, setGalleryForm] = useState({
@@ -465,7 +524,7 @@ export default function AdminPage() {
       }
       const list = await res.json();
       setGalleryPhotos(list);
-    } catch (e) {
+    } catch {
       showToast("Failed to load gallery photos.", "error");
     } finally {
       setLoading(false);
@@ -486,21 +545,6 @@ export default function AdminPage() {
 
   // On Mount: Load public statuses and session
   useEffect(() => {
-    // Hydrate from localStorage cache immediately (client-only, avoids hydration mismatch)
-    try {
-      const cachedStatuses = localStorage.getItem("cached_statuses");
-      if (cachedStatuses) {
-        setStatuses(JSON.parse(cachedStatuses));
-        setLoading(false);
-      }
-      const cachedPlans = localStorage.getItem("cached_plans");
-      if (cachedPlans) {
-        setPlans(JSON.parse(cachedPlans));
-      }
-    } catch (e) {
-      console.warn("Failed to hydrate from localStorage cache:", e);
-    }
-
     fetchPublicLogs();
 
     const token = sessionStorage.getItem("admin_token");
@@ -523,13 +567,19 @@ export default function AdminPage() {
 
   // When Unlocked: Load CMS
   useEffect(() => {
-    if (unlocked) {
-      fetchAdminData();
-      fetchGalleryData();
-      fetchMusicSettings();
-      fetchResumeData();
-      fetchQuizData();
-    }
+    if (!unlocked) return;
+
+    const loadProtectedResources = async () => {
+      await Promise.all([
+        fetchAdminData(),
+        fetchGalleryData(),
+        fetchMusicSettings(),
+        fetchResumeData(),
+        fetchQuizData(),
+      ]);
+    };
+
+    void loadProtectedResources();
   }, [unlocked, fetchAdminData, fetchGalleryData, fetchMusicSettings, fetchResumeData, fetchQuizData]);
 
   // Handle Admin Auth
@@ -559,8 +609,9 @@ export default function AdminPage() {
       } else {
         throw new Error(data.error || "Incorrect access credentials.");
       }
-    } catch (err: any) {
-      setLoginError(err.message || "Incorrect access credentials.");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Incorrect access credentials.";
+      setLoginError(errorMessage);
       setLoginShaking(true);
       setTimeout(() => setLoginShaking(false), 600);
     }
@@ -580,7 +631,7 @@ export default function AdminPage() {
     try {
       if (editingUpdateId) {
         // Update existing
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/updates`, {
+        const res = await fetch(`${API_BASE}/api/updates`, {
           method: "PUT",
           headers: getAuthHeaders(),
           body: JSON.stringify({ ...updateForm, id: editingUpdateId }),
@@ -592,7 +643,7 @@ export default function AdminPage() {
         setEditingUpdateId(null);
       } else {
         // Create new
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/updates`, {
+        const res = await fetch(`${API_BASE}/api/updates`, {
           method: "POST",
           headers: getAuthHeaders(),
           body: JSON.stringify(updateForm),
@@ -604,8 +655,8 @@ export default function AdminPage() {
       }
       setUpdateForm({ category: "blog", title: "", description: "", date: new Date().toISOString().split("T")[0], href: "", badge: "", meta: "", isNew: true });
       setActiveTab("manage-updates");
-    } catch (err: any) {
-      showToast(err.message, "error");
+    } catch (err) {
+      showToast(getErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -632,7 +683,7 @@ export default function AdminPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/future-plans`, {
+      const res = await fetch(`${API_BASE}/api/future-plans`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(planForm),
@@ -643,8 +694,8 @@ export default function AdminPage() {
       setPlanForm({ title: "", description: "", targetDate: "", category: "general", status: "planned" });
       showToast("Milestone added to roadmap!", "success");
       setActiveTab("manage-plans");
-    } catch (err: any) {
-      showToast(err.message, "error");
+    } catch (err) {
+      showToast(getErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -679,7 +730,7 @@ export default function AdminPage() {
         formData.append("originalSlug", editingBlogSlug || "");
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/blog`, {
+      const res = await fetch(`${API_BASE}/api/blog`, {
         method: isEdit ? "PUT" : "POST",
         headers: getAuthOnlyHeaders(),
         body: formData,
@@ -706,8 +757,8 @@ export default function AdminPage() {
       const coverInput = document.getElementById("blog-cover-file-input") as HTMLInputElement;
       if (coverInput) coverInput.value = "";
       setEditingBlogSlug(null);
-    } catch (err: any) {
-      showToast(err.message, "error");
+    } catch (err) {
+      showToast(getErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -728,8 +779,8 @@ export default function AdminPage() {
           if (!res.ok) throw new Error("Failed to delete update.");
           setUpdates((prev) => prev.filter((u) => u.id !== id));
           showToast("Update deleted successfully.", "success");
-        } catch (err: any) {
-          showToast(err.message, "error");
+        } catch (err) {
+          showToast(getErrorMessage(err), "error");
         }
       },
     });
@@ -750,8 +801,8 @@ export default function AdminPage() {
           if (!res.ok) throw new Error("Failed to delete roadmap item.");
           setPlans((prev) => prev.filter((p) => p.id !== id));
           showToast("Item removed from roadmap.", "success");
-        } catch (err: any) {
-          showToast(err.message, "error");
+        } catch (err) {
+          showToast(getErrorMessage(err), "error");
         }
       },
     });
@@ -772,8 +823,8 @@ export default function AdminPage() {
           if (!res.ok) throw new Error("Failed to delete blog.");
           setBlogs((prev) => prev.filter((b) => b.slug !== slug));
           showToast("Blog deleted successfully.", "success");
-        } catch (err: any) {
-          showToast(err.message, "error");
+        } catch (err) {
+          showToast(getErrorMessage(err), "error");
         }
       },
     });
@@ -794,8 +845,8 @@ export default function AdminPage() {
           if (!res.ok) throw new Error("Failed to delete message.");
           setMessages((prev) => prev.filter((m) => m.id !== id));
           showToast("Message deleted.", "success");
-        } catch (err: any) {
-          showToast(err.message, "error");
+        } catch (err) {
+          showToast(getErrorMessage(err), "error");
         }
       },
     });
@@ -826,8 +877,8 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Failed to update status.");
       setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, status: next } : p));
       showToast(`Thread status cycled to "${next}".`, "success");
-    } catch (err: any) {
-      showToast(err.message, "error");
+    } catch (err) {
+      showToast(getErrorMessage(err), "error");
     }
   };
 
@@ -928,8 +979,8 @@ export default function AdminPage() {
       });
 
       showToast("Workspace commit published successfully!", "success");
-    } catch (err: any) {
-      showToast(err.message, "error");
+    } catch (err) {
+      showToast(getErrorMessage(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -950,8 +1001,8 @@ export default function AdminPage() {
           if (!res.ok) throw new Error("Failed to delete workspace commit.");
           setStatuses((prev) => prev.filter((s) => s.id !== id));
           showToast("Workspace commit deleted.", "success");
-        } catch (err: any) {
-          showToast(err.message, "error");
+        } catch (err) {
+          showToast(getErrorMessage(err), "error");
         }
       },
     });
@@ -1000,8 +1051,8 @@ export default function AdminPage() {
       if (fileInput) fileInput.value = "";
 
       showToast("Memory uploaded successfully!", "success");
-    } catch (err: any) {
-      showToast(err.message || "Failed to upload memory.", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to upload memory."), "error");
     } finally {
       setSubmitting(false);
     }
@@ -1028,8 +1079,8 @@ export default function AdminPage() {
 
           setGalleryPhotos(prev => prev.filter(p => p.id !== id));
           showToast("Memory deleted.", "success");
-        } catch (err: any) {
-          showToast(err.message || "Failed to delete memory.", "error");
+        } catch (err) {
+          showToast(getErrorMessage(err, "Failed to delete memory."), "error");
         }
       }
     });
@@ -1058,8 +1109,8 @@ export default function AdminPage() {
       const fi = document.getElementById("resume-file-input") as HTMLInputElement;
       if (fi) fi.value = "";
       showToast("Resume uploaded successfully!", "success");
-    } catch (err: any) {
-      showToast(err.message || "Failed to upload resume.", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to upload resume."), "error");
     } finally {
       setSubmitting(false);
     }
@@ -1080,8 +1131,8 @@ export default function AdminPage() {
           if (!res.ok) throw new Error("Failed to delete resume.");
           setResumes((prev) => prev.filter((r) => r.id !== id));
           showToast("Resume deleted.", "success");
-        } catch (err: any) {
-          showToast(err.message, "error");
+        } catch (err) {
+          showToast(getErrorMessage(err), "error");
         }
       },
     });
@@ -1104,8 +1155,8 @@ export default function AdminPage() {
       if (!res.ok) throw new Error(data.error || "Failed to save playlist.");
       setMusicSettings(data);
       showToast("Music Corner playlist updated! The player will reflect this on the next visit.", "success");
-    } catch (err: any) {
-      showToast(err.message || "Failed to save playlist.", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to save playlist."), "error");
     } finally {
       setSubmitting(false);
     }
@@ -1125,8 +1176,8 @@ export default function AdminPage() {
           setMusicSettings(null);
           setMusicPlaylistUrl("");
           showToast("Music playlist settings deleted.", "success");
-        } catch (err: any) {
-          showToast(err.message || "Failed to delete playlist.", "error");
+        } catch (err) {
+          showToast(getErrorMessage(err, "Failed to delete playlist."), "error");
         }
       },
     });
@@ -1182,82 +1233,6 @@ export default function AdminPage() {
   };
 
   // 30 Days activity bar mapping
-  const getUptimeBars = () => {
-    const bars = [];
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0]; // YYYY-MM-DD
-      const statusForDay = statuses.find((s) => s.date === dateStr);
-      bars.push({
-        date: dateStr,
-        hasStatus: !!statusForDay,
-        statusText: statusForDay ? statusForDay.statusText : "No logs recorded",
-        tasksCount: statusForDay ? (statusForDay.tasks?.length || 0) : 0,
-      });
-    }
-    return bars;
-  };
-
-  // Color-code uptime bars dynamically based on keywords
-  const getBarColor = (statusText: string, hasStatus: boolean) => {
-    if (!hasStatus) return "bg-white/5 hover:bg-white/10";
-    const text = statusText.toLowerCase();
-    if (text.includes("video") || text.includes("🎥") || text.includes("shoot") || text.includes("edit")) {
-      return "bg-gradient-to-t from-rose-600 to-rose-400 hover:from-rose-400 hover:to-accent shadow-[0_0_8px_rgba(244,63,94,0.3)]";
-    }
-    if (text.includes("build") || text.includes("coding") || text.includes("code") || text.includes("🚀") || text.includes("dev")) {
-      return "bg-gradient-to-t from-cyan-600 to-cyan-400 hover:from-cyan-400 hover:to-accent shadow-[0_0_8px_rgba(34,211,238,0.3)]";
-    }
-
-    if (text.includes("blog") || text.includes("write") || text.includes("post") || text.includes("✍️")) {
-      return "bg-gradient-to-t from-purple-600 to-purple-400 hover:from-purple-400 hover:to-accent shadow-[0_0_8px_rgba(168,85,247,0.3)]";
-    }
-    return "bg-gradient-to-t from-emerald-600 to-emerald-400 hover:from-emerald-400 hover:to-accent shadow-[0_0_8px_rgba(16,185,129,0.3)]";
-  };
-
-  const getDotColor = (statusText: string) => {
-    const text = statusText.toLowerCase();
-    if (text.includes("video") || text.includes("🎥") || text.includes("shoot") || text.includes("edit")) {
-      return "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.45)]";
-    }
-    if (text.includes("build") || text.includes("coding") || text.includes("code") || text.includes("🚀") || text.includes("dev")) {
-      return "bg-cyan-500 shadow-[0_0_8px_rgba(34,211,238,0.45)]";
-    }
-
-    if (text.includes("blog") || text.includes("write") || text.includes("post") || text.includes("✍️")) {
-      return "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.45)]";
-    }
-    return "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.45)]";
-  };
-
-  // Uptime bar click handler: filter logs by date
-  const handleBarClick = (bar: any) => {
-    if (!bar.hasStatus) return;
-    if (searchQuery === bar.date) {
-      setSearchQuery("");
-    } else {
-      setSearchQuery(bar.date);
-    }
-    setShowAllLogs(false); // reset pagination when filtering by bar
-  };
-
-  // Categorize log tasks dynamically for terminal aesthetic
-  const getTaskPrefix = (task: string) => {
-    const text = task.toLowerCase();
-    if (text.includes("refactored") || text.includes("optimized") || text.includes("cleaned") || text.includes("fix") || text.includes("setup")) {
-      return <span className="text-cyan-400 font-semibold">[BUILD]</span>;
-    }
-    if (text.includes("met") || text.includes("planned") || text.includes("community") || text.includes("drafted") || text.includes("schedule")) {
-      return <span className="text-blue-400 font-semibold">[INFO]</span>;
-    }
-    if (text.includes("recorded") || text.includes("edited") || text.includes("released") || text.includes("video") || text.includes("shoot")) {
-      return <span className="text-rose-400 font-semibold">[RELEASE]</span>;
-    }
-    return <span className="text-emerald-400 font-semibold">[OK]</span>;
-  };
-
   const filteredStatuses = statuses.filter((s) => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return true;
@@ -1283,12 +1258,6 @@ export default function AdminPage() {
       return matchesText || matchesTasks || matchesDate;
     });
   });
-
-  const activeStatus = statuses[0];
-
-  const inProgressPlans = plans.filter((p) => p.status === "in-progress");
-  const plannedPlans = plans.filter((p) => p.status === "planned");
-  const completedPlans = plans.filter((p) => p.status === "completed");
 
   const unreadCount = messages.filter((m) => !m.read).length;
 
@@ -1726,7 +1695,7 @@ export default function AdminPage() {
 
                   <form onSubmit={handleUpdateSubmit} className="space-y-5 glass-strong border border-white/10 rounded-2xl p-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <SelectField label="Category" name="category" value={updateForm.category} onChange={(e) => setUpdateForm((p) => ({ ...p, category: e.target.value as any }))} required
+                      <SelectField label="Category" name="category" value={updateForm.category} onChange={(e) => setUpdateForm((p) => ({ ...p, category: e.target.value as UpdateItem["category"] }))} required
                         options={[
                           { value: "blog", label: "✍️ Blog Post" },
                           { value: "instagram", label: "📸 Instagram Post" },
@@ -1836,7 +1805,7 @@ export default function AdminPage() {
 
                   <form onSubmit={handlePlanSubmit} className="space-y-5 glass-strong border border-white/10 rounded-2xl p-6">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                      <SelectField label="Category" name="category" value={planForm.category} onChange={(e) => setPlanForm((p) => ({ ...p, category: e.target.value as any }))} required
+                      <SelectField label="Category" name="category" value={planForm.category} onChange={(e) => setPlanForm((p) => ({ ...p, category: e.target.value as FuturePlan["category"] }))} required
                         options={[
                           { value: "general", label: "General" },
                           { value: "academic", label: "Academic / GATE" },
@@ -1845,7 +1814,7 @@ export default function AdminPage() {
                         ]}
                       />
                       <InputField label="Target Date" name="targetDate" value={planForm.targetDate} onChange={(e) => setPlanForm((p) => ({ ...p, targetDate: e.target.value }))} placeholder="e.g. Q3 2026 or Dec 2026" required hint="Flexible timeline label" />
-                      <SelectField label="Status" name="status" value={planForm.status} onChange={(e) => setPlanForm((p) => ({ ...p, status: e.target.value as any }))} required
+                      <SelectField label="Status" name="status" value={planForm.status} onChange={(e) => setPlanForm((p) => ({ ...p, status: e.target.value as FuturePlan["status"] }))} required
                         options={[
                           { value: "planned", label: "○ Planned" },
                           { value: "in-progress", label: "◑ In Progress" },
@@ -2481,7 +2450,7 @@ export default function AdminPage() {
                         <span>Editor Format:</span>
                         <select
                           value={blogForm.contentType}
-                          onChange={(e) => setBlogForm((p) => ({ ...p, contentType: e.target.value as any }))}
+                          onChange={(e) => setBlogForm((p) => ({ ...p, contentType: e.target.value as "markdown" | "tiptap" }))}
                           className="bg-zinc-950/40 border border-white/5 rounded px-2 py-1 text-[10px] text-white focus:outline-none"
                         >
                           <option value="tiptap">Rich Text (Tiptap)</option>
@@ -2588,7 +2557,7 @@ export default function AdminPage() {
                                   date: blog.date,
                                   readTime: blog.readTime,
                                   tags: blog.tags.join(", "),
-                                  featured: blog.featured,
+                                  featured: !!blog.featured,
                                   content: blog.content ? blog.content.join("\n\n") : "",
                                   writtenBy: blog.writtenBy || "Nishant Kumar",
                                   category: blog.category || "All",
@@ -2743,6 +2712,7 @@ export default function AdminPage() {
                             className="flex gap-4 p-4 rounded-xl border border-white/5 bg-white/2 hover:bg-white/4 hover:border-white/10 transition-all group"
                           >
                             <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-black/20 border border-white/5 relative">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={photo.imageUrl} alt={photo.title} className="w-full h-full object-cover" />
                             </div>
                             <div className="flex-grow min-w-0 flex flex-col justify-between">
@@ -2799,11 +2769,14 @@ export default function AdminPage() {
                     {musicSettings?.playlistId && (
                       <div className="flex gap-4 p-4 rounded-xl border border-white/5 bg-white/2">
                         {musicSettings.playlistThumbnail && (
-                          <img
-                            src={musicSettings.playlistThumbnail}
-                            alt={musicSettings.playlistTitle}
-                            className="w-20 h-20 rounded-lg object-cover shrink-0 border border-white/10"
-                          />
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={musicSettings.playlistThumbnail}
+                              alt={musicSettings.playlistTitle}
+                              className="w-20 h-20 rounded-lg object-cover shrink-0 border border-white/10"
+                            />
+                          </>
                         )}
                         <div className="min-w-0">
                           <p className="text-[9px] uppercase tracking-widest text-brand-500 mb-1">Current playlist</p>

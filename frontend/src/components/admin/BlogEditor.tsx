@@ -9,6 +9,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
 import LinkExtension from "@tiptap/extension-link";
 import { useState, useRef, useEffect } from "react";
+import { API_BASE } from "@/lib/api";
 
 // Extend Tiptap's Image extension to support custom attributes: width, alignment, caption
 const CustomImage = ImageExtension.extend({
@@ -144,7 +145,7 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
 
       setUploadProgress(30);
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
+      const backendUrl = API_BASE;
       const res = await fetch(`${backendUrl}/api/blog/upload-image`, {
         method: "POST",
         headers,
@@ -165,8 +166,9 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
       editor?.chain().focus().setImage({ src: data.url, alt: file.name }).run();
 
       setTimeout(() => setUploadProgress(null), 1000);
-    } catch (err: any) {
-      alert(err.message || "Image upload failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert(message || "Image upload failed");
       setUploadProgress(null);
     }
   };
@@ -184,7 +186,13 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
     ? editor.getAttributes("image")
     : null;
 
-  const updateImageAttr = (attrs: Record<string, any>) => {
+  type ImageAttrs = {
+    width?: "small" | "medium" | "large" | "full";
+    align?: "left" | "center" | "right";
+    caption?: string;
+  };
+
+  const updateImageAttr = (attrs: ImageAttrs) => {
     if (selectedImageAttrs) {
       editor.chain().focus().updateAttributes("image", attrs).run();
     }

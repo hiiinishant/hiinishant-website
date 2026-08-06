@@ -3,21 +3,22 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { API_BASE } from "@/lib/api";
 import Link from "next/link";
 
 const getApiBase = () => {
   if (typeof window !== "undefined" && window.location.hostname === "localhost") {
     return "http://localhost:5000";
   }
-  return process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
+  return API_BASE || "http://localhost:5000";
 };
 
 interface UserStats {
   totalXP: number;
+  totalCorrect: number;
+  totalAttempts: number;
   currentStreak: number;
   longestStreak: number;
-  totalAttempts: number;
-  totalCorrect: number;
 }
 
 interface QuizToday {
@@ -72,6 +73,8 @@ export default function DailyQuizCard() {
   // Fetch user stats + today's response status
   useEffect(() => {
     if (!user) {
+      // This effect resets derived quiz state when the user signs out.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStats(null);
       setHasAnsweredToday(false);
       return;

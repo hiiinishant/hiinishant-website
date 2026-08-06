@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, Check } from "lucide-react";
 
 interface ShareButtonsProps {
@@ -8,12 +8,8 @@ interface ShareButtonsProps {
 }
 
 export default function ShareButtons({ title }: ShareButtonsProps) {
-  const [shareUrl, setShareUrl] = useState("");
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    setShareUrl(window.location.href);
-  }, []);
 
   const handleCopy = async () => {
     if (!shareUrl) return;

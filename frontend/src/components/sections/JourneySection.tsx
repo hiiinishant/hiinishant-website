@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { journey } from "@/data/journey";
 
+const fireflies = Array.from({ length: 20 }, (_, idx) => {
+  const size = Math.random() * 4 + 2;
+  const left = Math.random() * 90 + 5;
+  const delay = Math.random() * 10;
+  const duration = Math.random() * 15 + 10;
+  return { idx, size, left, delay, duration };
+});
+
 export default function JourneySection() {
   return (
     <section id="journey" className="py-20 lg:py-28 relative overflow-hidden">
@@ -20,26 +28,20 @@ export default function JourneySection() {
 
       {/* Floating Fireflies Background */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        {Array.from({ length: 20 }).map((_, idx) => {
-          const size = Math.random() * 4 + 2;
-          const left = Math.random() * 90 + 5;
-          const delay = Math.random() * 10;
-          const duration = Math.random() * 15 + 10;
-          return (
-            <div
-              key={idx}
-              className="absolute rounded-full bg-emerald-400/35 blur-[1px] firefly-particle"
-              style={{
-                width: `${size}px`,
-                height: `${size}px`,
-                left: `${left}%`,
-                top: `-20px`,
-                animationDelay: `${delay}s`,
-                animationDuration: `${duration}s`,
-              }}
-            />
-          );
-        })}
+        {fireflies.map((fly) => (
+          <div
+            key={fly.idx}
+            className="absolute rounded-full bg-emerald-400/35 blur-[1px] firefly-particle"
+            style={{
+              width: `${fly.size}px`,
+              height: `${fly.size}px`,
+              left: `${fly.left}%`,
+              top: `-20px`,
+              animationDelay: `${fly.delay}s`,
+              animationDuration: `${fly.duration}s`,
+            }}
+          />
+        ))}
       </div>
 
       {/* Faint Nature Foliage/Tree silhouette in the background */}

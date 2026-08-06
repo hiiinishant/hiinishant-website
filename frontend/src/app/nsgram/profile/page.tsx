@@ -3,6 +3,7 @@
 import React, { useState, type FormEvent } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { API_BASE } from "@/lib/api";
 import { useNsgramAuth, type AvatarType } from "@/components/nsgram/NsgramAuthProvider";
 
 export default function NsgramProfilePage() {
@@ -47,8 +48,8 @@ export default function NsgramProfilePage() {
       });
 
       // Update via backend API too (optional, but good for database consistency if backend tracks login/profile history)
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-      if (backendUrl && authUser) {
+      const backendUrl = API_BASE;
+      if (authUser) {
         try {
           const idToken = await authUser.getIdToken();
           await fetch(`${backendUrl}/api/users/profile`, {

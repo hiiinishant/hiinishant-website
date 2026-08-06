@@ -4,8 +4,9 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from "firebase/auth";
 import { doc, onSnapshot, collection } from "firebase/firestore";
 import { auth, db, isConfigured } from "@/lib/firebase";
+import { API_BASE } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { io } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 
 export type AvatarType = "boy" | "girl";
 
@@ -19,7 +20,7 @@ export type UserProfile = {
   avatar: AvatarType;
   role: "admin" | "user";
   isActivated?: boolean;
-  createdAt?: any;
+  createdAt?: unknown;
 };
 
 type NsgramAuthContextType = {
@@ -28,7 +29,7 @@ type NsgramAuthContextType = {
   users: UserProfile[];
   loading: boolean;
   logout: () => Promise<void>;
-  socket: any | null;
+  socket: Socket | null;
   socketConnected: boolean;
 };
 
@@ -39,13 +40,13 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [socket, setSocket] = useState<any>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [socketConnected, setSocketConnected] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     if (!isConfigured || !auth || !db) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
 
@@ -62,12 +63,12 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
       unsubscribeProfile?.();
       unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
         if (snapshot.exists()) {
-          const data = snapshot.data();
-          setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
+          const data = snapshot.data() as Partial<UserProfile>;
+          setProfile({ id: snapshot.id, uid: (data.uid as string) ?? snapshot.id, ...(data as object) } as UserProfile);
         } else {
           setProfile(null);
         }
-        setLoading(false);
+        queueMicrotask(() => setLoading(false));
       });
     });
 
@@ -81,7 +82,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
   // This prevents Permission Denied errors for guests or unverified users.
   useEffect(() => {
     if (!db || !authUser || !authUser.emailVerified || !profile || !profile.isActivated) {
-      setUsers([]);
+      queueMicrotask(() => setUsers([]));
       return;
     }
 
@@ -114,15 +115,15 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
     if (!profileId) {
       if (socket) {
         socket.disconnect();
-        setSocket(null);
-        setSocketConnected(false);
+        queueMicrotask(() => setSocket(null));
+        queueMicrotask(() => setSocketConnected(false));
       }
       return;
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://hiinishant-backend.onrender.com";
-    console.log("Connecting to socket backend:", backendUrl);
-    const socketClient = io(backendUrl, {
+    const backendUrl = API_BASE;
+    console.log("Connecting to socket backend:", backendUrl || "same origin");
+    const socketClient = io(backendUrl || undefined, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -153,7 +154,7 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
       setSocketConnected(true);
     });
 
-    setSocket(socketClient);
+    queueMicrotask(() => setSocket(socketClient));
 
     return () => {
       socketClient.disconnect();

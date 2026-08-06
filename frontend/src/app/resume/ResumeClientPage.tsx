@@ -23,9 +23,7 @@ export default function ResumeClientPage() {
   useEffect(() => {
     async function fetchResume() {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL || ""}/api/resume`
-        );
+        const res = await fetch(`/api/resume`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {

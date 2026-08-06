@@ -1,0 +1,553 @@
+﻿C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|120|61
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|143|61
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|169|61
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|253|38
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|256|42
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'e' is defined but never used.|469|14
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx:494:9
+  492 |       const cachedStatuses = localStorage.getItem("cached_statuses");
+  493 |       if (cachedStatuses) {
+> 494 |         setStatuses(JSON.parse(cachedStatuses));
+      |         ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  495 |         setLoading(false);
+  496 |       }
+  497 |       const cachedPlans = localStorage.getItem("cached_plans");|494|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx:528:7
+  526 |   useEffect(() => {
+  527 |     if (unlocked) {
+> 528 |       fetchAdminData();
+      |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  529 |       fetchGalleryData();
+  530 |       fetchMusicSettings();
+  531 |       fetchResumeData();|528|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|563|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|608|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|647|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|710|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|732|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|754|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|776|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|798|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|830|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|932|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|954|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1004|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1032|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1062|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1084|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1108|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1129|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'getUptimeBars' is assigned a value but never used.|1186|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'getBarColor' is assigned a value but never used.|1205|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'getDotColor' is assigned a value but never used.|1221|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'handleBarClick' is assigned a value but never used.|1237|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1237|32
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'getTaskPrefix' is assigned a value but never used.|1248|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'activeStatus' is assigned a value but never used.|1288|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'inProgressPlans' is assigned a value but never used.|1290|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'plannedPlans' is assigned a value but never used.|1291|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-unused-vars|1|'completedPlans' is assigned a value but never used.|1292|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1730|172
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1840|168
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1849|160
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|2485|103
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|2747|31
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\admin\page.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|2803|27
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\blog\BlogClientPage.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|178|27
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\contact\ContactClientPage.tsx|@typescript-eslint/no-unused-vars|1|'Link' is defined but never used.|4|8
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\contact\ContactClientPage.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|99|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\gallery\GalleryClientPage.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|266|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\gallery\GalleryClientPage.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|360|15
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\layout.tsx|@typescript-eslint/no-unused-vars|1|'Footer' is defined but never used.|5|8
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\music\MusicClientPage.tsx|@typescript-eslint/no-unused-vars|1|'playerLoading' is assigned a value but never used.|55|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\music\MusicClientPage.tsx|react-hooks/immutability|2|Error: Cannot access variable before it is declared
+
+`tryLoadPlaylist` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\music\MusicClientPage.tsx:83:26
+  81 |       } else if (attempts < 20) {
+  82 |         // Retry every 500ms up to 10 seconds
+> 83 |         setTimeout(() => tryLoadPlaylist(player, attempts + 1), 500);
+     |                          ^^^^^^^^^^^^^^^ `tryLoadPlaylist` accessed before it is declared
+  84 |       } else {
+  85 |         console.warn("Could not load playlist tracks after retries");
+  86 |       }
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\music\MusicClientPage.tsx:73:3
+  71 |
+  72 |   // Polls getPlaylist() until data is available (YouTube fills it async after CUED)
+> 73 |   const tryLoadPlaylist = useCallback(
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 74 |     (player: YT.Player, attempts = 0) => {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 75 |       if (tracksLoadedRef.current) return;
+     ΓÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 88 |     [loadTrackTitles]
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 89 |   );
+     | ^^^^^ `tryLoadPlaylist` is declared here
+  90 |
+  91 |   const initPlayer = useCallback(
+  92 |     async (playlistId: string) => {|83|26
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\music\MusicClientPage.tsx|react-hooks/exhaustive-deps|1|React Hook useCallback has an unnecessary dependency: 'loadTrackTitles'. Either exclude it or remove the dependency array.|149|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\music\MusicClientPage.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|245|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\music\MusicClientPage.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|334|25
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|@typescript-eslint/no-unused-vars|1|'getDocs' is defined but never used.|15|3
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|115|25
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx:171:7
+  169 |
+  170 |     if (audio.readyState >= 1) {
+> 171 |       setDuration(audio.duration);
+      |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  172 |     }
+  173 |
+  174 |     return () => {|171|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|@typescript-eslint/no-unused-vars|1|'isDeclined' is assigned a value but never used.|247|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx:431:13
+  429 |   useEffect(() => {
+  430 |     const id = searchParams.get("convoId");
+> 431 |     if (id) setSelectedConversationId(id);
+      |             ^^^^^^^^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  432 |   }, [searchParams]);
+  433 |
+  434 |   // NOTE: We intentionally do NOT lock body/html overflow here.|431|13
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx:455:7
+  453 |   useEffect(() => {
+  454 |     if (!db || !profile?.id) {
+> 455 |       setConversations([]);
+      |       ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  456 |       setConvoLoading(false);
+  457 |       return;
+  458 |     }|455|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx:479:7
+  477 |   useEffect(() => {
+  478 |     if (!db || !selectedConversationId) {
+> 479 |       setMessages([]);
+      |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  480 |       return;
+  481 |     }
+  482 ||479|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|496|37
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|react-hooks/preserve-manual-memoization|2|Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `profile`, but the source dependencies were [socket, profile?.id]. Inferred less specific property than source.
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx:515:5
+  513 |   // ΓöÇΓöÇ markAsRead: emit socket event + optimistically flip local messages ΓöÇΓöÇΓöÇΓöÇΓöÇ
+  514 |   const markAsRead = useCallback(
+> 515 |     (conversationId: string) => {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 516 |       if (!socket || !profile?.id) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 517 |       socket.emit("mark-as-read", { conversationId, userId: profile.id });
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 525 |       setReadConvoIds((prev) => new Set([...prev, conversationId]));
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 526 |     },
+      | ^^^^^^ Could not preserve existing manual memoization
+  527 |     [socket, profile?.id]
+  528 |   );
+  529 ||515|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx:542:5
+  540 |
+  541 |     // Mark conversation as read the moment we join it
+> 542 |     markAsRead(selectedConversationId);
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  543 |
+  544 |     // Incoming message from other users in the room
+  545 |     const onReceiveMessage = (msg: Message) => {|542|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx||1|Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps').|580|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx||1|Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps').|711|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|react-hooks/preserve-manual-memoization|2|Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `profile`, but the source dependencies were [socket, selectedConversationId, profile?.id]. Inferred less specific property than source.
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx:774:36
+  772 |
+  773 |   // ΓöÇΓöÇ Typing emit: debounced, fires on every keystroke ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+> 774 |   const handleTyping = useCallback(() => {
+      |                                    ^^^^^^^
+> 775 |     if (!socket || !selectedConversationId || !profile?.id) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 776 |     // Emit typing-start
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 777 |     socket.emit("typing-start", { conversationId: selectedConversationId, userId: profile.id });
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 778 |     // Clear previous timer and set a new 2s stop timer
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 779 |     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 780 |     typingTimeoutRef.current = setTimeout(() => {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 781 |       socket.emit("typing-stop", { conversationId: selectedConversationId, userId: profile.id });
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 782 |     }, 2000);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 783 |   }, [socket, selectedConversationId, profile?.id]);
+      | ^^^^ Could not preserve existing manual memoization
+  784 |
+  785 |   // ΓöÇΓöÇ Scroll to Message highlight helper ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  786 |   const scrollToMessage = useCallback((msgId: string) => {|774|36
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx:800:7
+  798 |   useEffect(() => {
+  799 |     if (!socket || !selectedConversationId || !selectedChatUser?.id) {
+> 800 |       setIsTyping(false);
+      |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  801 |       return;
+  802 |     }
+  803 ||800|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\nsgram\messages\page.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|1073|22
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\page.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|90|17
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\page.tsx|react/no-unescaped-entities|2|`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.|214|30
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\page.tsx|react/no-unescaped-entities|2|`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.|247|26
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\page.tsx|react/no-unescaped-entities|2|`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.|356|26
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\page.tsx|react/no-unescaped-entities|2|`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.|496|26
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\privacy\PrivacyClientPage.tsx|@typescript-eslint/no-unused-vars|1|'Sparkles' is defined but never used.|16|3
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx|@typescript-eslint/no-unused-vars|1|'SubjectItem' is defined but never used.|44|11
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx:106:18
+  104 |   // Fetch stats once auth resolves
+  105 |   useEffect(() => {
+> 106 |     if (!user) { setStats(null); return; }
+      |                  ^^^^^^^^ Avoid calling setState() directly within an effect
+  107 |     (async () => {
+  108 |       const apiBase = getApiBase();
+  109 |       try {|106|18
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx|react-hooks/immutability|2|Error: Cannot access variable before it is declared
+
+`loadQuiz` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx:118:5
+  116 |   // Load default Daily Challenge on startup
+  117 |   useEffect(() => {
+> 118 |     loadQuiz("Daily Challenge");
+      |     ^^^^^^^^ `loadQuiz` accessed before it is declared
+  119 |   }, []);
+  120 |
+  121 |   // Fetch responses whenever user or activeSubject changes
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx:142:3
+  140 |   }, [user, activeSubject]);
+  141 |
+> 142 |   const loadQuiz = async (subject: string) => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 143 |     setQuizLoading(true);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 144 |     setShowLoginPrompt(false);
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 165 |     }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 166 |   };
+      | ^^^^^ `loadQuiz` is declared here
+  167 |
+  168 |   const handleSubjectClick = (subject: string) => {
+  169 |     setActiveSubject(subject);|118|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx:123:18
+  121 |   // Fetch responses whenever user or activeSubject changes
+  122 |   useEffect(() => {
+> 123 |     if (!user) { setResponses({}); return; }
+      |                  ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  124 |     (async () => {
+  125 |       const apiBase = getApiBase();
+  126 |       try {|123|18
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx|react-hooks/purity|2|Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx:237:29
+  235 |   const todayLabel = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  236 |   // IST date string (YYYY-MM-DD) ΓÇö matches publishDate format on backend
+> 237 |   const todayIST = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
+      |                             ^^^^^^^^^^ Cannot call impure function
+  238 |
+  239 |   /* ΓöÇΓöÇΓöÇ LOADING ΓöÇΓöÇΓöÇ */
+  240 |   if (loading) {|237|29
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx|prefer-const|2|'cardBase' is never reassigned. Use 'const' instead.|415|29
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\quiz\QuizClientPage.tsx|prefer-const|2|'labelBase' is never reassigned. Use 'const' instead.|417|29
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\resume\ResumeClientPage.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|10|52
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\resume\ResumeClientPage.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|32|21
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\resume\ResumeClientPage.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|84|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'TrendingUp' is defined but never used.|9|3
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'Smile' is defined but never used.|11|3
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'RefreshCw' is defined but never used.|17|3
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'Trophy' is defined but never used.|19|3
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'Utensils' is defined but never used.|20|3
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'StatPill' is defined but never used.|73|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'SectionRow' is defined but never used.|86|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'futurePlans' is defined but never used.|100|66
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'refreshing' is assigned a value but never used.|103|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx:121:5
+  119 |
+  120 |   useEffect(() => {
+> 121 |     fetchLatest();
+      |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  122 |     const interval = setInterval(() => fetchLatest(), 30_000);
+  123 |     return () => clearInterval(interval);
+  124 |   // eslint-disable-next-line react-hooks/exhaustive-deps|121|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx||1|Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps').|124|3
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'totalStudyHours' is assigned a value but never used.|172|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'totalDevHours' is assigned a value but never used.|173|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'avgSleep' is assigned a value but never used.|175|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\app\status\StatusDashboardClient.tsx|@typescript-eslint/no-unused-vars|1|'avgMood' is assigned a value but never used.|179|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\Newsletter.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|34|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\ShareButtons.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\ShareButtons.tsx:15:5
+  13 |
+  14 |   useEffect(() => {
+> 15 |     setShareUrl(window.location.href);
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  16 |   }, []);
+  17 |
+  18 |   const handleCopy = async () => {|15|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\SpotlightCursor.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\SpotlightCursor.tsx:12:5
+  10 |     // Only show spotlight on devices that have a fine pointer (mouse/trackpad)
+  11 |     const mq = window.matchMedia("(pointer: fine)");
+> 12 |     setIsTouch(!mq.matches);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  13 |
+  14 |     const onChange = (e: MediaQueryListEvent) => setIsTouch(!e.matches);
+  15 |     mq.addEventListener("change", onChange);|12|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\admin\BlogEditor.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|169|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\admin\BlogEditor.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|188|50
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\admin\QuizManager.tsx|react-hooks/purity|2|Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\admin\QuizManager.tsx:37:14
+  35 |   // Generate today's date in IST (UTC+5:30) ΓÇö must match backend's todayKeyIST()
+  36 |   const todayIST = () =>
+> 37 |     new Date(Date.now() + (5 * 60 + 30) * 60 * 1000).toISOString().slice(0, 10);
+     |              ^^^^^^^^^^ Cannot call impure function
+  38 |
+  39 |   const [form, setForm] = useState({
+  40 |     id: "",|37|14
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\admin\QuizManager.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|110|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\admin\QuizManager.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|168|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\admin\QuizManager.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|192|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\admin\QuizManager.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|277|37
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx:60:7
+  58 |   useEffect(() => {
+  59 |     if (!isConfigured || !auth || !db) {
+> 60 |       setLoading(false);
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  61 |       setNotice("Connect Firebase to enable real-time authentication and chat.");
+  62 |       return;
+  63 |     }|60|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|react-hooks/exhaustive-deps|1|React Hook useCallback has an unnecessary dependency: 'db'. Either exclude it or remove the dependency array. Outer scope values like 'db' aren't valid dependencies because mutating them doesn't re-render the component.|132|6
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|react-hooks/exhaustive-deps|1|React Hook useEffect has a missing dependency: 'autoCheckVerification'. Either include it or remove the dependency array.|143|6
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|152|21
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|197|21
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|212|21
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|236|21
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|339|21
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|417|23
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|459|21
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|react/no-unescaped-entities|2|`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.|539|50
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramApp.tsx|react/no-unescaped-entities|2|`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.|581|21
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|23|15
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|32|11
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|43|40
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx:49:7
+  47 |   useEffect(() => {
+  48 |     if (!isConfigured || !auth || !db) {
+> 49 |       setLoading(false);
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  50 |       return;
+  51 |     }
+  52 ||49|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx:85:7
+  83 |   useEffect(() => {
+  84 |     if (!db || !authUser || !authUser.emailVerified || !profile || !profile.isActivated) {
+> 85 |       setUsers([]);
+     |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  86 |       return;
+  87 |     }
+  88 ||85|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\NsgramAuthProvider.tsx:118:9
+  116 |       if (socket) {
+  117 |         socket.disconnect();
+> 118 |         setSocket(null);
+      |         ^^^^^^^^^ Avoid calling setState() directly within an effect
+  119 |         setSocketConnected(false);
+  120 |       }
+  121 |       return;|118|9
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\VoiceCallUI.tsx|@typescript-eslint/no-unused-vars|1|'PhoneOff' is defined but never used.|3|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\VoiceCallUI.tsx|@typescript-eslint/no-unused-vars|1|'PhoneCall' is defined but never used.|3|20
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|39|17
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|69|11
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|126|58
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|react-hooks/exhaustive-deps|1|React Hook useCallback has a missing dependency: 'stopRinging'. Either include it or remove the dependency array.|220|6
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|react-hooks/exhaustive-deps|1|React Hook useCallback has an unnecessary dependency: 'stopRinging'. Either exclude it or remove the dependency array.|241|6
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|react-hooks/exhaustive-deps|1|React Hook useCallback has an unnecessary dependency: 'stopRinging'. Either exclude it or remove the dependency array.|249|6
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|257|17
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|378|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|450|19
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|612|49
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|632|51
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|645|51
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\nsgram\useVoiceCall.ts|react-hooks/exhaustive-deps|1|React Hook useEffect has missing dependencies: 'selectedChatUser' and 'selectedConversationId'. Either include them or remove the dependency array.|673|6
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\DailyQuizCard.tsx|@typescript-eslint/no-unused-vars|1|'quiz' is assigned a value but never used.|32|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\DailyQuizCard.tsx|@typescript-eslint/no-unused-vars|1|'hasAnsweredToday' is assigned a value but never used.|33|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\DailyQuizCard.tsx|@typescript-eslint/no-unused-vars|1|'stats' is assigned a value but never used.|34|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\DailyQuizCard.tsx|@typescript-eslint/no-unused-vars|1|'loading' is assigned a value but never used.|35|10
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\LatestUpdatesSection.tsx|@typescript-eslint/no-unused-vars|1|'categoryColors' is assigned a value but never used.|71|7
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\LatestUpdatesSection.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|228|13
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\LatestUpdatesSection.tsx|@next/next/no-img-element|1|Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element|274|17
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\LatestUpdatesSection.tsx|react-hooks/set-state-in-effect|2|Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\LatestUpdatesSection.tsx:392:5
+  390 |
+  391 |   useEffect(() => {
+> 392 |     setIsTransitioning(true);
+      |     ^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  393 |     const timer = setTimeout(() => {
+  394 |       const sorted = [...updatesList].sort(
+  395 |         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()|392|5
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\ProjectsSection.tsx|@typescript-eslint/no-unused-vars|1|'Link' is defined but never used.|4|8
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\components\sections\SocialSection.tsx|react/no-unescaped-entities|2|`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.|213|26
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\data\blog.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|75|26
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\data\blog.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|78|50
+C:\Users\sunil\OneDrive\Desktop\HIII-Nishant\frontend\src\data\blog.ts|@typescript-eslint/no-explicit-any|2|Unexpected any. Specify a different type.|183|26

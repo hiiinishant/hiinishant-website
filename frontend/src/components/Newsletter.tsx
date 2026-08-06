@@ -17,8 +17,7 @@ export default function Newsletter({ variant = "section" }: NewsletterProps) {
     setStatus("loading");
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-      const res = await fetch(`${backendUrl}/api/newsletter`, {
+      const res = await fetch(`/api/newsletter`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

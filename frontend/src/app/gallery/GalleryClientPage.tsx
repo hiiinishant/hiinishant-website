@@ -61,8 +61,7 @@ export default function GalleryClientPage() {
   useEffect(() => {
     const fetchPhotos = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-        const res = await fetch(`${backendUrl}/api/gallery`);
+        const res = await fetch(`/api/gallery`);
         if (!res.ok) {
           throw new Error("Failed to fetch gallery photos");
         }

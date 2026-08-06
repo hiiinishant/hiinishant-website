@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from "react";
 
 export default function SpotlightCursor() {
   const spotlightRef = useRef<HTMLDivElement | null>(null);
-  const [isTouch, setIsTouch] = useState(true);
+  const [isTouch, setIsTouch] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !window.matchMedia("(pointer: fine)").matches;
+  });
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     // Only show spotlight on devices that have a fine pointer (mouse/trackpad)
     const mq = window.matchMedia("(pointer: fine)");
-    setIsTouch(!mq.matches);
-
     const onChange = (e: MediaQueryListEvent) => setIsTouch(!e.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
