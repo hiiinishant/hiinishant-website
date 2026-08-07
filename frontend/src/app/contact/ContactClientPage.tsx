@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { API_BASE } from "@/lib/api";
 
 const contactMethods = [
   {
@@ -83,7 +84,8 @@ export default function ContactClientPage() {
     setErrorMsg("");
 
     try {
-      const res = await fetch(`/api/contact`, {
+      const backendUrl = API_BASE || "http://localhost:5000";
+      const res = await fetch(`${backendUrl}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

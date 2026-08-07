@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import PageHeader from "@/components/layout/PageHeader";
+import { API_BASE } from "@/lib/api";
 
 export default function ResumeClientPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -23,7 +24,8 @@ export default function ResumeClientPage() {
   useEffect(() => {
     async function fetchResume() {
       try {
-        const res = await fetch(`/api/resume`);
+        const backendUrl = API_BASE || "http://localhost:5000";
+        const res = await fetch(`${backendUrl}/api/resume`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {

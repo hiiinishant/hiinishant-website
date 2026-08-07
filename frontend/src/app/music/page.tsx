@@ -5,11 +5,23 @@ import { apiUrl } from "@/lib/api";
 import type { MusicSettings } from "@/lib/youtube";
 
 export const metadata: Metadata = {
-  title: "Music Corner",
-  description:
-    "Listen to Nishant Kumar's curated YouTube playlist — play songs directly on the website without leaving the page.",
+  title: "Music Corner — Nishant Kumar | Curated Playlist",
+  description: "Listen to Nishant Kumar's curated YouTube playlist — play songs directly on the website without leaving the page. Study music, focus tracks, and personal favorites from the founder of 2 AM Study.",
+  keywords: [
+    "Nishant Kumar music",
+    "hiiinishant playlist",
+    "2 AM Study music",
+    "study music playlist",
+    "focus music",
+    "YouTube playlist",
+  ],
   alternates: {
     canonical: "/music",
+  },
+  openGraph: {
+    title: "Music Corner — Nishant Kumar | Curated Playlist",
+    description: "Listen to Nishant Kumar's curated YouTube playlist — study music, focus tracks, and personal favorites.",
+    url: "https://hiiinishant.com/music",
   },
 };
 

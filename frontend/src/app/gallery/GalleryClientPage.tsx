@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import { isConfigured } from "@/lib/firebase";
 import type { GalleryPhoto } from "@/types";
+import { API_BASE } from "@/lib/api";
 
 const CATEGORIES = ["All", "Daily Moments", "School", "College", "Achievements"];
 
@@ -61,7 +62,8 @@ export default function GalleryClientPage() {
   useEffect(() => {
     const fetchPhotos = async () => {
       try {
-        const res = await fetch(`/api/gallery`);
+        const backendUrl = API_BASE || "http://localhost:5000";
+        const res = await fetch(`${backendUrl}/api/gallery`);
         if (!res.ok) {
           throw new Error("Failed to fetch gallery photos");
         }

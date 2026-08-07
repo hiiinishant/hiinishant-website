@@ -3,7 +3,7 @@
 export default function AuroraBackground() {
   return (
     <div
-      className="pointer-events-none absolute inset-0 overflow-hidden"
+      className="pointer-events-none absolute inset-0 overflow-hidden will-change-transform"
       aria-hidden="true"
     >
       {/* Aurora wave 1 — amber/gold */}
@@ -14,6 +14,7 @@ export default function AuroraBackground() {
             "radial-gradient(ellipse at center, #f59e0b 0%, #fbbf24 40%, transparent 70%)",
           filter: "blur(80px)",
           animation: "auroraFloat1 12s ease-in-out infinite",
+          willChange: "transform",
         }}
       />
       {/* Aurora wave 2 — blue/indigo */}
@@ -24,6 +25,7 @@ export default function AuroraBackground() {
             "radial-gradient(ellipse at center, #6366f1 0%, #3b82f6 50%, transparent 70%)",
           filter: "blur(90px)",
           animation: "auroraFloat2 16s ease-in-out infinite",
+          willChange: "transform",
         }}
       />
       {/* Aurora wave 3 — emerald/teal */}
@@ -34,6 +36,7 @@ export default function AuroraBackground() {
             "radial-gradient(ellipse at center, #10b981 0%, #06b6d4 50%, transparent 70%)",
           filter: "blur(100px)",
           animation: "auroraFloat3 20s ease-in-out infinite",
+          willChange: "transform",
         }}
       />
       {/* Aurora wave 4 — rose/pink highlight */}
@@ -44,6 +47,7 @@ export default function AuroraBackground() {
             "radial-gradient(ellipse 60% 40% at center, #f43f5e 0%, #a855f7 50%, transparent 70%)",
           filter: "blur(80px)",
           animation: "auroraFloat2 24s ease-in-out infinite reverse",
+          willChange: "transform",
         }}
       />
     </div>

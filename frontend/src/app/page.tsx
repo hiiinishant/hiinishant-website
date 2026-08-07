@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import AuroraBackground from "@/components/AuroraBackground";
 import DailyQuizCard from "@/components/sections/DailyQuizCard";
 
@@ -87,13 +88,12 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/50 z-10 pointer-events-none" />
                 <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-blue-500/5 z-10 pointer-events-none" />
                 {/* Profile photo — fills the whole card */}
-                <img
+                <Image
                   src="/profile.jpg"
                   alt="Nishant Kumar — Founder of 2 AM Study"
                   width={280}
                   height={350}
-                  fetchPriority="high"
-                  decoding="async"
+                  priority
                   className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
                 />
               </div>

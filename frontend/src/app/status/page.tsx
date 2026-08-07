@@ -5,10 +5,24 @@ import { apiUrl } from "@/lib/api";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Live Status Dashboard",
-  description: "See what Nishant Kumar is building today. Live daily status logs, accomplishments, and roadmap focus.",
+  title: "Live Status Dashboard — Nishant Kumar | Building in Public",
+  description: "See what Nishant Kumar (hiiinishant) is building today. Live daily status logs, accomplishments, study hours, project progress, and roadmap focus. Building 2 AM Study in public.",
+  keywords: [
+    "Nishant Kumar status",
+    "hiiinishant dashboard",
+    "2 AM Study progress",
+    "building in public",
+    "daily status log",
+    "founder dashboard",
+    "student entrepreneur status",
+  ],
   alternates: {
     canonical: "/status",
+  },
+  openGraph: {
+    title: "Live Status Dashboard — Nishant Kumar | Building in Public",
+    description: "See what Nishant Kumar is building today. Live daily status logs, accomplishments, and roadmap focus.",
+    url: "https://hiiinishant.com/status",
   },
 };
 
