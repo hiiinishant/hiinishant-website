@@ -20,17 +20,61 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   const post = await getBlogPost(slug);
   if (!post) return { title: "Post Not Found" };
 
+  const title = post.seoTitle || post.title;
+  const image = post.imageUrl || post.imagePath || "/profile.jpg";
+  const author = post.writtenBy || "Nishant Kumar";
+
   return {
-    title: post.seoTitle || post.title,
+    title,
     description: post.excerpt,
+    keywords: [
+      post.title,
+      title,
+      author,
+      "Nishant Kumar blog",
+      "hiiinishant blog",
+      ...(post.category ? [post.category] : []),
+      ...post.tags,
+    ],
+    authors: [{ name: author }],
     openGraph: {
-      title: post.seoTitle || post.title,
+      title,
       description: post.excerpt,
+      url: `/blog/${slug}`,
       type: "article",
       publishedTime: post.date,
+      authors: [author],
+      section: post.category || "Blog",
+      tags: post.tags,
+      images: [
+        {
+          url: image,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: post.excerpt,
+      images: [image],
+      creator: "@hiiinishant",
     },
     alternates: {
       canonical: `/blog/${slug}`,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
   };
 }
@@ -62,8 +106,39 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     .slice(0, 3)
     .map((item) => item.post);
 
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": post.title,
+    "alternativeHeadline": post.seoTitle || post.title,
+    "description": post.excerpt,
+    "image": post.imageUrl || post.imagePath || "https://hiiinishant.com/profile.jpg",
+    "datePublished": post.date,
+    "dateModified": post.date,
+    "author": {
+      "@type": "Person",
+      "name": post.writtenBy || "Nishant Kumar",
+      "url": "https://hiiinishant.com",
+    },
+    "publisher": {
+      "@type": "Person",
+      "name": "Nishant Kumar",
+      "url": "https://hiiinishant.com",
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://hiiinishant.com/blog/${post.slug}`,
+    },
+    "keywords": post.tags.join(", "),
+    "articleSection": post.category || "Blog",
+  };
+
   return (
     <article className="pt-8 pb-24 lg:pt-10 lg:pb-32 relative overflow-hidden noise">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
       {/* Background glow */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-accent/5 blur-[120px]"></div>

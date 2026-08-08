@@ -20,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/status",
     "/gallery",
     "/music",
+    "/quiz",
   ].map((route) => {
     // Determine priority and change frequency based on the page
     let changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never" = "monthly";
@@ -28,7 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (route === "") {
       changeFrequency = "daily";
       priority = 1.0;
-    } else if (route === "/updates" || route === "/status") {
+    } else if (route === "/updates" || route === "/status" || route === "/quiz") {
       changeFrequency = "daily";
       priority = 0.8;
     } else if (route === "/blog" || route === "/projects" || route === "/journey") {

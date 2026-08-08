@@ -72,10 +72,15 @@ export function markdownToHtml(markdown: string): string {
 
 export interface TiptapNode {
   type: string;
-  attrs?: Record<string, any>;
+  attrs?: Record<string, unknown>;
   content?: TiptapNode[];
   text?: string;
-  marks?: { type: string; attrs?: Record<string, any> }[];
+  marks?: { type: string; attrs?: Record<string, unknown> }[];
+}
+
+interface RawBlogPost extends Omit<BlogPost, "content" | "html" | "tags"> {
+  content: string;
+  tags?: string[] | string;
 }
 
 export function tiptapToHtml(jsonStr: string): string {
@@ -97,7 +102,7 @@ export function tiptapToHtml(jsonStr: string): string {
           } else if (mark.type === "code") {
             html = `<code class="px-1.5 py-0.5 rounded bg-white/10 text-accent font-mono text-sm">${html}</code>`;
           } else if (mark.type === "link") {
-            const href = mark.attrs?.href || "#";
+            const href = typeof mark.attrs?.href === "string" ? mark.attrs.href : "#";
             html = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-accent underline hover:text-accent-light">${html}</a>`;
           }
         }
@@ -114,7 +119,7 @@ export function tiptapToHtml(jsonStr: string): string {
         case "paragraph":
           return `<p class="text-brand-300 leading-relaxed text-lg mb-6">${childrenHtml || "<br/>"}</p>\n`;
         case "heading": {
-          const level = node.attrs?.level || 1;
+          const level = typeof node.attrs?.level === "number" ? node.attrs.level : 1;
           if (level === 1) {
             return `<h1 class="text-3xl sm:text-4xl font-extrabold text-white mt-8 mb-4">${childrenHtml}</h1>\n`;
           } else if (level === 2) {
@@ -135,11 +140,11 @@ export function tiptapToHtml(jsonStr: string): string {
         case "codeBlock":
           return `<pre class="bg-zinc-950/80 border border-white/5 rounded-xl p-4 my-6 font-mono text-sm text-brand-200 overflow-x-auto"><code>${childrenHtml}</code></pre>\n`;
         case "image": {
-          const src = node.attrs?.src || "";
-          const alt = node.attrs?.alt || "";
-          const width = node.attrs?.width || "large";
-          const align = node.attrs?.align || "center";
-          const caption = node.attrs?.caption || "";
+          const src = typeof node.attrs?.src === "string" ? node.attrs.src : "";
+          const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
+          const width = typeof node.attrs?.width === "string" ? node.attrs.width : "large";
+          const align = typeof node.attrs?.align === "string" ? node.attrs.align : "center";
+          const caption = typeof node.attrs?.caption === "string" ? node.attrs.caption : "";
 
           let widthClass = "max-w-3xl";
           if (width === "small") widthClass = "max-w-sm";
@@ -179,9 +184,14 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
     const res = await fetch(apiUrl("/api/blog"), { cache: 'no-store' });
     if (!res.ok) return [];
     
-    const blogs = await res.json();
-    return blogs.map((b: any) => ({
+    const blogs = (await res.json()) as RawBlogPost[];
+    return blogs.map((b) => ({
       ...b,
+      tags: Array.isArray(b.tags)
+        ? b.tags
+        : typeof b.tags === "string"
+          ? b.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+          : [],
       content: [b.content],
       html: b.contentType === "tiptap" ? tiptapToHtml(b.content) : markdownToHtml(b.content)
     }));

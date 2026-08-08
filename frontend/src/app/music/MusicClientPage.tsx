@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import PageHeader from "@/components/layout/PageHeader";
 import { loadYouTubeApi, fetchVideoTitle, videoThumbnailUrl, type MusicSettings } from "@/lib/youtube";
 
@@ -47,14 +48,15 @@ export default function MusicClientPage({
 
   const [settings] = useState<MusicSettings>(initialSettings);
   const [playerReady, setPlayerReady] = useState(false);
+  const [playerInitializing, setPlayerInitializing] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentTitle, setCurrentTitle] = useState("");
   const [tracks, setTracks] = useState<PlaylistTrack[]>([]);
   const [error, setError] = useState("");
-  const [playerLoading, setPlayerLoading] = useState(true);
 
   const tracksLoadedRef = useRef(false);
+  const playWhenReadyRef = useRef(false);
 
   const syncCurrentTrack = useCallback((player: YT.Player) => {
     const data = player.getVideoData();
@@ -86,10 +88,13 @@ export default function MusicClientPage({
   }, [loadTrackTitles]);
 
   const initPlayer = useCallback(
-    async (playlistId: string) => {
-      console.log("Loading YouTube API...");
+    async (playlistId: string, playWhenReady = false) => {
+      if (playerRef.current || playerInitializing) return;
+
+      playWhenReadyRef.current = playWhenReady;
+      setPlayerInitializing(true);
+      setError("");
       await loadYouTubeApi();
-      console.log("YouTube API loaded, initializing player with playlist:", playlistId);
 
       if (playerRef.current) {
         playerRef.current.destroy();
@@ -115,11 +120,16 @@ export default function MusicClientPage({
         },
         events: {
           onReady: (event) => {
-            console.log("Player ready");
             setPlayerReady(true);
+            setPlayerInitializing(false);
             syncCurrentTrack(event.target);
             // getPlaylist() is often null right on onReady — start polling
             tryLoadPlaylist(event.target);
+            if (playWhenReadyRef.current) {
+              event.target.playVideo();
+              setPlaying(true);
+              playWhenReadyRef.current = false;
+            }
           },
           onStateChange: (event) => {
             console.log("Player state changed:", event.data);
@@ -138,28 +148,30 @@ export default function MusicClientPage({
           },
           onError: (event) => {
             console.error("Player error:", event.data);
+            setPlayerInitializing(false);
             setError("Failed to load playlist. The playlist may be private or unavailable.");
           },
         },
       });
     },
-    [loadTrackTitles, syncCurrentTrack, tryLoadPlaylist]
+    [playerInitializing, syncCurrentTrack, tryLoadPlaylist]
   );
 
   useEffect(() => {
-    if (!settings.playlistId) return;
-
-    initPlayer(settings.playlistId).finally(() => setPlayerLoading(false));
-
     return () => {
       playerRef.current?.destroy();
       playerRef.current = null;
     };
-  }, [initPlayer, settings.playlistId]);
+  }, []);
 
   const togglePlay = () => {
     const player = playerRef.current;
-    if (!player) return;
+    if (!player) {
+      if (settings.playlistId) {
+        initPlayer(settings.playlistId, true);
+      }
+      return;
+    }
     const state = player.getPlayerState();
     if (state === YT.PlayerState.PLAYING) {
       player.pauseVideo();
@@ -228,9 +240,35 @@ export default function MusicClientPage({
             {/* Video embed */}
             <div className="lg:col-span-3 relative bg-black aspect-video lg:aspect-auto lg:min-h-[320px]">
               <div id={playerContainerId} className="absolute inset-0 w-full h-full" />
+              {!playerReady && settings.playlistThumbnail && (
+                <Image
+                  src={settings.playlistThumbnail}
+                  alt=""
+                  fill
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                  className="absolute inset-0 w-full h-full object-cover opacity-45"
+                  aria-hidden="true"
+                />
+              )}
               {!playerReady && (
-                <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 text-brand-400 text-sm animate-pulse">
-                  Loading player…
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/70 text-brand-300 text-sm">
+                  <button
+                    type="button"
+                    onClick={togglePlay}
+                    disabled={playerInitializing}
+                    className="w-16 h-16 rounded-2xl bg-accent hover:bg-accent-hover text-black flex items-center justify-center transition-all hover:shadow-[0_0_24px_rgba(245,158,11,0.4)] hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed mb-4"
+                    aria-label="Load YouTube player and play playlist"
+                  >
+                    {playerInitializing ? (
+                      <svg className="w-7 h-7 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <PlayIcon className="w-8 h-8 ml-0.5" />
+                    )}
+                  </button>
+                  <span>{playerInitializing ? "Loading player..." : "Play playlist"}</span>
                 </div>
               )}
             </div>
@@ -239,9 +277,12 @@ export default function MusicClientPage({
             <div className="lg:col-span-2 p-5 sm:p-6 lg:p-8 flex flex-col gap-4 sm:gap-5 border-t lg:border-t-0 lg:border-l border-white/5">
               <div className="flex gap-3 sm:gap-4 items-start">
                 {settings.playlistThumbnail && (
-                  <img
+                  <Image
                     src={settings.playlistThumbnail}
                     alt={settings.playlistTitle}
+                    width={80}
+                    height={80}
+                    sizes="(min-width: 640px) 80px, 64px"
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0 border border-white/10 shadow-lg"
                   />
                 )}
@@ -269,11 +310,20 @@ export default function MusicClientPage({
 
                 <button
                   onClick={togglePlay}
-                  disabled={!playerReady}
+                  disabled={playerInitializing}
                   className="w-14 h-14 rounded-2xl bg-accent hover:bg-accent-hover text-black flex items-center justify-center transition-all hover:shadow-[0_0_24px_rgba(245,158,11,0.4)] hover:-translate-y-0.5 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-                  aria-label={playing ? "Pause" : "Play"}
+                  aria-label={playing ? "Pause" : "Load YouTube player and play"}
                 >
-                  {playing ? <PauseIcon className="w-7 h-7" /> : <PlayIcon className="w-7 h-7 ml-0.5" />}
+                  {playerInitializing ? (
+                    <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : playing ? (
+                    <PauseIcon className="w-7 h-7" />
+                  ) : (
+                    <PlayIcon className="w-7 h-7 ml-0.5" />
+                  )}
                 </button>
 
                 <button
@@ -328,9 +378,12 @@ export default function MusicClientPage({
                             index + 1
                           )}
                         </span>
-                        <img
+                        <Image
                           src={videoThumbnailUrl(track.videoId)}
                           alt=""
+                          width={48}
+                          height={36}
+                          sizes="48px"
                           className="w-12 h-9 rounded-md object-cover shrink-0 border border-white/5"
                         />
                         <span
