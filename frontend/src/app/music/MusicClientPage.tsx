@@ -96,10 +96,12 @@ export default function MusicClientPage({
       setError("");
       await loadYouTubeApi();
 
-      if (playerRef.current) {
-        playerRef.current.destroy();
-        playerRef.current = null;
-      }
+       const existingPlayer = playerRef.current;
+
+if (existingPlayer) {
+  existingPlayer.destroy();
+  playerRef.current = null;
+}
 
       tracksLoadedRef.current = false;
 
@@ -158,10 +160,14 @@ export default function MusicClientPage({
   );
 
   useEffect(() => {
-    return () => {
-      playerRef.current?.destroy();
-      playerRef.current = null;
-    };
+ return () => {
+  const existingPlayer = playerRef.current;
+
+  if (existingPlayer) {
+    existingPlayer.destroy();
+    playerRef.current = null;
+  }
+};
   }, []);
 
   const togglePlay = () => {

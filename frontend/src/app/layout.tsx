@@ -12,12 +12,14 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  adjustFontFallback: true,
 });
 
 const caveat = Caveat({
   variable: "--font-caveat",
   subsets: ["latin"],
   display: "swap",
+  adjustFontFallback: true,
 });
 
 // Tell Android Chrome: when the virtual keyboard opens, shrink only the

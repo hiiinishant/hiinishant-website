@@ -38,8 +38,7 @@ declare namespace YT {
     author: string;
   }
 
-  class Player {
-    constructor(elementId: string | HTMLElement, options: PlayerOptions);
+  interface Player {
     playVideo(): void;
     pauseVideo(): void;
     stopVideo(): void;
@@ -52,13 +51,13 @@ declare namespace YT {
     getVideoData(): VideoData;
     destroy(): void;
   }
+
+  var Player: {
+    new (elementId: string | HTMLElement, options: PlayerOptions): Player;
+  };
 }
 
 interface Window {
-  YT?: {
-    Player: typeof YT.Player;
-    PlayerState: typeof YT.PlayerState;
-    loaded?: number;
-  };
+  YT?: typeof YT;
   onYouTubeIframeAPIReady?: () => void;
 }

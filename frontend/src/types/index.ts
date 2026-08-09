@@ -50,7 +50,7 @@ export interface BlogPost {
   readTime: string;
   tags: string[];
   featured?: boolean;
-  content: string[];
+  content: string;
   html?: string;
   imageUrl?: string;
   imagePath?: string;
