@@ -192,7 +192,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
         : typeof b.tags === "string"
           ? b.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
           : [],
-      content: [b.content],
+      content: b.content,
       html: b.contentType === "tiptap" ? tiptapToHtml(b.content) : markdownToHtml(b.content)
     }));
   } catch (error) {

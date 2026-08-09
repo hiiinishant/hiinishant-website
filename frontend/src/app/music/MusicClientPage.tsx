@@ -96,12 +96,6 @@ export default function MusicClientPage({
       setError("");
       await loadYouTubeApi();
 
-       const existingPlayer = playerRef.current;
-
-if (existingPlayer) {
-  existingPlayer.destroy();
-  playerRef.current = null;
-}
 
       tracksLoadedRef.current = false;
 

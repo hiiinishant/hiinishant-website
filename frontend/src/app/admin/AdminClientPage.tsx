@@ -1150,62 +1150,7 @@ export default function AdminClientPage() {
     setActiveTab("write-blog");
   };
 
-  // ── Submit Quiz ──
-  const handleQuizSubmit = async (quizData: Omit<QuizSummary, "id" | "createdAt">) => {
-    setSubmitting(true);
-    try {
-      const res = await fetch(`${getBackendUrl()}/api/quiz`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(quizData),
-      });
-      if (!res.ok) throw new Error("Failed to create quiz.");
-      showToast("Quiz created successfully.", "success");
-      fetchQuizData();
-    } catch (err) {
-      showToast(getErrorMessage(err), "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
-  // ── Delete Quiz ──
-  const deleteQuiz = (id: string, subject: string) => {
-    setConfirm({
-      message: `Delete quiz for ${subject}?`,
-      onConfirm: async () => {
-        setConfirm(null);
-        try {
-          const res = await fetch(`${getBackendUrl()}/api/quiz`, {
-            method: "DELETE",
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ id }),
-          });
-          if (!res.ok) throw new Error("Failed to delete quiz.");
-          setQuizzes((prev) => prev.filter((q) => q.id !== id));
-          showToast("Quiz deleted.", "success");
-        } catch (err) {
-          showToast(getErrorMessage(err), "error");
-        }
-      },
-    });
-  };
-
-  // ── Publish Quiz ──
-  const publishQuiz = async (id: string) => {
-    try {
-      const res = await fetch(`${getBackendUrl()}/api/quiz`, {
-        method: "PATCH",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ id, status: "published" }),
-      });
-      if (!res.ok) throw new Error("Failed to publish quiz.");
-      setQuizzes((prev) => prev.map((q) => q.id === id ? { ...q, status: "published" } : q));
-      showToast("Quiz published.", "success");
-    } catch (err) {
-      showToast(getErrorMessage(err), "error");
-    }
-  };
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: "overview", label: "Overview", icon: "📊" },
@@ -2137,7 +2082,7 @@ export default function AdminClientPage() {
                         {galleryPhotos.map((photo) => (
                           <div key={photo.id} className="glass p-3 rounded-lg">
                             <div className="aspect-square bg-zinc-900 rounded-lg mb-2 overflow-hidden">
-                              <img src={photo.url} alt={photo.title} className="w-full h-full object-cover" />
+                              <img src={photo.imageUrl} alt={photo.title} className="w-full h-full object-cover" />
                             </div>
                             <div className="text-xs font-semibold text-white truncate mb-1">{photo.title}</div>
                             <div className="text-[10px] text-brand-500 mb-2">{photo.category}</div>
@@ -2265,10 +2210,9 @@ export default function AdminClientPage() {
                     <h2 className="text-lg font-bold text-white mb-4">Quiz Management</h2>
                     <QuizManager
                       quizzes={quizzes}
-                      onSubmit={handleQuizSubmit}
-                      onDelete={deleteQuiz}
-                      onPublish={publishQuiz}
-                      submitting={submitting}
+                      onRefresh={fetchQuizData}
+                      showToast={showToast}
+                      setConfirm={setConfirm}
                     />
                   </div>
                 )}
