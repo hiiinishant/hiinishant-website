@@ -86,3 +86,37 @@ export interface GalleryPhoto {
   createdAt: number;
 }
 
+export interface DailyStatus {
+  id: string;
+  date: string;
+  statusText?: string;
+  tasks?: string[];
+  study?: {
+    hours: number;
+    subject: string;
+    questions: number;
+    mock?: string;
+  };
+  project?: {
+    hours: number;
+    tasks: string[];
+  };
+  content?: {
+    videos?: number;
+    posts?: number;
+    blogs?: number;
+  };
+  health?: {
+    sleep: number;
+    healthyEating: number;
+  };
+  finance?: {
+    expense: number;
+    income: number;
+  };
+  mood?: number;
+  bestMoment?: string;
+  lessonLearned?: string;
+  updatedAt: string;
+}
+

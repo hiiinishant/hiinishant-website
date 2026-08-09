@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { apiUrl } from "@/lib/api";
 import {
   BookOpen,
   Terminal,
@@ -105,7 +106,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
   const fetchLatest = async (showIndicator = false) => {
     if (showIndicator) setRefreshing(true);
     try {
-      const res = await fetch(`/api/status`, { cache: "no-store" });
+      const res = await fetch(apiUrl("/api/status"), { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) setStatuses(data);
@@ -257,10 +258,15 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                   <article>
                   {/* ── Card Header ── */}
                   <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/5 bg-white/2">
-                    <div className="flex items-center gap-2">
+                    <Link
+                      href={`/status/${encodeURIComponent(status.date || status.id)}`}
+                      className="flex items-center gap-2 group transition-colors"
+                      title={`Permalink for ${status.date}`}
+                    >
                       <Calendar className="w-3.5 h-3.5 text-accent shrink-0" />
-                      <span className="text-sm font-bold text-white">{formatDate(status.date)}</span>
-                    </div>
+                      <span className="text-sm font-bold text-white group-hover:text-accent transition-colors">{formatDate(status.date)}</span>
+                      <span className="text-[10px] text-brand-500 group-hover:text-accent transition-colors">↗</span>
+                    </Link>
                     <div className="flex items-center gap-2">
                       {status.mood != null && (
                         <span className="text-xs font-semibold text-amber-400">

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/data/site";
 import { getAllBlogPosts } from "@/data/blog";
+import { getAllStatuses } from "@/data/statusServer";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url;
@@ -50,12 +51,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // 2. Fetch dynamic blog posts and append them
   const blogPosts = await getAllBlogPosts();
-  const dynamicRoutes = blogPosts.map((post) => ({
+  const dynamicBlogRoutes = blogPosts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: new Date(post.date),
     changeFrequency: "weekly" as const,
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...dynamicRoutes];
+  // 3. Fetch dynamic daily status logs and append them
+  const statuses = await getAllStatuses();
+  const dynamicStatusRoutes = statuses.map((status) => ({
+    url: `${baseUrl}/status/${encodeURIComponent(status.date || status.id)}`,
+    lastModified: status.updatedAt ? new Date(status.updatedAt) : new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...dynamicBlogRoutes, ...dynamicStatusRoutes];
 }
