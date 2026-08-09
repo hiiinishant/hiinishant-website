@@ -1055,22 +1055,28 @@ export default function AdminClientPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const playlistIdMatch = musicPlaylistUrl.match(/[?&]list=([^&]+)/);
-      const playlistId = playlistIdMatch ? playlistIdMatch[1] : "";
+      const url = musicPlaylistUrl.trim();
+      const listMatch = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+      const pathMatch = url.match(/youtube\.com\/playlist\/([a-zA-Z0-9_-]+)/);
+      const playlistId = listMatch ? listMatch[1] : pathMatch ? pathMatch[1] : "";
 
       if (!playlistId) {
-        showToast("Invalid YouTube playlist URL.", "error");
+        showToast("Invalid YouTube playlist URL. Link must contain a playlist ID (e.g., list=PL...)", "error");
         return;
       }
 
       const res = await fetch(`${getBackendUrl()}/api/music`, {
-        method: "POST",
+        method: "PUT",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ playlistUrl: musicPlaylistUrl, playlistId }),
+        body: JSON.stringify({ playlistUrl: url, playlistId }),
       });
-      if (!res.ok) throw new Error("Failed to update music settings.");
-      showToast("Music settings updated.", "success");
-      fetchMusicSettings();
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to update music settings (${res.status}).`);
+      }
+      const data = await res.json();
+      setMusicSettings(data);
+      showToast("Music playlist updated successfully!", "success");
     } catch (err) {
       showToast(getErrorMessage(err), "error");
     } finally {

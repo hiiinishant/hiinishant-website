@@ -81,8 +81,13 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.put('/', requireAuth, async (req, res) => {
+const updateMusicHandler = async (req: any, res: any) => {
   try {
+    if (!firestore) {
+      res.status(503).json({ error: "Database not available." });
+      return;
+    }
+
     const { playlistUrl } = req.body;
     if (!playlistUrl || typeof playlistUrl !== "string") {
       res.status(400).json({ error: "A valid YouTube playlist URL is required." });
@@ -105,21 +110,28 @@ router.put('/', requireAuth, async (req, res) => {
     }, { merge: true });
 
     const doc = await firestore.collection('musicSettings').doc('default').get();
-    const data = doc.data()!;
+    const data = doc.data() || {};
 
     res.status(200).json({
-      playlistUrl: data.playlistUrl,
-      playlistId: data.playlistId,
-      playlistTitle: data.playlistTitle,
-      playlistThumbnail: data.playlistThumbnail,
+      playlistUrl: data.playlistUrl || playlistUrl.trim(),
+      playlistId: data.playlistId || playlistId,
+      playlistTitle: data.playlistTitle || metadata.title,
+      playlistThumbnail: data.playlistThumbnail || metadata.thumbnail,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to save music settings" });
   }
-});
+};
+
+router.put('/', requireAuth, updateMusicHandler);
+router.post('/', requireAuth, updateMusicHandler);
 
 router.delete('/', requireAuth, async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(503).json({ error: "Database not available." });
+      return;
+    }
     await firestore.collection('musicSettings').doc('default').delete();
     res.status(200).json({ success: true });
   } catch (error: any) {
