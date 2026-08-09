@@ -58,6 +58,18 @@ export default function GalleryClientPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  // Open native fullscreen on the entire page
+  const openFullscreen = useCallback(() => {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
   // Fetch photos from backend API
   useEffect(() => {
     const fetchPhotos = async () => {
@@ -108,7 +120,8 @@ export default function GalleryClientPage() {
 
   const handleClose = useCallback(() => {
     setLightboxIndex(null);
-  }, []);
+    exitFullscreen();
+  }, [exitFullscreen]);
 
   const touchStartXRef = useRef<number | null>(null);
 
@@ -157,6 +170,47 @@ export default function GalleryClientPage() {
 
   return (
     <div className={`min-h-screen pb-24 relative overflow-hidden transition-colors duration-300 ${isDark ? "bg-background" : "bg-slate-50"}`}>
+
+      {/* ── JSON-LD ImageGallery Schema — auto-built from loaded photos ── */}
+      {photos.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "ImageGallery",
+              name: "Nishant Kumar — Gallery",
+              description: "Photo gallery of Nishant Kumar (hiiinishant) — daily moments, school days, college life, achievements, and the journey building 2 AM Study.",
+              url: "https://hiiinishant.com/gallery",
+              author: {
+                "@type": "Person",
+                name: "Nishant Kumar",
+                url: "https://hiiinishant.com",
+                sameAs: ["https://instagram.com/hiiinishant"],
+              },
+              image: photos.map((photo) => ({
+                "@type": "ImageObject",
+                name: photo.title,
+                description: photo.story,
+                contentUrl: photo.imageUrl,
+                url: photo.imageUrl,
+                datePublished: photo.date,
+                keywords: `Nishant Kumar, hiiinishant, ${photo.category}, ${photo.title}`,
+                author: {
+                  "@type": "Person",
+                  name: "Nishant Kumar",
+                },
+                copyrightHolder: {
+                  "@type": "Person",
+                  name: "Nishant Kumar",
+                },
+                representativeOfPage: false,
+              })),
+            }),
+          }}
+        />
+      )}
+
       {/* Background decoration */}
       <div className={`absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[130px] pointer-events-none -z-10 transition-colors duration-300 ${isDark ? "bg-accent/3" : "bg-accent/10"}`} />
       <div className={`absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[140px] pointer-events-none -z-10 transition-colors duration-300 ${isDark ? "bg-blue-500/2" : "bg-blue-500/5"}`} />
@@ -256,7 +310,7 @@ export default function GalleryClientPage() {
                 {filteredPhotos.map((photo, index) => (
                   <div
                     key={photo.id}
-                    onClick={() => setLightboxIndex(index)}
+                    onClick={() => { setLightboxIndex(index); openFullscreen(); }}
                     className={`group cursor-pointer rounded-2xl overflow-hidden border transition-all duration-300 hover:-translate-y-1 ${
                       isDark
                         ? "bg-zinc-950/30 border-white/5 hover:border-white/10 hover:bg-zinc-950/50"
@@ -267,8 +321,10 @@ export default function GalleryClientPage() {
                     <div className="aspect-[4/3] overflow-hidden relative bg-black/10">
                       <img
                         src={photo.imageUrl}
-                        alt={photo.title}
+                        alt={`${photo.title} — Nishant Kumar (hiiinishant) ${photo.category}`}
+                        title={photo.title}
                         loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                       {/* Hover Overlay */}
@@ -307,28 +363,37 @@ export default function GalleryClientPage() {
             )}
           </>
         )}
-      </div>
-
-      {/* Fullscreen Lightbox Overlay */}
+        {/* Fullscreen Lightbox Overlay */}
       {lightboxIndex !== null && filteredPhotos[lightboxIndex] && (
         <div
-          className="fixed inset-0 z-50 bg-black/96 backdrop-blur-md"
+          className="fixed inset-0 z-50 bg-black flex flex-col"
+          style={{ height: "100dvh" }}
           onClick={handleClose}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Fixed top bar – close + counter */}
-          <div className="fixed top-0 left-0 right-0 z-20 flex justify-between items-center px-4 md:px-8 py-4 max-w-6xl mx-auto font-mono text-white text-xs">
-            <span className="text-accent font-bold uppercase tracking-widest text-[10px] bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">
-              {filteredPhotos[lightboxIndex].category}
-            </span>
-            <div className="flex items-center gap-4">
-              <span className="text-brand-400">
+          {/* ── Top Bar ── */}
+          <div
+            className="shrink-0 flex justify-between items-center px-4 md:px-8 py-3 bg-black/80 backdrop-blur-md w-full border-b border-white/5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-accent font-bold uppercase tracking-widest text-[10px] bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg font-mono">
+                {filteredPhotos[lightboxIndex].category}
+              </span>
+              <span className="text-brand-400 text-xs hidden sm:block font-mono">
+                {formatDate(filteredPhotos[lightboxIndex].date)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-brand-500 text-xs font-mono">
                 {lightboxIndex + 1} / {filteredPhotos.length}
               </span>
+              {/* Close */}
               <button
                 onClick={handleClose}
-                className="w-9 h-9 rounded-full bg-white/8 hover:bg-white/15 border border-white/10 flex items-center justify-center text-base transition-all cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white/8 hover:bg-red-500/30 hover:text-red-400 border border-white/10 flex items-center justify-center text-white text-base transition-all cursor-pointer"
                 title="Close (Esc)"
               >
                 ✕
@@ -336,51 +401,57 @@ export default function GalleryClientPage() {
             </div>
           </div>
 
-          {/* Fixed left / right nav arrows */}
-          <button
-            onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-            className="fixed left-3 md:left-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/50 hover:bg-black/70 border border-white/10 flex items-center justify-center text-white text-base transition-all cursor-pointer hover:scale-105 active:scale-95"
-            title="Previous (← Arrow)"
-          >
-            ◀
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleNext(); }}
-            className="fixed right-3 md:right-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/50 hover:bg-black/70 border border-white/10 flex items-center justify-center text-white text-base transition-all cursor-pointer hover:scale-105 active:scale-95"
-            title="Next (→ Arrow)"
-          >
-            ▶
-          </button>
-
-          {/* Scrollable body – image + full caption */}
+          {/* ── Image — fills ALL remaining height ── */}
           <div
-            className="h-full overflow-y-auto pt-16 pb-10 px-4 md:px-16 flex flex-col items-center"
+            className="flex-1 relative flex items-center justify-center overflow-hidden px-12 md:px-20 py-4"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Image */}
-            <div className="w-full max-w-4xl flex justify-center mt-4">
-              <img
-                src={filteredPhotos[lightboxIndex].imageUrl}
-                alt={filteredPhotos[lightboxIndex].title}
-                className="max-h-[52vh] md:max-h-[58vh] w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/10"
-              />
-            </div>
+            <img
+              key={filteredPhotos[lightboxIndex].id}
+              src={filteredPhotos[lightboxIndex].imageUrl}
+              alt={`${filteredPhotos[lightboxIndex].title} — Nishant Kumar (hiiinishant) ${filteredPhotos[lightboxIndex].category}`}
+              title={filteredPhotos[lightboxIndex].title}
+              decoding="async"
+              className="max-h-full max-w-full w-auto h-auto object-contain select-none"
+              style={{ display: "block" }}
+            />
 
-            {/* Caption — always fully visible, never clipped */}
-            <div className="w-full max-w-2xl mx-auto text-center mt-8 space-y-3 select-text px-2">
-              <span className="inline-block text-[10px] font-mono text-accent uppercase tracking-widest font-bold bg-accent/10 border border-accent/20 px-3 py-1 rounded-full">
-                {formatDate(filteredPhotos[lightboxIndex].date)}
-              </span>
-              <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight leading-snug">
-                {filteredPhotos[lightboxIndex].title}
-              </h2>
-              <p className="text-sm md:text-base text-brand-300 leading-relaxed font-light">
+            {/* Left arrow */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-black/60 hover:bg-accent hover:text-black border border-white/15 flex items-center justify-center text-white text-sm transition-all cursor-pointer hover:scale-110 active:scale-95 shadow-2xl"
+              title="Previous (← Arrow)"
+            >
+              ◀
+            </button>
+
+            {/* Right arrow */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleNext(); }}
+              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-40 w-11 h-11 rounded-full bg-black/60 hover:bg-accent hover:text-black border border-white/15 flex items-center justify-center text-white text-sm transition-all cursor-pointer hover:scale-110 active:scale-95 shadow-2xl"
+              title="Next (→ Arrow)"
+            >
+              ▶
+            </button>
+          </div>
+
+          {/* ── Bottom Caption ── */}
+          <div
+            className="shrink-0 bg-black/80 backdrop-blur-md border-t border-white/5 px-6 py-3 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-sm md:text-base font-bold text-white leading-tight">
+              {filteredPhotos[lightboxIndex].title}
+            </h2>
+            {filteredPhotos[lightboxIndex].story && (
+              <p className="text-xs text-brand-400 leading-relaxed max-w-2xl mx-auto mt-1 line-clamp-2">
                 {filteredPhotos[lightboxIndex].story}
               </p>
-            </div>
+            )}
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

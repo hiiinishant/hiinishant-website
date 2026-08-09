@@ -173,7 +173,7 @@ export default async function StatusDatePage({ params }: Props) {
   );
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden py-20 lg:py-28">
+    <div className="min-h-screen bg-background relative overflow-hidden pt-16 lg:pt-20 pb-16 lg:pb-24">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

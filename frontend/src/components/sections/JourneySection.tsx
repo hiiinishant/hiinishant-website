@@ -1,5 +1,18 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { journey } from "@/data/journey";
+import { apiUrl } from "@/lib/api";
+
+interface FuturePlan {
+  id: string;
+  title: string;
+  description: string;
+  targetDate: string;
+  category: "academic" | "business" | "community" | "general";
+  status: "planned" | "in-progress" | "completed";
+}
 
 const fireflies = Array.from({ length: 20 }, (_, idx) => {
   const size = Math.random() * 4 + 2;
@@ -10,6 +23,17 @@ const fireflies = Array.from({ length: 20 }, (_, idx) => {
 });
 
 export default function JourneySection() {
+  const [showPlans, setShowPlans] = useState(false);
+  const [plans, setPlans] = useState<FuturePlan[]>([]);
+
+  useEffect(() => {
+    fetch(apiUrl("/api/future-plans"))
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) setPlans(data);
+      })
+      .catch(() => {});
+  }, []);
   return (
     <section id="journey" className="py-20 lg:py-28 relative overflow-hidden">
       {styleBlock}
@@ -176,17 +200,86 @@ export default function JourneySection() {
         </div>
 
         {/* CTA */}
-        <div className="mt-20 text-center">
-          <p className="text-brand-400 text-sm mb-6 italic">The journey continues — the best chapters are still being written.</p>
-          <Link
-            href="/contact"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl glass-strong text-white font-semibold hover:bg-white/10 transition-all duration-300 hover:-translate-y-0.5 group border border-white/5 hover:border-accent/30"
-          >
-            Connect with Nishant
-            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </Link>
+        <div className="mt-20 text-center space-y-6">
+          <p className="text-brand-400 text-sm italic">The journey continues — the best chapters are still being written.</p>
+
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <button
+              onClick={() => setShowPlans(!showPlans)}
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-accent/10 border border-accent/30 text-accent font-bold hover:bg-accent/20 transition-all duration-300 hover:-translate-y-0.5 group shadow-lg shadow-accent/10 font-mono text-xs uppercase tracking-wider"
+            >
+              <span>🎯 Nishant Plans</span>
+              <span className={`transition-transform duration-300 ${showPlans ? "rotate-180" : ""}`}>
+                ▼
+              </span>
+            </button>
+
+            <Link
+              href="/universe"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl glass-strong text-white font-semibold hover:bg-white/10 transition-all duration-300 hover:-translate-y-0.5 group border border-white/5 hover:border-accent/30"
+            >
+              Connect with Nishant
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
+
+          {/* Expandable Plans Section */}
+          {showPlans && (
+            <div className="pt-6 animate-fade-in text-left max-w-3xl mx-auto space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                  <span className="text-accent">🎯</span> Nishant's Future Plans &amp; Roadmap
+                </h3>
+                <span className="text-[10px] text-zinc-500 font-mono">{plans.length} milestones</span>
+              </div>
+
+              {plans.length === 0 ? (
+                <p className="text-xs text-brand-500 text-center py-6 font-mono">No roadmap plans published yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {plans.map((plan) => {
+                    const statusInfo = {
+                      planned: { label: "Planned", color: "text-brand-400 border-brand-500/20 bg-brand-500/10", icon: "○" },
+                      "in-progress": { label: "In Progress", color: "text-amber-400 border-amber-500/20 bg-amber-500/10", icon: "◑" },
+                      completed: { label: "Completed", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10", icon: "●" },
+                    }[plan.status] || { label: plan.status, color: "text-zinc-400 border-zinc-700 bg-zinc-800", icon: "•" };
+
+                    return (
+                      <div key={plan.id} className="rounded-xl border border-white/10 bg-zinc-950/80 p-4 space-y-2 relative group hover:border-accent/30 transition-all font-mono">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+                            {plan.category}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusInfo.color}`}>
+                            <span>{statusInfo.icon}</span>
+                            <span>{statusInfo.label}</span>
+                          </span>
+                        </div>
+
+                        <h4 className="text-xs font-bold text-white group-hover:text-accent transition-colors">
+                          {plan.title}
+                        </h4>
+
+                        {plan.description && (
+                          <p className="text-[11px] text-zinc-300 leading-relaxed">
+                            {plan.description}
+                          </p>
+                        )}
+
+                        {plan.targetDate && (
+                          <div className="text-[9px] text-zinc-500 pt-1">
+                            Target: <span className="text-zinc-300">{plan.targetDate}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>

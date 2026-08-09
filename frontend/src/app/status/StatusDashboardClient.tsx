@@ -101,6 +101,7 @@ function SectionRow({ icon, label, color, children }: { icon: React.ReactNode; l
 export default function StatusDashboardClient({ initialStatuses, futurePlans }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statuses, setStatuses] = useState<DailyStatus[]>(initialStatuses);
+  const [visibleCount, setVisibleCount] = useState(5);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchLatest = async (showIndicator = false) => {
@@ -191,12 +192,12 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
     !!(s.study || s.project || s.content || s.health || s.finance || s.bestMoment || s.lessonLearned);
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden py-20 lg:py-28">
+    <div className="min-h-screen bg-background relative overflow-hidden pt-16 lg:pt-20 pb-16 lg:pb-24">
       {/* Ambient glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-accent/3 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse-slow" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.005)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.005)_1px,transparent_1px)] bg-[size:72px_72px] pointer-events-none -z-20 opacity-30" />
 
-      <div className="max-w-2xl mx-auto px-5 relative z-10 space-y-8">
+      <div className="max-w-2xl mx-auto px-5 relative z-10 space-y-6">
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5">
@@ -246,7 +247,7 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
               <p className="text-brand-600 text-xs mt-1">Try a different keyword.</p>
             </div>
           ) : (
-            filteredStatuses.map((status) => {
+            filteredStatuses.slice(0, visibleCount).map((status) => {
               const structured = isStructured(status);
               const net = (status.finance?.income || 0) - (status.finance?.expense || 0);
 
@@ -418,6 +419,19 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
               </div>
               );
             })
+          )}
+
+          {/* ── View More Button ── */}
+          {filteredStatuses.length > visibleCount && (
+            <div className="text-center pt-4">
+              <button
+                onClick={() => setVisibleCount((prev) => prev + 5)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 hover:border-accent/40 text-xs font-bold text-white hover:text-accent transition-all duration-300 shadow-lg hover:bg-white/8 group font-mono"
+              >
+                <span>View More Logs ({filteredStatuses.length - visibleCount} remaining)</span>
+                <span className="text-accent text-sm group-hover:translate-y-0.5 transition-transform">↓</span>
+              </button>
+            </div>
           )}
         </div>
 

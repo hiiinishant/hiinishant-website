@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/data/site";
 import { getAllBlogPosts } from "@/data/blog";
 import { getAllStatuses } from "@/data/statusServer";
+import { getAllQuizDates } from "@/data/quizServer";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url;
@@ -67,5 +68,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...dynamicBlogRoutes, ...dynamicStatusRoutes];
+  // 4. Fetch all published quiz dates and append them
+  // Each date becomes: hiiinishant.com/quiz/YYYY-MM-DD
+  // Google indexes the questions on that page automatically
+  const quizDates = await getAllQuizDates();
+  const dynamicQuizRoutes = quizDates.map((date) => ({
+    url: `${baseUrl}/quiz/${date}`,
+    lastModified: new Date(date),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
+  return [...staticRoutes, ...dynamicBlogRoutes, ...dynamicStatusRoutes, ...dynamicQuizRoutes];
 }

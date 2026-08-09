@@ -217,7 +217,88 @@ router.get('/subject/:subject', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/quiz/stats/:userId
+// GET /api/quiz/date/:date
+// Returns all published quizzes for a specific publishDate (YYYY-MM-DD).
+// correctOption is ALWAYS exposed here — used by the SSR SEO page for archived quiz dates.
+// Response: { quizzes: QuizPublic[], date: string }
+router.get('/date/:date', async (req: Request, res: Response) => {
+  try {
+    const rawDate = req.params.date;
+    const date: string = Array.isArray(rawDate) ? rawDate[0] : (rawDate as string);
+    if (!firestore) { res.json({ quizzes: [], date }); return; }
+
+    // Validate date format YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+      return;
+    }
+
+    const snap = await firestore.collection(QUIZZES)
+      .where('publishDate', '==', date)
+      .where('status', '==', 'published')
+      .orderBy('createdAt', 'asc')
+      .get();
+
+    let docsList = snap.docs;
+
+    // Fallback: check legacy doc where doc ID == date
+    if (docsList.length === 0) {
+      const singleDoc = await firestore.collection(QUIZZES).doc(date).get();
+      if (singleDoc.exists && singleDoc.data()?.status === 'published') {
+        docsList = [singleDoc as any];
+      }
+    }
+
+    const quizzes = docsList.map(doc => {
+      const d = doc.data()!;
+      return {
+        id:            doc.id,
+        date:          d.publishDate || doc.id,
+        subject:       d.subject,
+        question:      d.question,
+        optionA:       d.optionA,
+        optionB:       d.optionB,
+        optionC:       d.optionC,
+        optionD:       d.optionD,
+        correctOption: d.correctOption,  // always exposed for SEO/archive
+        attemptsCount: d.attemptsCount || 0,
+      };
+    });
+
+    res.json({ quizzes, date });
+  } catch (err) {
+    console.error('[quiz/date] Error:', err);
+    res.status(500).json({ error: 'Failed to load quizzes for date' });
+  }
+});
+
+// GET /api/quiz/dates
+// Returns all distinct publishDates that have at least one published quiz.
+// Used by the frontend sitemap generator to auto-index quiz pages.
+// Response: { dates: string[] }  — sorted descending (newest first)
+router.get('/dates', async (_req: Request, res: Response) => {
+  try {
+    if (!firestore) { res.json({ dates: [] }); return; }
+
+    const snap = await firestore.collection(QUIZZES)
+      .where('status', '==', 'published')
+      .orderBy('publishDate', 'desc')
+      .get();
+
+    const dateSet = new Set<string>();
+    snap.docs.forEach(doc => {
+      const d = doc.data()?.publishDate || doc.id;
+      if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) dateSet.add(d);
+    });
+
+    res.json({ dates: Array.from(dateSet) });
+  } catch (err) {
+    console.error('[quiz/dates] Error:', err);
+    res.status(500).json({ dates: [] });
+  }
+});
+
+
 // Returns a user's XP and streak stats. Public (userId is the Firebase UID).
 // Response: { stats: QuizStats | null }
 router.get('/stats/:userId', async (req: Request, res: Response) => {

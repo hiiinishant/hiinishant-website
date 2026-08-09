@@ -3,17 +3,34 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { isConfigured as isFirebaseConfigured } from "@/lib/firebase";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, LIVE_BACKEND_URL } from "@/lib/api";
 import BlogEditor from "@/components/admin/BlogEditor";
 import QuizManager from "@/components/admin/QuizManager";
 import type { BlogPost, GalleryPhoto } from "@/types";
 
 const getBackendUrl = () => {
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_BACKEND_URL;
+  }
+  if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
     return "http://localhost:5000";
   }
-  return API_BASE || "http://localhost:5000";
+  return API_BASE || LIVE_BACKEND_URL;
 };
+
+async function safeFetch(urlPath: string, options?: RequestInit): Promise<Response> {
+  const primaryBase = getBackendUrl();
+  try {
+    const res = await fetch(`${primaryBase}${urlPath}`, options);
+    return res;
+  } catch (err) {
+    if (primaryBase.includes("localhost") || primaryBase.includes("127.0.0.1")) {
+      console.warn(`Local backend ${primaryBase} unreachable. Falling back to live backend ${LIVE_BACKEND_URL}...`);
+      return await fetch(`${LIVE_BACKEND_URL}${urlPath}`, options);
+    }
+    throw err;
+  }
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface UpdateItem {
@@ -273,6 +290,7 @@ interface ResumeItem {
 
 export default function AdminClientPage() {
   const [unlocked, setUnlocked] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -553,7 +571,7 @@ export default function AdminClientPage() {
 
     const token = sessionStorage.getItem("admin_token");
     if (token) {
-      fetch(`${getBackendUrl()}/api/auth/verify`, {
+      safeFetch("/api/auth/verify", {
         headers: { "Authorization": `Bearer ${token}` }
       })
       .then((res) => {
@@ -561,11 +579,18 @@ export default function AdminClientPage() {
           setUnlocked(true);
         } else {
           sessionStorage.removeItem("admin_token");
+          setUnlocked(false);
         }
       })
       .catch(() => {
         sessionStorage.removeItem("admin_token");
+        setUnlocked(false);
+      })
+      .finally(() => {
+        setCheckingAuth(false);
       });
+    } else {
+      setCheckingAuth(false);
     }
   }, [fetchPublicLogs]);
 
@@ -588,21 +613,16 @@ export default function AdminClientPage() {
 
   // Handle Admin Auth
   const handleLogin = async (pw: string) => {
+    setSubmitting(true);
+    setLoginError("");
     try {
-      const backendUrl = getBackendUrl();
-      const res = await fetch(`${backendUrl}/api/auth/login`, {
+      const res = await safeFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pw }),
       });
 
-      // Check if response is JSON
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Backend server not responding correctly. Check if backend is running on port 5000.");
-      }
-
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.token) {
         sessionStorage.setItem("admin_token", data.token);
         setUnlocked(true);
@@ -611,13 +631,15 @@ export default function AdminClientPage() {
         setAdminPasswordInput("");
         showToast("Console unlocked. Mode: Admin Write Enabled.", "success");
       } else {
-        throw new Error(data.error || "Incorrect access credentials.");
+        throw new Error(data.error || "Incorrect password. Access denied.");
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Incorrect access credentials.";
+      const errorMessage = err instanceof Error ? err.message : "Unable to connect to authentication server.";
       setLoginError(errorMessage);
       setLoginShaking(true);
       setTimeout(() => setLoginShaking(false), 600);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -1176,6 +1198,68 @@ export default function AdminClientPage() {
     { id: "manage-resume", label: "Resume", icon: "📄" },
     { id: "quiz-management", label: "Quiz", icon: "❓" },
   ];
+
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center font-mono text-xs text-brand-400">
+        <div className="flex items-center gap-3">
+          <div className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+          <span>Verifying access credentials...</span>
+        </div>
+      </main>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 font-mono text-xs relative overflow-hidden">
+        {/* Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-accent/5 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="w-full max-w-sm glass-strong border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-2xl mx-auto mb-3">
+              🔐
+            </div>
+            <h1 className="text-lg font-bold text-white tracking-tight">Admin Access Required</h1>
+            <p className="text-[11px] text-brand-400">Enter admin password to unlock CMS page</p>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleLogin(adminPasswordInput); }} className="space-y-4">
+            <InputField
+              label="Admin Password *"
+              name="password"
+              type="password"
+              value={adminPasswordInput}
+              onChange={(e) => setAdminPasswordInput(e.target.value)}
+              placeholder="Enter admin password"
+              required
+            />
+
+            {loginError && (
+              <div className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl text-center">
+                {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className={`w-full py-3 rounded-xl bg-accent text-black font-bold hover:bg-accent-hover transition-all duration-300 shadow-lg shadow-accent/20 disabled:opacity-50 ${loginShaking ? "animate-shake" : ""}`}
+            >
+              {submitting ? "Authenticating..." : "Unlock Admin Page"}
+            </button>
+          </form>
+
+          <div className="pt-2 text-center">
+            <Link href="/" className="text-[11px] text-brand-500 hover:text-white transition-colors">
+              ← Return to Main Site
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-zinc-950 text-brand-100 font-mono text-xs">
