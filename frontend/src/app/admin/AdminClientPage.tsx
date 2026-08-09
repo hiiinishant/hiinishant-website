@@ -930,7 +930,10 @@ export default function AdminClientPage() {
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Failed to submit daily status.");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to submit daily status (${res.status}).`);
+      }
       setStatuses((prev) => [payload as DailyStatus, ...prev]);
       showToast("Daily status logged successfully.", "success");
       setStatusForm({
@@ -1330,203 +1333,243 @@ export default function AdminClientPage() {
                 {activeTab === "daily-status" && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-bold text-white mb-4">Daily Status Log</h2>
-                      <form onSubmit={handleStatusSubmit} className="space-y-4">
-                        <InputField
-                          label="Date"
-                          name="date"
-                          type="date"
-                          value={statusForm.date}
-                          onChange={(e) => setStatusForm({ ...statusForm, date: e.target.value })}
-                          required
-                        />
-                        <TextAreaField
-                          label="Status Text"
-                          name="statusText"
-                          value={statusForm.statusText}
-                          onChange={(e) => setStatusForm({ ...statusForm, statusText: e.target.value })}
-                          placeholder="How was your day?"
-                          rows={2}
-                        />
-                        <TextAreaField
-                          label="Tasks (one per line)"
-                          name="tasksText"
-                          value={statusForm.tasksText}
-                          onChange={(e) => setStatusForm({ ...statusForm, tasksText: e.target.value })}
-                          placeholder="Task 1\nTask 2\nTask 3"
-                          rows={3}
-                        />
-                        <div className="grid grid-cols-2 gap-4">
+                      <h2 className="text-lg font-bold text-white mb-1">📅 Daily Status Log</h2>
+                      <p className="text-[10px] text-brand-500 font-mono mb-5">Fill in each section just like your daily log card.</p>
+
+                      <form onSubmit={handleStatusSubmit} className="space-y-0 rounded-2xl border border-zinc-700/70 bg-[#09090b]/90 overflow-hidden">
+
+                        {/* ── Header Row ── */}
+                        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/5 bg-white/2">
                           <InputField
-                            label="Study Hours"
-                            name="studyHours"
-                            type="number"
-                            value={statusForm.studyHours}
-                            onChange={(e) => setStatusForm({ ...statusForm, studyHours: e.target.value })}
+                            label="Date *"
+                            name="date"
+                            type="date"
+                            value={statusForm.date}
+                            onChange={(e) => setStatusForm({ ...statusForm, date: e.target.value })}
+                            required
                           />
                           <InputField
-                            label="Study Subject"
-                            name="studySubject"
-                            value={statusForm.studySubject}
-                            onChange={(e) => setStatusForm({ ...statusForm, studySubject: e.target.value })}
+                            label="Mood (1-10)"
+                            name="mood"
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={statusForm.mood}
+                            onChange={(e) => setStatusForm({ ...statusForm, mood: e.target.value })}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <InputField
-                            label="Study Questions"
-                            name="studyQuestions"
-                            type="number"
-                            value={statusForm.studyQuestions}
-                            onChange={(e) => setStatusForm({ ...statusForm, studyQuestions: e.target.value })}
-                          />
-                          <InputField
-                            label="Mock Test"
-                            name="studyMock"
-                            value={statusForm.studyMock}
-                            onChange={(e) => setStatusForm({ ...statusForm, studyMock: e.target.value })}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <InputField
-                            label="Project Hours"
-                            name="projectHours"
-                            type="number"
-                            value={statusForm.projectHours}
-                            onChange={(e) => setStatusForm({ ...statusForm, projectHours: e.target.value })}
-                          />
+
+                        {/* ── Focus / Status Text ── */}
+                        <div className="px-5 py-3.5 border-b border-white/[0.06]">
                           <TextAreaField
-                            label="Project Tasks"
-                            name="projectTasksText"
-                            value={statusForm.projectTasksText}
-                            onChange={(e) => setStatusForm({ ...statusForm, projectTasksText: e.target.value })}
-                            placeholder="Task 1\nTask 2"
+                            label="Focus / Status Text"
+                            name="statusText"
+                            value={statusForm.statusText}
+                            onChange={(e) => setStatusForm({ ...statusForm, statusText: e.target.value })}
+                            placeholder="How was your day? What were you focused on?"
                             rows={2}
                           />
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
-                          <InputField
-                            label="Content Videos"
-                            name="contentVideos"
-                            type="number"
-                            value={statusForm.contentVideos}
-                            onChange={(e) => setStatusForm({ ...statusForm, contentVideos: e.target.value })}
-                          />
-                          <InputField
-                            label="Content Blogs"
-                            name="contentBlogs"
-                            type="number"
-                            value={statusForm.contentBlogs}
-                            onChange={(e) => setStatusForm({ ...statusForm, contentBlogs: e.target.value })}
-                          />
-                          <InputField
-                            label="Content Posts"
-                            name="contentPosts"
-                            type="number"
-                            value={statusForm.contentPosts}
-                            onChange={(e) => setStatusForm({ ...statusForm, contentPosts: e.target.value })}
+
+                        {/* ── 📚 Study ── */}
+                        <div className="px-5 py-3.5 border-b border-white/[0.06] space-y-3">
+                          <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono">📚 Study</span>
+                          <div className="grid grid-cols-2 gap-3">
+                            <InputField
+                              label="Hours"
+                              name="studyHours"
+                              type="number"
+                              value={statusForm.studyHours}
+                              onChange={(e) => setStatusForm({ ...statusForm, studyHours: e.target.value })}
+                            />
+                            <InputField
+                              label="Subject"
+                              name="studySubject"
+                              value={statusForm.studySubject}
+                              onChange={(e) => setStatusForm({ ...statusForm, studySubject: e.target.value })}
+                              placeholder="OS, DBMS, CN..."
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <InputField
+                              label="Practice Questions"
+                              name="studyQuestions"
+                              type="number"
+                              value={statusForm.studyQuestions}
+                              onChange={(e) => setStatusForm({ ...statusForm, studyQuestions: e.target.value })}
+                            />
+                            <InputField
+                              label="Mock Test Score"
+                              name="studyMock"
+                              value={statusForm.studyMock}
+                              onChange={(e) => setStatusForm({ ...statusForm, studyMock: e.target.value })}
+                              placeholder="e.g. 45/60 or N/A"
+                            />
+                          </div>
+                        </div>
+
+                        {/* ── 💻 Dev ── */}
+                        <div className="px-5 py-3.5 border-b border-white/[0.06] space-y-3">
+                          <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono">💻 Dev</span>
+                          <div className="grid grid-cols-2 gap-3">
+                            <InputField
+                              label="Dev Hours"
+                              name="projectHours"
+                              type="number"
+                              value={statusForm.projectHours}
+                              onChange={(e) => setStatusForm({ ...statusForm, projectHours: e.target.value })}
+                            />
+                            <TextAreaField
+                              label="Tasks (one per line)"
+                              name="projectTasksText"
+                              value={statusForm.projectTasksText}
+                              onChange={(e) => setStatusForm({ ...statusForm, projectTasksText: e.target.value })}
+                              placeholder={"Hiii Nishant team\nFixed auth bug"}
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+
+                        {/* ── 🎥 Content ── */}
+                        <div className="px-5 py-3.5 border-b border-white/[0.06] space-y-3">
+                          <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono">🎥 Content</span>
+                          <div className="grid grid-cols-3 gap-3">
+                            <InputField
+                              label="YouTube Videos"
+                              name="contentVideos"
+                              type="number"
+                              value={statusForm.contentVideos}
+                              onChange={(e) => setStatusForm({ ...statusForm, contentVideos: e.target.value })}
+                            />
+                            <InputField
+                              label="Blogs"
+                              name="contentBlogs"
+                              type="number"
+                              value={statusForm.contentBlogs}
+                              onChange={(e) => setStatusForm({ ...statusForm, contentBlogs: e.target.value })}
+                            />
+                            <InputField
+                              label="Insta Posts"
+                              name="contentPosts"
+                              type="number"
+                              value={statusForm.contentPosts}
+                              onChange={(e) => setStatusForm({ ...statusForm, contentPosts: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        {/* ── 😴 Health ── */}
+                        <div className="px-5 py-3.5 border-b border-white/[0.06] space-y-3">
+                          <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono">😴 Health</span>
+                          <div className="grid grid-cols-2 gap-3">
+                            <InputField
+                              label="Sleep Hours"
+                              name="healthSleep"
+                              type="number"
+                              value={statusForm.healthSleep}
+                              onChange={(e) => setStatusForm({ ...statusForm, healthSleep: e.target.value })}
+                            />
+                            <InputField
+                              label="Diet Rating (1-5)"
+                              name="healthEating"
+                              type="number"
+                              min="1"
+                              max="5"
+                              value={statusForm.healthEating}
+                              onChange={(e) => setStatusForm({ ...statusForm, healthEating: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        {/* ── 💸 Finance ── */}
+                        <div className="px-5 py-3.5 border-b border-white/[0.06] space-y-3">
+                          <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono">💸 Finance</span>
+                          <div className="grid grid-cols-2 gap-3">
+                            <InputField
+                              label="Income (₹)"
+                              name="financeIncome"
+                              type="number"
+                              value={statusForm.financeIncome}
+                              onChange={(e) => setStatusForm({ ...statusForm, financeIncome: e.target.value })}
+                            />
+                            <InputField
+                              label="Expense (₹)"
+                              name="financeExpense"
+                              type="number"
+                              value={statusForm.financeExpense}
+                              onChange={(e) => setStatusForm({ ...statusForm, financeExpense: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        {/* ── ⭐ Best Moment ── */}
+                        <div className="px-5 py-3.5 border-b border-white/[0.06] space-y-3">
+                          <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono">⭐ Best Moment</span>
+                          <TextAreaField
+                            label=""
+                            name="bestMoment"
+                            value={statusForm.bestMoment}
+                            onChange={(e) => setStatusForm({ ...statusForm, bestMoment: e.target.value })}
+                            placeholder='"stayed focused."'
+                            rows={2}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <InputField
-                            label="Sleep Hours"
-                            name="healthSleep"
-                            type="number"
-                            value={statusForm.healthSleep}
-                            onChange={(e) => setStatusForm({ ...statusForm, healthSleep: e.target.value })}
-                          />
-                          <InputField
-                            label="Healthy Eating"
-                            name="healthEating"
-                            type="number"
-                            value={statusForm.healthEating}
-                            onChange={(e) => setStatusForm({ ...statusForm, healthEating: e.target.value })}
+
+                        {/* ── 💡 Lesson ── */}
+                        <div className="px-5 py-3.5 space-y-3">
+                          <span className="text-[10.5px] font-bold text-yellow-400 uppercase tracking-wider font-mono">💡 Lesson Learned</span>
+                          <TextAreaField
+                            label=""
+                            name="lessonLearned"
+                            value={statusForm.lessonLearned}
+                            onChange={(e) => setStatusForm({ ...statusForm, lessonLearned: e.target.value })}
+                            placeholder="Planning ahead saves time."
+                            rows={2}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <InputField
-                            label="Expense"
-                            name="financeExpense"
-                            type="number"
-                            value={statusForm.financeExpense}
-                            onChange={(e) => setStatusForm({ ...statusForm, financeExpense: e.target.value })}
-                          />
-                          <InputField
-                            label="Income"
-                            name="financeIncome"
-                            type="number"
-                            value={statusForm.financeIncome}
-                            onChange={(e) => setStatusForm({ ...statusForm, financeIncome: e.target.value })}
-                          />
+
+                        {/* ── Submit ── */}
+                        <div className="px-5 py-4 border-t border-white/5 bg-white/[0.01]">
+                          <button
+                            type="submit"
+                            disabled={submitting}
+                            className="w-full py-3 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-bold hover:bg-accent/20 transition-all disabled:opacity-50 font-mono tracking-wide"
+                          >
+                            {submitting ? "Saving log..." : "✓ Submit Status Log"}
+                          </button>
                         </div>
-                        <InputField
-                          label="Mood (1-10)"
-                          name="mood"
-                          type="number"
-                          min="1"
-                          max="10"
-                          value={statusForm.mood}
-                          onChange={(e) => setStatusForm({ ...statusForm, mood: e.target.value })}
-                        />
-                        <TextAreaField
-                          label="Best Moment"
-                          name="bestMoment"
-                          value={statusForm.bestMoment}
-                          onChange={(e) => setStatusForm({ ...statusForm, bestMoment: e.target.value })}
-                          placeholder="What was the highlight of your day?"
-                          rows={2}
-                        />
-                        <TextAreaField
-                          label="Lesson Learned"
-                          name="lessonLearned"
-                          value={statusForm.lessonLearned}
-                          onChange={(e) => setStatusForm({ ...statusForm, lessonLearned: e.target.value })}
-                          placeholder="What did you learn today?"
-                          rows={2}
-                        />
-                        <button
-                          type="submit"
-                          disabled={submitting}
-                          className="w-full py-3 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-semibold hover:bg-accent/20 transition-all disabled:opacity-50"
-                        >
-                          {submitting ? "Submitting..." : "Submit Status Log"}
-                        </button>
                       </form>
                     </div>
 
+                    {/* Recent Logs */}
                     <div>
                       <h3 className="text-sm font-bold text-white mb-3">Recent Status Logs</h3>
                       <div className="space-y-2 max-h-96 overflow-y-auto">
                         {statuses.map((status) => (
-                          <div key={status.id} className="glass p-3 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-[10px] text-brand-500">{status.date}</span>
+                          <div key={status.id} className="rounded-xl border border-zinc-700/50 bg-zinc-950/40 p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-white font-mono">{status.date}</span>
+                                {status.mood && <span className="text-[10px] text-amber-400">{status.mood}/10</span>}
+                              </div>
                               <button
                                 onClick={() => deleteStatus(status.id, status.date)}
-                                className="text-[10px] text-red-400 hover:text-red-300"
+                                className="text-[10px] text-red-400 hover:text-red-300 transition-colors"
                               >
                                 Delete
                               </button>
                             </div>
-                            {status.statusText && <p className="text-xs text-white mb-2">{status.statusText}</p>}
-                            {status.tasks && status.tasks.length > 0 && (
-                              <div className="text-[10px] text-brand-400 mb-1">
-                                Tasks: {status.tasks.join(", ")}
-                              </div>
-                            )}
-                            {status.study && (
-                              <div className="text-[10px] text-brand-400 mb-1">
-                                Study: {status.study.hours}h - {status.study.subject}
-                              </div>
-                            )}
-                            {status.mood && (
-                              <div className="text-[10px] text-brand-400">
-                                Mood: {status.mood}/10
-                              </div>
-                            )}
+                            {status.statusText && <p className="text-[10px] text-zinc-300 border-l-2 border-accent/30 pl-2 mb-1.5 italic">{status.statusText}</p>}
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] text-zinc-500 font-mono">
+                              {status.study && <span className="text-yellow-500">📚 {status.study.hours}h {status.study.subject}</span>}
+                              {status.project && <span className="text-cyan-500">💻 {status.project.hours}h</span>}
+                              {status.health && <span>😴 {status.health.sleep}h</span>}
+                              {status.finance && <span className={status.finance.income >= status.finance.expense ? "text-emerald-500" : "text-red-400"}>₹{status.finance.income - status.finance.expense}</span>}
+                            </div>
                           </div>
                         ))}
                         {statuses.length === 0 && (
-                          <div className="text-brand-500 text-xs py-8 text-center">No status logs yet</div>
+                          <div className="text-brand-500 text-xs py-8 text-center font-mono">No status logs yet</div>
                         )}
                       </div>
                     </div>

@@ -21,6 +21,11 @@ router.get('/', async (req, res) => {
 
 router.post('/', requireAuth, async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(503).json({ error: 'Database not available.' });
+      return;
+    }
+
     const { 
       date, 
       statusText, 
@@ -34,6 +39,11 @@ router.post('/', requireAuth, async (req, res) => {
       bestMoment,
       lessonLearned
     } = req.body;
+
+    if (!date) {
+      res.status(400).json({ error: 'Date is required.' });
+      return;
+    }
 
     const docRef = firestore.collection('dailyStatus').doc(date);
     const updateData: any = {
@@ -56,17 +66,25 @@ router.post('/', requireAuth, async (req, res) => {
     const doc = await docRef.get();
     res.status(201).json({ id: doc.id, ...doc.data() });
   } catch (error: any) {
-    res.status(500).json({ error: "Failed to create status" });
+    res.status(500).json({ error: error?.message || 'Failed to create status' });
   }
 });
 
 router.delete('/', requireAuth, async (req, res) => {
   try {
+    if (!firestore) {
+      res.status(503).json({ error: 'Database not available.' });
+      return;
+    }
     const { id } = req.body;
+    if (!id) {
+      res.status(400).json({ error: 'ID is required.' });
+      return;
+    }
     await firestore.collection('dailyStatus').doc(id).delete();
     res.status(200).json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: "Failed to delete status" });
+    res.status(500).json({ error: error?.message || 'Failed to delete status' });
   }
 });
 
