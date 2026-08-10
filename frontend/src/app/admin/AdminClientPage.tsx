@@ -278,7 +278,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "manage-resume" | "quiz-management";
+type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "vlog-settings" | "vlog-videos" | "manage-resume" | "quiz-management";
 
 interface ResumeItem {
   id: string;
@@ -364,6 +364,34 @@ export default function AdminClientPage() {
     playlistTitle: string;
     playlistThumbnail: string;
   } | null>(null);
+
+  // Vlog Corner settings
+  const [vlogPlaylistUrl, setVlogPlaylistUrl] = useState("https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+  const [vlogSettings, setVlogSettings] = useState<{
+    playlistUrl?: string;
+    playlistId?: string;
+    playlistTitle?: string;
+    playlistThumbnail?: string;
+  } | null>(null);
+
+  // Vlog Videos management
+  interface VlogVideoItem {
+    id: string;
+    videoId: string;
+    title: string;
+    description?: string;
+    uploadDate?: string;
+    tags?: string[];
+    thumbnail?: string;
+  }
+  const [vlogVideos, setVlogVideos] = useState<VlogVideoItem[]>([]);
+  const [vlogVideoForm, setVlogVideoForm] = useState({
+    videoId: "",
+    title: "",
+    description: "",
+    uploadDate: new Date().toISOString().split("T")[0],
+    tags: "",
+  });
 
   // Update Form
   const [updateForm, setUpdateForm] = useState({
@@ -565,6 +593,29 @@ export default function AdminClientPage() {
     }
   }, []);
 
+  const fetchVlogSettings = useCallback(async () => {
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/vlogs`);
+      if (!res.ok) throw new Error("Failed to load vlog settings");
+      const data = await res.json();
+      setVlogSettings(data);
+      setVlogPlaylistUrl(data.playlistUrl || "");
+    } catch {
+      showToast("Failed to load vlog settings.", "error");
+    }
+  }, []);
+
+  const fetchVlogVideos = useCallback(async () => {
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/vlogs/videos`, { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed to load vlog videos");
+      const data = await res.json();
+      setVlogVideos(Array.isArray(data) ? data : []);
+    } catch {
+      // silent fail — not critical
+    }
+  }, []);
+
   // On Mount: Load public statuses and session
   useEffect(() => {
     fetchPublicLogs();
@@ -603,6 +654,8 @@ export default function AdminClientPage() {
         fetchAdminData(),
         fetchGalleryData(),
         fetchMusicSettings(),
+        fetchVlogSettings(),
+        fetchVlogVideos(),
         fetchResumeData(),
         fetchQuizData(),
       ]);
@@ -1106,6 +1159,40 @@ export default function AdminClientPage() {
     }
   };
 
+  // ── Submit Vlog Settings ──
+  const handleVlogSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const url = vlogPlaylistUrl.trim();
+      const listMatch = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+      const pathMatch = url.match(/youtube\.com\/playlist\/([a-zA-Z0-9_-]+)/);
+      const playlistId = listMatch ? listMatch[1] : pathMatch ? pathMatch[1] : "";
+
+      if (!playlistId) {
+        showToast("Invalid YouTube playlist URL. Link must contain a playlist ID (e.g., list=PL...)", "error");
+        return;
+      }
+
+      const res = await fetch(`${getBackendUrl()}/api/vlogs`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ playlistUrl: url, playlistId }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to update vlog settings (${res.status}).`);
+      }
+      const data = await res.json();
+      setVlogSettings(data);
+      showToast("Vlog playlist updated successfully!", "success");
+    } catch (err) {
+      showToast(getErrorMessage(err), "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ── Submit Resume ──
   const handleResumeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1194,7 +1281,9 @@ export default function AdminClientPage() {
     { id: "write-blog", label: "Write Blog", icon: "✍️" },
     { id: "manage-blogs", label: "Manage Blogs", icon: "📝" },
     { id: "gallery-management", label: "Gallery", icon: "🖼️" },
-    { id: "music-settings", label: "Music", icon: "🎵" },
+    { id: "music-settings", label: "Music Playlist", icon: "🎵" },
+    { id: "vlog-settings", label: "Vlog Playlist", icon: "📹" },
+    { id: "vlog-videos", label: "Vlog Videos", icon: "🎥" },
     { id: "manage-resume", label: "Resume", icon: "📄" },
     { id: "quiz-management", label: "Quiz", icon: "❓" },
   ];
@@ -2264,6 +2353,238 @@ export default function AdminClientPage() {
                         {submitting ? "Updating..." : "Update Settings"}
                       </button>
                     </form>
+                  </div>
+                )}
+
+                {/* Vlog Settings Tab */}
+                {activeTab === "vlog-settings" && (
+                  <div>
+                    <h2 className="text-lg font-bold text-white mb-4">Vlog Corner Settings</h2>
+                    <form onSubmit={handleVlogSubmit} className="space-y-4">
+                      <InputField
+                        label="YouTube Vlog Playlist URL"
+                        name="vlogPlaylistUrl"
+                        value={vlogPlaylistUrl}
+                        onChange={(e) => setVlogPlaylistUrl(e.target.value)}
+                        placeholder="https://www.youtube.com/playlist?list=..."
+                        required
+                        hint="Must be a YouTube playlist URL for Nishant's Vlogs"
+                      />
+                      {vlogSettings && (
+                        <div className="glass p-4 rounded-lg space-y-2">
+                          <div className="text-xs text-brand-400 font-semibold">Current Vlog Playlist Settings:</div>
+                          <div className="flex items-center gap-3">
+                            {vlogSettings.playlistThumbnail && (
+                              <img
+                                src={vlogSettings.playlistThumbnail}
+                                alt="Playlist thumbnail"
+                                className="w-16 h-12 object-cover rounded border border-white/10"
+                              />
+                            )}
+                            <div>
+                              <div className="text-xs text-white font-medium">{vlogSettings.playlistTitle || "Nishant's Vlogs"}</div>
+                              <div className="text-[10px] text-brand-500 font-mono">Playlist ID: {vlogSettings.playlistId || "N/A"}</div>
+                              {vlogSettings.playlistUrl && (
+                                <a
+                                  href={vlogSettings.playlistUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-accent hover:underline mt-0.5 inline-block"
+                                >
+                                  Open Playlist ↗
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-3 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-semibold hover:bg-accent/20 transition-all disabled:opacity-50"
+                      >
+                        {submitting ? "Updating..." : "Update Vlog Playlist Settings"}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {/* Vlog Videos Management Tab */}
+                {activeTab === "vlog-videos" && (
+                  <div className="space-y-6">
+                    <h2 className="text-lg font-bold text-white mb-4">Manage Vlog Videos</h2>
+                    <p className="text-xs text-brand-400 mb-4">
+                      Add individual vlog videos here. Each video gets its own SEO page at{" "}
+                      <span className="text-accent font-mono">/vlogs/&#123;videoId&#125;</span> with
+                      unique title, description, and structured data for Google.
+                    </p>
+
+                    {/* Add Video Form */}
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        setSubmitting(true);
+                        try {
+                          const res = await fetch(`${getBackendUrl()}/api/vlogs/videos`, {
+                            method: "POST",
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({
+                              videoId: vlogVideoForm.videoId.trim(),
+                              title: vlogVideoForm.title.trim(),
+                              description: vlogVideoForm.description.trim(),
+                              uploadDate: vlogVideoForm.uploadDate,
+                              tags: vlogVideoForm.tags,
+                            }),
+                          });
+                          if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            throw new Error(err.error || `Failed to add video (${res.status})`);
+                          }
+                          const newVideo = await res.json();
+                          setVlogVideos((prev) => [newVideo, ...prev]);
+                          setVlogVideoForm({ videoId: "", title: "", description: "", uploadDate: new Date().toISOString().split("T")[0], tags: "" });
+                          showToast("Vlog video added successfully!", "success");
+                        } catch (err) {
+                          showToast(getErrorMessage(err), "error");
+                        } finally {
+                          setSubmitting(false);
+                        }
+                      }}
+                      className="glass p-5 rounded-xl space-y-4"
+                    >
+                      <h3 className="text-sm font-bold text-white">Add New Vlog Video</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <InputField
+                          label="YouTube Video ID *"
+                          name="videoId"
+                          value={vlogVideoForm.videoId}
+                          onChange={(e) => setVlogVideoForm({ ...vlogVideoForm, videoId: e.target.value })}
+                          placeholder="e.g. dQw4w9WgXcQ"
+                          hint="The ID after ?v= in the YouTube URL"
+                          required
+                        />
+                        <InputField
+                          label="Video Title *"
+                          name="vlogTitle"
+                          value={vlogVideoForm.title}
+                          onChange={(e) => setVlogVideoForm({ ...vlogVideoForm, title: e.target.value })}
+                          placeholder="My College Life Vlog — Day 1"
+                          required
+                        />
+                      </div>
+                      <InputField
+                        label="Description"
+                        name="vlogDescription"
+                        value={vlogVideoForm.description}
+                        onChange={(e) => setVlogVideoForm({ ...vlogVideoForm, description: e.target.value })}
+                        placeholder="Short description for SEO and Google rich results"
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <InputField
+                          label="Upload Date"
+                          name="uploadDate"
+                          type="date"
+                          value={vlogVideoForm.uploadDate}
+                          onChange={(e) => setVlogVideoForm({ ...vlogVideoForm, uploadDate: e.target.value })}
+                        />
+                        <InputField
+                          label="Tags (comma separated)"
+                          name="vlogTags"
+                          value={vlogVideoForm.tags}
+                          onChange={(e) => setVlogVideoForm({ ...vlogVideoForm, tags: e.target.value })}
+                          placeholder="vlog, college life, CU"
+                          hint="Used as SEO keywords"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-3 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-semibold hover:bg-accent/20 transition-all disabled:opacity-50"
+                      >
+                        {submitting ? "Adding..." : "Add Vlog Video"}
+                      </button>
+                    </form>
+
+                    {/* Videos List */}
+                    <div>
+                      <h3 className="text-sm font-bold text-white mb-3">Added Videos ({vlogVideos.length})</h3>
+                      <div className="space-y-3">
+                        {vlogVideos.map((v) => (
+                          <div key={v.id} className="glass p-4 rounded-xl flex items-start gap-3">
+                            <img
+                              src={v.thumbnail || `https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`}
+                              alt={v.title}
+                              className="w-20 h-14 object-cover rounded-lg border border-white/10 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-white truncate">{v.title}</div>
+                              {v.description && (
+                                <div className="text-xs text-brand-400 truncate mt-0.5">{v.description}</div>
+                              )}
+                              <div className="flex items-center gap-3 mt-1.5">
+                                {v.uploadDate && (
+                                  <span className="text-[10px] text-brand-500">{v.uploadDate}</span>
+                                )}
+                                <a
+                                  href={`/vlogs/${v.videoId}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-accent hover:underline"
+                                >
+                                  SEO Page ↗
+                                </a>
+                                <a
+                                  href={`https://youtube.com/watch?v=${v.videoId}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-brand-400 hover:text-white"
+                                >
+                                  YouTube ↗
+                                </a>
+                              </div>
+                              {v.tags && v.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {v.tags.map((tag) => (
+                                    <span key={tag} className="px-1.5 py-0.5 rounded bg-accent/10 text-[9px] text-accent">
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                setConfirm({
+                                  message: `Delete video "${v.title}"?`,
+                                  onConfirm: async () => {
+                                    setConfirm(null);
+                                    try {
+                                      const res = await fetch(`${getBackendUrl()}/api/vlogs/videos/${v.id}`, {
+                                        method: "DELETE",
+                                        headers: getAuthHeaders(),
+                                      });
+                                      if (!res.ok) throw new Error("Failed to delete");
+                                      setVlogVideos((prev) => prev.filter((x) => x.id !== v.id));
+                                      showToast("Video deleted.", "success");
+                                    } catch (err) {
+                                      showToast(getErrorMessage(err), "error");
+                                    }
+                                  },
+                                });
+                              }}
+                              className="text-[10px] text-red-400 hover:text-red-300 shrink-0 mt-1"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                        {vlogVideos.length === 0 && (
+                          <div className="text-brand-500 text-xs py-8 text-center">
+                            No vlog videos added yet. Add your first video above.
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 

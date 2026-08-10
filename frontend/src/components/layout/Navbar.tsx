@@ -10,6 +10,7 @@ const navLinks = [
   { href: "/universe", label: "Social Media", match: "/universe" },
   { href: "/blog", label: "Blog", match: "/blog" },
   { href: "/music", label: "Music", match: "/music" },
+  { href: "/vlogs", label: "Vlogs", match: "/vlogs" },
 ];
 
 function isActive(pathname: string, match: string) {
