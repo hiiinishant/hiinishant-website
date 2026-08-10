@@ -121,6 +121,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://hiiinishant.com",
   },
+  verification: {
+    // Add your Google Search Console verification token below.
+    // Get it from: https://search.google.com/search-console → Add Property → HTML tag method
+    // Example: google: "abcdef1234567890abcdef1234567890abcdef12",
+    google: "google-site-verification-token-here",
+  },
 };
 
 export default function RootLayout({
@@ -134,6 +140,8 @@ export default function RootLayout({
       "@type": "Person",
       "@id": "https://hiiinishant.com/#person",
       "name": "Nishant Kumar",
+      "givenName": "Nishant",
+      "familyName": "Kumar",
       "alternateName": ["hiiinishant", "Hiii Nishant", "nishant kumar"],
       "url": "https://hiiinishant.com",
       "image": {
@@ -141,9 +149,22 @@ export default function RootLayout({
         "url": "https://hiiinishant.com/profile.jpg",
         "width": 800,
         "height": 800,
+        "caption": "Nishant Kumar — Founder of 2 AM Study",
       },
-      "description": "Nishant Kumar is the founder of 2 AM Study — a leading edtech platform empowering 100,000+ students. Student entrepreneur from Chandigarh University, digital creator, and educator.",
+      "description": "Nishant Kumar (hiiinishant) is the founder of 2 AM Study — a leading edtech platform empowering 100,000+ students across India. Student entrepreneur from Chandigarh University, digital creator, vlogger, and educator.",
       "jobTitle": "Founder & CEO",
+      "hasOccupation": [
+        {
+          "@type": "Occupation",
+          "name": "Entrepreneur",
+          "occupationLocation": { "@type": "Country", "name": "India" },
+        },
+        {
+          "@type": "Occupation",
+          "name": "Educator & Content Creator",
+          "occupationLocation": { "@type": "Country", "name": "India" },
+        },
+      ],
       "worksFor": {
         "@type": "Organization",
         "@id": "https://2amstudy.com/#org",
@@ -155,6 +176,10 @@ export default function RootLayout({
         "name": "Chandigarh University",
         "url": "https://www.cuchd.in",
       },
+      "birthPlace": {
+        "@type": "Place",
+        "name": "India",
+      },
       "knowsAbout": [
         "Education Technology",
         "Entrepreneurship",
@@ -162,8 +187,11 @@ export default function RootLayout({
         "Student Community Building",
         "Online Learning Platforms",
         "EdTech",
-        "YouTube Content",
+        "YouTube Content Creation",
+        "Vlogging",
         "Blogging",
+        "GATE CSE Preparation",
+        "B.Tech Computer Science",
       ],
       "nationality": {
         "@type": "Country",
@@ -177,6 +205,7 @@ export default function RootLayout({
         "https://facebook.com/hiiinishant",
         "https://github.com/hiiinishant",
         "https://2amstudy.com",
+        "https://hiiinishant.com/vlogs",
       ],
     },
     {

@@ -271,7 +271,7 @@ function UpdateCard({ item, index }: { item: UpdateItem; index: number }) {
               {isInstagram && (
             <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-black/65 backdrop-blur-md rounded-full px-2.5 py-1 border border-white/10">
               <div className="w-4 h-4 rounded-full overflow-hidden relative">
-                <Image src="/profile.jpg" alt="hiiinishant" fill className="object-cover object-top" />
+                <Image src="/profile.jpg" alt="Nishant Kumar — hiiinishant, Founder of 2 AM Study" fill className="object-cover object-top" />
               </div>
               <span className="text-[10px] font-semibold text-white font-mono">hiiinishant</span>
             </div>

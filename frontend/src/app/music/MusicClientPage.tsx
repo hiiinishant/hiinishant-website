@@ -801,7 +801,7 @@ export default function MusicClientPage({
                         <div className="relative w-12 h-9 rounded-md overflow-hidden shrink-0 border border-white/5">
                           <Image
                             src={videoThumbnailUrl(track.videoId)}
-                            alt=""
+                            alt={track.title ? `${track.title} — Nishant Kumar Music` : "Music track thumbnail — Nishant Kumar"}
                             fill
                             sizes="48px"
                             className="object-cover"

@@ -3,6 +3,7 @@ import { siteConfig } from "@/data/site";
 import { getAllBlogPosts } from "@/data/blog";
 import { getAllStatuses } from "@/data/statusServer";
 import { getAllQuizDates } from "@/data/quizServer";
+import { getAllVlogVideos } from "@/data/vlogsServer";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url;
@@ -10,6 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 1. Define all static paths
   const staticRoutes = [
     "",
+    "/vlogs",
     "/journey",
     "/links",
     "/universe",
@@ -31,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (route === "") {
       changeFrequency = "daily";
       priority = 1.0;
-    } else if (route === "/updates" || route === "/status" || route === "/quiz") {
+    } else if (route === "/updates" || route === "/status" || route === "/quiz" || route === "/vlogs") {
       changeFrequency = "daily";
       priority = 0.8;
     } else if (route === "/blog" || route === "/projects" || route === "/journey") {
@@ -69,8 +71,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // 4. Fetch all published quiz dates and append them
-  // Each date becomes: hiiinishant.com/quiz/YYYY-MM-DD
-  // Google indexes the questions on that page automatically
   const quizDates = await getAllQuizDates();
   const dynamicQuizRoutes = quizDates.map((date) => ({
     url: `${baseUrl}/quiz/${date}`,
@@ -79,5 +79,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...dynamicBlogRoutes, ...dynamicStatusRoutes, ...dynamicQuizRoutes];
+  // 5. Fetch dynamic vlog videos and append them
+  const vlogVideos = await getAllVlogVideos();
+  const dynamicVlogRoutes = vlogVideos.map((video) => ({
+    url: `${baseUrl}/vlogs/${video.videoId}`,
+    lastModified: video.uploadDate ? new Date(video.uploadDate) : new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
+  return [...staticRoutes, ...dynamicBlogRoutes, ...dynamicStatusRoutes, ...dynamicQuizRoutes, ...dynamicVlogRoutes];
 }
