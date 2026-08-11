@@ -132,6 +132,30 @@ function deduplicateMessages(msgs: Message[]): Message[] {
   return result;
 }
 
+/** Detect URLs in plain text and wrap them in clickable <a> elements */
+function renderMessageText(text: string): React.ReactNode {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    urlRegex.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="underline underline-offset-2 break-all hover:opacity-80 transition-opacity"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
+
 
 function sortByRecent(list: Conversation[]): Conversation[] {
   return [...list].sort((a, b) => {
@@ -1520,7 +1544,7 @@ export default function NsgramMessagesPage() {
                       {msg.audioUrl ? (
                         <VoiceNotePlayer audioUrl={msg.audioUrl} />
                       ) : (
-                        msg.text
+                        renderMessageText(msg.text)
                       )}
 
                       {/* Message reactions badge */}
