@@ -1322,8 +1322,8 @@ export default function NsgramMessagesPage() {
                 {/* Voice Call */}
                 <button
                   onClick={() => voiceCall.initiateCall("voice")}
-                  disabled={!chatUserStatus || voiceCall.callState !== "idle"}
-                  title={chatUserStatus ? "Start Voice Call" : "User is offline"}
+                  disabled={voiceCall.callState !== "idle"}
+                  title="Start Voice Call"
                   className="flex items-center justify-center w-10 h-10 rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-400 hover:bg-amber-400/25 hover:text-amber-300 disabled:opacity-30 disabled:border-white/10 disabled:bg-white/5 disabled:text-brand-500 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1339,8 +1339,8 @@ export default function NsgramMessagesPage() {
                 {/* Video Call */}
                 <button
                   onClick={() => voiceCall.initiateCall("video")}
-                  disabled={!chatUserStatus || voiceCall.callState !== "idle"}
-                  title={chatUserStatus ? "Start Video Call" : "User is offline"}
+                  disabled={voiceCall.callState !== "idle"}
+                  title="Start Video Call"
                   className="flex items-center justify-center w-10 h-10 rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-400 hover:bg-amber-400/25 hover:text-amber-300 disabled:opacity-30 disabled:border-white/10 disabled:bg-white/5 disabled:text-brand-500 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

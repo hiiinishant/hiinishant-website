@@ -559,12 +559,16 @@ export function useVoiceCall(
     };
 
     // 3. Call Declined
-    const onCallDeclined = (data: { reason?: string }) => {
-      console.log("Call declined, reason:", data.reason);
+    const onCallDeclined = (data: { reason?: string; emailSent?: boolean }) => {
+      console.log("Call declined, reason:", data.reason, "emailSent:", data.emailSent);
       if (data.reason === "busy") {
         setCallErrorMessage("User is busy.");
       } else if (data.reason === "offline") {
-        setCallErrorMessage("User is offline.");
+        if (data.emailSent) {
+          setCallErrorMessage("User is offline. Urgent missed call email notification sent!");
+        } else {
+          setCallErrorMessage("User is offline. Missed call email was already sent within the last 4 hours.");
+        }
       } else if (data.reason === "mic_error") {
         setCallErrorMessage("User has media access issues.");
       } else if (data.reason === "timeout") {

@@ -31,8 +31,18 @@ export default function GlobalCallListener() {
     }
   }, []);
 
-  // Play ringtone function
-  const startRingtone = () => {
+  // Play ringtone and vibrate phone
+  const startRingtoneAndVibration = () => {
+    // 1. Device vibration pattern for mobile phones (0.5s vibrate, 0.25s pause)
+    try {
+      if (typeof window !== "undefined" && "navigator" in window && "vibrate" in navigator) {
+        navigator.vibrate([500, 250, 500, 250, 500, 250, 500, 250]);
+      }
+    } catch {
+      // Ignored if device doesn't support vibration
+    }
+
+    // 2. Ringtone audio
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
@@ -47,7 +57,7 @@ export default function GlobalCallListener() {
         osc.frequency.setValueAtTime(440, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
 
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
 
         osc.connect(gain);
@@ -64,7 +74,13 @@ export default function GlobalCallListener() {
     }
   };
 
-  const stopRingtone = () => {
+  const stopRingtoneAndVibration = () => {
+    try {
+      if (typeof window !== "undefined" && "navigator" in window && "vibrate" in navigator) {
+        navigator.vibrate(0);
+      }
+    } catch {}
+
     if (ringIntervalRef.current) {
       clearInterval(ringIntervalRef.current);
       ringIntervalRef.current = null;
@@ -102,16 +118,16 @@ export default function GlobalCallListener() {
       if (pathname === "/nsgram/messages") return;
 
       setIncomingCall(data);
-      startRingtone();
+      startRingtoneAndVibration();
     };
 
     const handleCallEnded = () => {
-      stopRingtone();
+      stopRingtoneAndVibration();
       setIncomingCall(null);
     };
 
     const handleCallDeclined = () => {
-      stopRingtone();
+      stopRingtoneAndVibration();
       setIncomingCall(null);
     };
 
@@ -123,7 +139,7 @@ export default function GlobalCallListener() {
       socket.off("incoming-call", handleIncomingCall);
       socket.off("call-ended", handleCallEnded);
       socket.off("call-declined", handleCallDeclined);
-      stopRingtone();
+      stopRingtoneAndVibration();
     };
   }, [socket, profile, pathname]);
 
@@ -133,30 +149,30 @@ export default function GlobalCallListener() {
     if (socket && incomingCall) {
       socket.emit("call-declined", { callerId: incomingCall.callerId, reason: "declined" });
     }
-    stopRingtone();
+    stopRingtoneAndVibration();
     setIncomingCall(null);
   };
 
   const handleAccept = () => {
-    stopRingtone();
+    stopRingtoneAndVibration();
     setIncomingCall(null);
     // Navigate user to messages page with caller conversation
     router.push(`/nsgram/messages?callerId=${incomingCall.callerId}&callType=${incomingCall.callType}`);
   };
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] animate-bounce-in max-w-sm w-[calc(100vw-32px)]">
-      <div className="glass-strong border border-amber-400/40 p-4 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] bg-slate-900/95 text-white flex items-center justify-between gap-3">
+    <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-4 sm:top-4 z-[99999] max-w-md sm:w-96 mx-auto sm:mx-0 animate-bounce-in">
+      <div className="glass-strong border-2 border-amber-400/60 p-4 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.9)] bg-slate-900/98 text-white flex items-center justify-between gap-3 backdrop-blur-2xl">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="relative shrink-0 w-11 h-11 rounded-xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-2xl select-none">
+          <div className="relative shrink-0 w-12 h-12 rounded-2xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-2xl select-none shadow-inner">
             {incomingCall.callerAvatar === "girl" ? "👧" : "👦"}
-            <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[9px] font-bold text-black animate-ping" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-400 text-[10px] font-bold text-black animate-ping" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-white truncate">
+            <p className="text-sm font-bold text-white truncate leading-tight">
               @{incomingCall.callerName}
             </p>
-            <p className="text-[11px] text-amber-300 flex items-center gap-1 font-medium">
+            <p className="text-xs text-amber-300 flex items-center gap-1 font-semibold mt-0.5 animate-pulse">
               <span>{incomingCall.callType === "video" ? "🎥 Incoming Video Call" : "📞 Incoming Voice Call"}</span>
             </p>
           </div>
@@ -165,14 +181,14 @@ export default function GlobalCallListener() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleDecline}
-            className="p-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 transition-all cursor-pointer"
+            className="p-3 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/40 transition-all active:scale-95 cursor-pointer"
             title="Decline"
           >
-            <PhoneOff className="w-4 h-4" />
+            <PhoneOff className="w-5 h-5" />
           </button>
           <button
             onClick={handleAccept}
-            className="p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition-all shadow-md hover:scale-105 cursor-pointer flex items-center gap-1 text-xs"
+            className="px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold transition-all shadow-lg active:scale-95 cursor-pointer flex items-center gap-1.5 text-xs tracking-wide"
             title="Answer"
           >
             <PhoneCall className="w-4 h-4" />
@@ -183,3 +199,4 @@ export default function GlobalCallListener() {
     </div>
   );
 }
+
