@@ -156,8 +156,8 @@ export default function GlobalCallListener() {
   const handleAccept = () => {
     stopRingtoneAndVibration();
     setIncomingCall(null);
-    // Navigate user to messages page with caller conversation
-    router.push(`/nsgram/messages?callerId=${incomingCall.callerId}&callType=${incomingCall.callType}`);
+    // Navigate user to messages page with conversation selected
+    router.push(`/nsgram/messages?convoId=${incomingCall.conversationId}&callerId=${incomingCall.callerId}&callType=${incomingCall.callType}`);
   };
 
   return (

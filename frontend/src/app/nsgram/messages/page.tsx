@@ -450,11 +450,19 @@ export default function NsgramMessagesPage() {
   // Communicates send-vs-cancel decision to the async onstop handler
   const shouldSendRef = useRef(false);
 
-  // ── Sync convoId from URL ──────────────────────────────────────────────────
+  // ── Sync convoId / callerId from URL ──────────────────────────────────────
   useEffect(() => {
-    const id = searchParams.get("convoId");
-    if (id) queueMicrotask(() => setSelectedConversationId(id));
-  }, [searchParams]);
+    const convoId = searchParams.get("convoId");
+    const callerId = searchParams.get("callerId");
+    if (convoId) {
+      queueMicrotask(() => setSelectedConversationId(convoId));
+    } else if (callerId && conversations.length > 0) {
+      const match = conversations.find((c) => c.participants.includes(callerId));
+      if (match) {
+        queueMicrotask(() => setSelectedConversationId(match.id));
+      }
+    }
+  }, [searchParams, conversations]);
 
   // NOTE: We intentionally do NOT lock body/html overflow here.
   // Doing so fights Android Chrome's dynamic viewport resize when the keyboard
