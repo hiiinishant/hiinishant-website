@@ -144,7 +144,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-accent/5 blur-[120px]"></div>
       </div>
       
-      <div className="max-w-3xl mx-auto px-5 sm:px-8 relative z-10">
+      <div className="max-w-5xl mx-auto px-5 sm:px-8 relative z-10">
         {/* ← Back to Blog */}
         <Link
           href="/blog"
