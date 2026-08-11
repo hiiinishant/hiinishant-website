@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { NsgramAuthProvider, useNsgramAuth } from "@/components/nsgram/NsgramAuthProvider";
 import NsgramSidebar from "@/components/nsgram/NsgramSidebar";
 import NsgramHeader from "@/components/nsgram/NsgramHeader";
+import GlobalCallListener from "@/components/nsgram/GlobalCallListener";
 
 function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
   const { authUser, profile, loading } = useNsgramAuth();
@@ -78,6 +79,8 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+      {/* Global Incoming Call Listener & Pop-up Notification */}
+      <GlobalCallListener />
     </div>
   );
 }

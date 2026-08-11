@@ -1697,8 +1697,8 @@ export default function NsgramMessagesPage() {
           isMuted={voiceCall.isMuted}
           isCameraOn={voiceCall.isCameraOn}
           duration={voiceCall.callDuration}
-          partnerName={selectedChatUser?.displayName || voiceCall.incomingCallInfo?.callerName || ""}
-          partnerAvatar={selectedChatUser?.avatar || voiceCall.incomingCallInfo?.callerAvatar || "boy"}
+          partnerName={voiceCall.incomingCallInfo?.callerName || selectedChatUser?.displayName || "User"}
+          partnerAvatar={voiceCall.incomingCallInfo?.callerAvatar || selectedChatUser?.avatar || "boy"}
           localStream={voiceCall.localStream}
           remoteStream={voiceCall.remoteStream}
           onEndCall={voiceCall.endCall}

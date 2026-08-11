@@ -212,13 +212,48 @@ io.on('connection', (socket) => {
   });
 
   // ── WebRTC Voice Call Signaling ───────────────────────────────────────────
-  socket.on('call-user', (data: { callerId: string; calleeId: string; callerName: string; callerAvatar: string; conversationId: string; callType: 'voice' | 'video' }) => {
+  socket.on('call-user', async (data: { callerId: string; calleeId: string; callerName: string; callerAvatar: string; conversationId: string; callType: 'voice' | 'video' }) => {
     const { callerId, calleeId, callerName, callerAvatar, conversationId, callType } = data;
     const calleeSocketId = getUserSocketId(calleeId);
     if (calleeSocketId) {
       io.to(calleeSocketId).emit('incoming-call', { callerId, callerName, callerAvatar, conversationId, callType });
     } else {
       socket.emit('call-declined', { reason: 'offline' });
+
+      // 📧 Send email notification to callee if offline / not connected to website
+      if (firestore) {
+        try {
+          const calleeDoc = await firestore.collection('users').doc(calleeId).get();
+          if (calleeDoc.exists) {
+            const calleeData = calleeDoc.data();
+            const calleeEmail = calleeData?.email;
+            const calleeName = calleeData?.displayName || calleeData?.username || "there";
+
+            if (calleeEmail) {
+              const { sendEmail } = await import('./lib/mail');
+              await sendEmail({
+                to: calleeEmail,
+                subject: `📞 Missed ${callType === 'video' ? 'Video' : 'Voice'} Call on NSGram from ${callerName}`,
+                text: `Hi ${calleeName},\n\n${callerName} tried to call you on NSGram while you were offline.\n\nLog in to NSGram to connect back: https://hiiinishant.com/nsgram/messages`,
+                html: `
+                  <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; background: #0f172a; color: #f8fafc; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                    <h2 style="color: #f59e0b; margin-top: 0;">📞 Missed ${callType === 'video' ? 'Video' : 'Voice'} Call</h2>
+                    <p>Hi <strong>${calleeName}</strong>,</p>
+                    <p><strong>${callerName}</strong> tried to start a ${callType} call with you on NSGram, but you were offline or away from the website.</p>
+                    <div style="margin: 24px 0;">
+                      <a href="https://hiiinishant.com/nsgram/messages" style="background: #f59e0b; color: #020617; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Open NSGram Messages →</a>
+                    </div>
+                    <p style="color: #64748b; font-size: 12px; margin-bottom: 0;">Hiii Nishant • NSGram Notifications</p>
+                  </div>
+                `,
+              });
+              console.log(`[call-user] Sent missed call email to ${calleeEmail} for caller ${callerName}`);
+            }
+          }
+        } catch (mailErr) {
+          console.error('[call-user] Failed to send missed call email:', mailErr);
+        }
+      }
     }
   });
 
