@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { API_BASE } from "@/lib/api";
 
 const pgpFingerprint = "3C84 727C EF14 8C05 C9D9\n2177 BF61 91EF 497A 3A36";
@@ -26,25 +26,6 @@ const contactMethods = [
   },
 ];
 
-const faqs = [
-  {
-    question: "Are you open to collaborations?",
-    answer: "Absolutely! I'm always looking for meaningful collaborations that align with the mission of making education better. Reach out via the form or DM me.",
-  },
-  {
-    question: "Do you do speaking engagements?",
-    answer: "Yes — I speak about entrepreneurship, edtech, community building, and the future of education. Let's discuss the details over email.",
-  },
-  {
-    question: "Can I join the 2 AM Study team?",
-    answer: "We're always looking for passionate people. Check our social channels for any open positions, or send in your details through the contact form.",
-  },
-  {
-    question: "How can I get featured on 2 AM Study?",
-    answer: "If you have a compelling student story or educational content to share, I'd love to hear about it. Drop me a message!",
-  },
-];
-
 interface FormState {
   name: string;
   email: string;
@@ -64,29 +45,7 @@ export default function ContactClientPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [copiedFingerprint, setCopiedFingerprint] = useState(false);
-  const [openFaqIndex, setOpenFaqIndex] = useState(0);
-  const [faqInView, setFaqInView] = useState(false);
-  const faqSectionRef = useRef<HTMLElement | null>(null);
-  const faqButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
-  useEffect(() => {
-    const section = faqSectionRef.current;
-    if (!section) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setFaqInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-
-    observer.observe(section);
-
-    return () => observer.disconnect();
-  }, []);
+  const fingerprintRef = useRef<HTMLButtonElement | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -124,25 +83,6 @@ export default function ContactClientPage() {
     await navigator.clipboard.writeText(pgpFingerprint.replace("\n", " "));
     setCopiedFingerprint(true);
     window.setTimeout(() => setCopiedFingerprint(false), 2000);
-  };
-
-  const handleFaqKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      const offset = e.key === "ArrowDown" ? 1 : -1;
-      const nextIndex = (index + offset + faqs.length) % faqs.length;
-      faqButtonRefs.current[nextIndex]?.focus();
-    }
-
-    if (e.key === "Home") {
-      e.preventDefault();
-      faqButtonRefs.current[0]?.focus();
-    }
-
-    if (e.key === "End") {
-      e.preventDefault();
-      faqButtonRefs.current[faqs.length - 1]?.focus();
-    }
   };
 
   return (
@@ -227,6 +167,7 @@ export default function ContactClientPage() {
                     Verify this fingerprint before sending confidential information.
                   </p>
                   <button
+                    ref={fingerprintRef}
                     type="button"
                     onClick={handleCopyFingerprint}
                     className="mt-3 w-full py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-brand-200 text-[10px] font-semibold uppercase tracking-wider transition-all duration-300"
@@ -373,71 +314,6 @@ export default function ContactClientPage() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── FAQ ─── */}
-      <section ref={faqSectionRef} className="py-20 lg:py-28 bg-brand-900/30 border-y border-white/5">
-        <div className="max-w-3xl mx-auto px-5 sm:px-8">
-          <div
-            className={`text-center mb-12 transition-all duration-300 ease-out ${
-              faqInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-            }`}
-          >
-            <span className="text-xs font-semibold text-accent uppercase tracking-widest mb-4 block">FAQ</span>
-            <h2 className="text-3xl font-bold">Frequently asked questions</h2>
-          </div>
-          <div className="space-y-4">
-            {faqs.map((faq, i) => (
-              <div
-                key={faq.question}
-                className={`glass rounded-xl hover:glass-strong hover:-translate-y-0.5 transition-all duration-300 ease-out ${
-                  faqInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
-                }`}
-                style={{ transitionDelay: faqInView ? `${i * 100}ms` : "0ms" }}
-              >
-                <h3>
-                  <button
-                    ref={(el) => {
-                      faqButtonRefs.current[i] = el;
-                    }}
-                    type="button"
-                    id={`faq-trigger-${i}`}
-                    aria-expanded={openFaqIndex === i}
-                    aria-controls={`faq-panel-${i}`}
-                    onClick={() => setOpenFaqIndex((current) => (current === i ? -1 : i))}
-                    onKeyDown={(e) => handleFaqKeyDown(e, i)}
-                    className="flex w-full items-center justify-between gap-4 p-6 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-950 rounded-xl"
-                  >
-                    <span className="text-base font-semibold text-white">{faq.question}</span>
-                    <svg
-                      className={`w-4 h-4 text-accent shrink-0 transition-transform duration-300 ${
-                        openFaqIndex === i ? "rotate-180" : "rotate-0"
-                      }`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </h3>
-                <div
-                  id={`faq-panel-${i}`}
-                  role="region"
-                  aria-labelledby={`faq-trigger-${i}`}
-                  className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
-                    openFaqIndex === i ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <p className="px-6 pb-6 -mt-1 text-sm text-brand-400 leading-relaxed">{faq.answer}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

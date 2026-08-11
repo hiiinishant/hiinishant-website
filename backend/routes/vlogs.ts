@@ -6,40 +6,83 @@ const router = Router();
 
 const DEFAULT_VLOG_PLAYLIST_URL =
   process.env.VLOG_PLAYLIST_URL ||
-  "https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf";
+  "https://www.youtube.com/playlist?list=PL7WyIzpQW_0aEsXP5PyWyjpmlGkEeU5nr";
 
 const DEFAULT_INITIAL_VIDEOS = [
   {
-    videoId: "dQw4w9WgXcQ",
-    title: "My College Life Vlog — Day 1",
-    description: "First day at Chandigarh University",
+    videoId: "-zCZyulh9I8",
+    title: "Diwali Celebration in my college  | Chandigarh University | Nishant's World of Vibes",
+    description: "By Hiii Nishant",
   },
   {
-    videoId: "dQw4w9WgXcQ",
-    title: "Building 2 AM Study — Behind the Scenes",
-    description: "How it all started",
+    videoId: "U68KQP2s0Qk",
+    title: "Holi celebration in my college  | Happy Holi 🎉 | Chandigarh University | Nishant Kumar Vlogs",
+    description: "By Hiii Nishant",
   },
   {
-    videoId: "dQw4w9WgXcQ",
-    title: "My Daily Routine as a Student Founder",
-    description: "Hustle, study, repeat",
+    videoId: "9qElnk3VIAM",
+    title: "Chandigarh university Diwali Celebration | Diwali Special Video 2023 | Vlog Video | Nishant Kumar",
+    description: "By Hiii Nishant",
   },
   {
-    videoId: "dQw4w9WgXcQ",
-    title: "Study Motivation Vlog — Late Night Grind",
-    description: "2 AM and still coding",
+    videoId: "qZflRQ3ZdG0",
+    title: "Ek diwali aisa bhi 👀 | Diwali celebration | Nishant Kumar | vlog video",
+    description: "By Hiii Nishant",
   },
   {
-    videoId: "dQw4w9WgXcQ",
-    title: "Campus Life & Entrepreneurship",
-    description: "Balancing college and a startup",
+    videoId: "fDZxl3m0TZw",
+    title: "Chandigarh University | MAKA TROPHY  champion 🔥",
+    description: "By Hiii Nishant",
   },
   {
-    videoId: "dQw4w9WgXcQ",
-    title: "What I Learned This Year — Annual Vlog",
-    description: "Lessons from the journey",
+    videoId: "98bwPXP6bBY",
+    title: "Lohri Celebration in my college | Chandigarh University 🎇",
+    description: "By Hiii Nishant",
   },
-];
+  {
+    videoId: "i6zlm5wal_o",
+    title: "First Time खाना बनाया | Part - 1| Chandigarh University Student Life | College Student Daily Routine",
+    description: "By Hiii Nishant",
+  },
+  {
+    videoId: "dLbYPk0ZiLc",
+    title: "International Women's Day in Chandigarh University 🔥 | Chandigarh University",
+    description: "By Hiii Nishant",
+  },
+  {
+    videoId: "x0ZCdKOOsxk",
+    title: "Mahashivratri Special 🧡 | Happy Mahashivratri Guys | Near Chandigarh University | Nishant Kumar vlog",
+    description: "By Hiii Nishant",
+  },
+  {
+    videoId: "LGlHdvB_cTE",
+    title: "My College Life 🙂 | Chandigarh University | CU | Nishant Kumar shorts video",
+    description: "By Hiii Nishant",
+  },
+  {
+    videoId: "_AyCbGNiX2k",
+    title: "Nishant shorts video | Chandigarh University student short video | college student",
+    description: "By Hiii Nishant",
+  },
+  {
+    videoId: "fb2K1XW_8cE",
+    title: "Raat me bahar 😱 | New vlog video | Nishant Kumar | Chandigarh university student",
+    description: "By Hiii Nishant",
+  },
+  {
+    videoId: "2UoNmuJfPWQ",
+    title: "Saraswati Group of Colleges | SGC | Fresher's Party Vlog | Daily Vlog | Nishant Kumar",
+    description: "By Hiii Nishant",
+  },
+  {
+    videoId: "NzIOLBaHvaI",
+    title: "Jubin Nautiyal in my college | Chandigarh University | Nishant Vlogs",
+    description: "By Hiii Nishant",
+  },
+].map((v) => ({
+  ...v,
+  thumbnail: `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+}));
 
 function extractPlaylistId(url: string): string | null {
   if (!url) return null;
@@ -70,6 +113,65 @@ async function fetchPlaylistMetadata(playlistId: string): Promise<{ title: strin
   }
 }
 
+async function fetchPlaylistVideos(playlistId: string): Promise<Array<{ videoId: string; title: string; description: string; thumbnail: string }>> {
+  if (!playlistId) return DEFAULT_INITIAL_VIDEOS;
+  try {
+    const playlistUrl = `https://www.youtube.com/playlist?list=${playlistId}`;
+    const res = await fetch(playlistUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+    if (!res.ok) return DEFAULT_INITIAL_VIDEOS;
+    const html = await res.text();
+
+    const matches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)];
+    const uniqueVideoIds: string[] = [];
+    const seen = new Set<string>();
+    for (const m of matches) {
+      const id = m[1];
+      if (!seen.has(id)) {
+        seen.add(id);
+        uniqueVideoIds.push(id);
+      }
+    }
+
+    if (uniqueVideoIds.length === 0) return DEFAULT_INITIAL_VIDEOS;
+
+    const idsToFetch = uniqueVideoIds.slice(0, 50);
+    const videoItems = await Promise.all(
+      idsToFetch.map(async (videoId) => {
+        try {
+          const oembedRes = await fetch(
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+          );
+          if (oembedRes.ok) {
+            const data = (await oembedRes.json()) as { title?: string; author_name?: string; thumbnail_url?: string };
+            return {
+              videoId,
+              title: data.title || `Vlog ${videoId}`,
+              description: data.author_name ? `By ${data.author_name}` : "",
+              thumbnail: data.thumbnail_url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+            };
+          }
+        } catch {}
+        return {
+          videoId,
+          title: `Vlog ${videoId}`,
+          description: "",
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        };
+      })
+    );
+
+    return videoItems.length > 0 ? videoItems : DEFAULT_INITIAL_VIDEOS;
+  } catch (err) {
+    console.warn("Failed to fetch playlist videos dynamically:", err);
+    return DEFAULT_INITIAL_VIDEOS;
+  }
+}
+
 async function buildVlogSettings(playlistUrl: string) {
   const playlistId = extractPlaylistId(playlistUrl) || "";
   if (!playlistId) {
@@ -84,6 +186,7 @@ async function buildVlogSettings(playlistUrl: string) {
     };
   }
   const metadata = await fetchPlaylistMetadata(playlistId);
+  const initialVideos = await fetchPlaylistVideos(playlistId);
   return {
     channelHandle: "@hiiinishant",
     channelName: "Nishant Kumar",
@@ -91,7 +194,7 @@ async function buildVlogSettings(playlistUrl: string) {
     playlistId,
     playlistTitle: metadata.title,
     playlistThumbnail: metadata.thumbnail,
-    initialVideos: DEFAULT_INITIAL_VIDEOS,
+    initialVideos,
   };
 }
 
@@ -142,6 +245,7 @@ const updateVlogHandler = async (req: any, res: any) => {
     }
 
     const metadata = await fetchPlaylistMetadata(playlistId);
+    const fetchedVideos = await fetchPlaylistVideos(playlistId);
     const updatedData = {
       channelHandle: req.body.channelHandle || "@hiiinishant",
       channelName: req.body.channelName || "Nishant Kumar",
@@ -149,6 +253,7 @@ const updateVlogHandler = async (req: any, res: any) => {
       playlistId,
       playlistTitle: metadata.title,
       playlistThumbnail: metadata.thumbnail,
+      initialVideos: fetchedVideos,
       updatedAt: new Date().toISOString(),
     };
 
@@ -164,7 +269,7 @@ const updateVlogHandler = async (req: any, res: any) => {
       playlistId: data.playlistId || playlistId,
       playlistTitle: data.playlistTitle || metadata.title,
       playlistThumbnail: data.playlistThumbnail || metadata.thumbnail,
-      initialVideos: data.initialVideos || DEFAULT_INITIAL_VIDEOS,
+      initialVideos: data.initialVideos || fetchedVideos,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to save vlog settings" });

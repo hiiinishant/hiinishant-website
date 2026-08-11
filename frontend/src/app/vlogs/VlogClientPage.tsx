@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import PageHeader from "@/components/layout/PageHeader";
 import { loadYouTubeApi, fetchVideoTitle, videoThumbnailUrl } from "@/lib/youtube";
-import { type VlogSettings, type VlogVideo } from "@/data/vlogs";
+import { type VlogSettings, type VlogVideo, NISHANT_ACTUAL_VLOGS } from "@/data/vlogs";
+import { apiUrl } from "@/lib/api";
 import {
   Play,
   Pause,
@@ -26,6 +27,15 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
 }
 
+function sanitizeVlogVideos(list?: VlogVideo[]): VlogVideo[] {
+  if (!list || list.length === 0) return NISHANT_ACTUAL_VLOGS;
+  const hasDummy = list.some(
+    (v) => v.videoId === "dQw4w9WgXcQ" || v.title?.includes("My College Life Vlog — Day 1")
+  );
+  if (hasDummy) return NISHANT_ACTUAL_VLOGS;
+  return list;
+}
+
 export default function VlogClientPage({
   initialSettings,
 }: {
@@ -41,8 +51,8 @@ export default function VlogClientPage({
   const [playing, setPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentTitle, setCurrentTitle] = useState("");
-  const [videos, setVideos] = useState<VlogVideo[]>(
-    initialSettings.initialVideos || []
+  const [videos, setVideos] = useState<VlogVideo[]>(() =>
+    sanitizeVlogVideos(initialSettings.initialVideos)
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -158,8 +168,26 @@ export default function VlogClientPage({
     [syncCurrentVideo, volume, videos.length]
   );
 
-  // Initialize on mount
+  // Initialize on mount and sync fresh video settings
   useEffect(() => {
+    async function loadFreshSettings() {
+      try {
+        const res = await fetch(apiUrl("/api/vlogs"));
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            const data = await res.json();
+            if (data.initialVideos && Array.isArray(data.initialVideos)) {
+              setVideos(sanitizeVlogVideos(data.initialVideos));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch fresh vlog settings, using sanitized list:", err);
+      }
+    }
+    loadFreshSettings();
+
     if (videos.length > 0) {
       initPlayer(videos[0].videoId, false);
     }
@@ -548,12 +576,12 @@ export default function VlogClientPage({
 
           {/* Vlog Video List */}
           <div className="border-t border-white/5">
-            <div className="px-6 sm:px-8 py-3 flex items-center justify-between gap-3 bg-white/[0.02]">
+            <div className="px-4 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 bg-white/[0.02]">
               <h3 className="text-xs font-bold uppercase tracking-widest text-brand-300 flex items-center gap-2 shrink-0">
                 <ListVideo className="w-4 h-4 text-accent" />
                 <span>Vlog Collection · {videos.length} videos</span>
               </h3>
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <svg
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand-500 pointer-events-none"
                   viewBox="0 0 24 24"
@@ -569,15 +597,15 @@ export default function VlogClientPage({
                   placeholder="Search vlogs..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-7 pr-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-brand-500 focus:outline-none focus:border-accent/50 focus:bg-white/8 transition-all w-36 sm:w-44"
+                  className="w-full sm:w-48 pl-8 pr-8 py-2 text-sm sm:text-xs bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-brand-500 focus:outline-none focus:border-accent/50 focus:bg-white/8 transition-all"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-500 hover:text-white transition-colors"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-500 hover:text-white transition-colors p-0.5"
                     aria-label="Clear search"
                   >
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M18 6 6 18M6 6l12 12" />
                     </svg>
                   </button>
@@ -585,7 +613,7 @@ export default function VlogClientPage({
               </div>
             </div>
 
-            <ul className="max-h-80 overflow-y-auto divide-y divide-white/5">
+            <ul className="max-h-72 sm:max-h-96 overflow-y-auto divide-y divide-white/5">
               {filteredVideos.length === 0 ? (
                 <li className="px-6 sm:px-8 py-6 text-center text-brand-500 text-xs">
                   No vlogs match &ldquo;{searchQuery}&rdquo;
@@ -598,7 +626,7 @@ export default function VlogClientPage({
                   <li key={vlog.videoId + index}>
                     <button
                       onClick={() => playAt(index)}
-                      className={`w-full flex items-center gap-3.5 px-6 sm:px-8 py-3 text-left transition-all cursor-pointer group ${
+                      className={`w-full flex items-center gap-3 px-3 sm:px-8 py-3 text-left transition-all cursor-pointer group ${
                         isActive
                           ? "bg-accent/10 border-l-2 border-accent"
                           : "hover:bg-white/[0.03] border-l-2 border-transparent"

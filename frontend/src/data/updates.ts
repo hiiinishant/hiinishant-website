@@ -55,7 +55,7 @@ export const latestUpdates: UpdateItem[] = [
     description: "Photoshoot - campus memories and new milestones. Reflecting on the journey so far. 🚀",
     date: "2024-02-29",
     href: "https://www.instagram.com/p/C37jQPcv03gvRaXnQRfhO4F2AqXkGG-E9ib2EA0/",
-    thumbnail: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=600&auto=format&fit=crop",
+    thumbnail: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=600&auto=format&fit=crop",
     badge: "Instagram",
     meta: "hiiinishant • View Post",
     isNew: false,

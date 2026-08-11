@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 async function fetchVlogSettings(): Promise<VlogSettings> {
   try {
     const res = await fetch(apiUrl("/api/vlogs"), {
-      next: { revalidate: 300 }, // cache for 5 minutes
+      cache: "no-store",
     });
     if (!res.ok) return defaultVlogSettings;
     const contentType = res.headers.get("content-type");
@@ -46,3 +46,4 @@ export default async function VlogsPage() {
   const initialSettings = await fetchVlogSettings();
   return <VlogClientPage initialSettings={initialSettings} />;
 }
+// Dynamic 14-video playlist sync enabled

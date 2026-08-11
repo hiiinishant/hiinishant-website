@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
   sendEmailVerification,
@@ -14,7 +15,7 @@ import {
   signInWithPopup,
   type User as FirebaseUser,
 } from "firebase/auth";
-import { doc, getDocs, query, collection, where, getDoc } from "firebase/firestore";
+import { doc, onSnapshot, getDocs, query, collection, where, getDoc } from "firebase/firestore";
 import { auth, db, isConfigured } from "@/lib/firebase";
 import { API_BASE } from "@/lib/api";
 
@@ -45,18 +46,130 @@ const emptyAuthForm = {
 export default function NsgramApp() {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [authForm, setAuthForm] = useState(emptyAuthForm);
+  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
   const [forgotPassword, setForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const router = useRouter();
 
+  useEffect(() => {
+    if (!isConfigured || !auth || !db) {
+      queueMicrotask(() => setLoading(false));
+      queueMicrotask(() => setNotice("Connect Firebase to enable real-time authentication and chat."));
+      return;
+    }
+
+    let unsubscribeProfile: (() => void) | undefined;
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      if (!user) {
+        setProfile(null);
+        clearTimeout(safetyTimer);
+        setLoading(false);
+        return;
+      }
+
+      const userRef = doc(db!, "users", user.uid);
+      unsubscribeProfile?.();
+      unsubscribeProfile = onSnapshot(
+        userRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
+          } else {
+            setProfile(null);
+          }
+          clearTimeout(safetyTimer);
+          queueMicrotask(() => setLoading(false));
+        },
+        (error) => {
+          if (error.code === "permission-denied") {
+            console.warn("User profile snapshot permission pending or denied:", error.message);
+          } else {
+            console.error("Error fetching user profile in NsgramApp:", error);
+          }
+          setProfile(null);
+          clearTimeout(safetyTimer);
+          queueMicrotask(() => setLoading(false));
+        }
+      );
+    });
+
+    return () => {
+      clearTimeout(safetyTimer);
+      unsubscribeAuth();
+      unsubscribeProfile?.();
+    };
+  }, []);
+
+  // Redirect to home if logged in successfully
+  useEffect(() => {
+    if (!loading && authUser && authUser.emailVerified && profile?.isActivated) {
+      router.replace("/nsgram/home");
+    }
+  }, [authUser, profile, loading, router]);
+
+  // Silent background verification check (no loading spinner, no notice update)
+  const autoCheckVerification = useCallback(async () => {
+    if (!authUser || authUser.emailVerified || !auth || !db) return;
+    try {
+      await reload(authUser);
+      const currentUser = auth.currentUser;
+      if (currentUser?.emailVerified) {
+        const idToken = await getIdToken(currentUser);
+        console.log("ID TOKEN:", idToken);
+        console.log("Sending Authorization header");
+        await fetch(`${API_BASE}/api/users/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            uid: currentUser.uid,
+            email: currentUser.email,
+            isActivated: true,
+          }),
+        });
+        setAuthUser(currentUser);
+        const docRef = doc(db, "users", currentUser.uid);
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
+        }
+        router.replace("/nsgram/home");
+      }
+    } catch {
+      // Silent — do not interrupt the user or show an error
+    }
+  }, [authUser, db, router]);
+
+  // Auto-check when user returns to this tab after verifying email in another tab
+  useEffect(() => {
+    const handleFocus = () => {
+      if (authUser && !authUser.emailVerified) {
+        autoCheckVerification();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [authUser]);
+
   const handleResendVerification = async () => {
-    if (!auth || !auth.currentUser) return;
+    if (!authUser) return;
     setAuthLoading(true);
     setNotice("");
     try {
-      await sendEmailVerification(auth.currentUser);
+      await sendEmailVerification(authUser);
       setNotice("Verification email resent successfully. Please check your inbox and spam folder.");
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
@@ -68,12 +181,12 @@ export default function NsgramApp() {
   };
 
   const handleCheckVerification = async () => {
-    if (!auth || !auth.currentUser) return;
+    if (!authUser) return;
     setAuthLoading(true);
     setNotice("");
     try {
-      await reload(auth.currentUser);
-      const currentUser = auth.currentUser;
+      await reload(authUser);
+      const currentUser = auth!.currentUser;
       if (currentUser?.emailVerified) {
         // Activate profile on backend with Firebase ID token
         const idToken = await getIdToken(currentUser);
@@ -89,6 +202,15 @@ export default function NsgramApp() {
             isActivated: true,
           }),
         });
+
+        // Set states so redirect triggers
+        setAuthUser(currentUser);
+        const docRef = doc(db!, "users", currentUser.uid);
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
+        }
 
         setNotice("Email verified successfully! Loading workspace...");
         router.replace("/nsgram/home");
@@ -109,7 +231,8 @@ export default function NsgramApp() {
     setNotice("");
     try {
       await signOut(auth!);
-      router.replace("/nsgram");
+      setAuthUser(null);
+      setProfile(null);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       console.warn("Sign out error:", error);
@@ -211,8 +334,18 @@ export default function NsgramApp() {
             isActivated: true,
           }),
         });
+
+        // Fetch the newly created profile so state is populated
+        const snapshot = await getDoc(userRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
+        }
       } else {
         // User already exists — update lastLoginAt asynchronously so redirect is instant
+        const data = userSnap.data();
+        setProfile({ id: userSnap.id, uid: data.uid ?? userSnap.id, ...data } as UserProfile);
+
         // Fire-and-forget background update (does not block redirect)
         const existingIdToken = await getIdToken(credential.user);
         fetch(`${backendUrl}/api/users/profile`, {
@@ -229,7 +362,8 @@ export default function NsgramApp() {
         }).catch((err) => console.warn("Background profile update failed:", err));
       }
 
-      setNotice("Signed in successfully with Google. Redirecting...");
+      setAuthUser(credential.user);
+      setNotice("Signed in successfully with Google.");
       router.replace("/nsgram/home");
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string } | Error | unknown;
@@ -362,7 +496,22 @@ export default function NsgramApp() {
         console.warn('Failed to update profile activation:', err);
       }
 
-      setNotice("Signed in successfully. Redirecting...");
+      setAuthUser(credential.user);
+
+      if (db) {
+        try {
+          const userRef = doc(db, "users", credential.user.uid);
+          const snapshot = await getDoc(userRef);
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data, isActivated: true } as UserProfile);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch profile snapshot:', err);
+        }
+      }
+
+      setNotice("Signed in successfully. Opening workspace...");
       router.replace("/nsgram/home");
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string } | Error | unknown;
@@ -380,6 +529,19 @@ export default function NsgramApp() {
       setAuthLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <section className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-brand-100">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-400 border-t-transparent" />
+          <p className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm tracking-wide">
+            Loading your community workspace…
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.14),_transparent_50%)] px-4 py-16 text-foreground flex items-center justify-center">
@@ -399,8 +561,8 @@ export default function NsgramApp() {
             <button
               onClick={() => setAuthMode("signup")}
               className={`rounded-2xl px-6 py-3 font-bold text-sm transition duration-300 ${authMode === "signup"
-                  ? "bg-amber-400 text-slate-950 hover:bg-amber-300"
-                  : "border border-white/10 text-white hover:bg-white/10"
+                ? "bg-amber-400 text-slate-950 hover:bg-amber-300"
+                : "border border-white/10 text-white hover:bg-white/10"
                 }`}
             >
               Sign up
@@ -408,8 +570,8 @@ export default function NsgramApp() {
             <button
               onClick={() => setAuthMode("login")}
               className={`rounded-2xl px-6 py-3 font-bold text-sm transition duration-300 ${authMode === "login"
-                  ? "bg-amber-400 text-slate-950 hover:bg-amber-300"
-                  : "border border-white/10 text-white hover:bg-white/10"
+                ? "bg-amber-400 text-slate-950 hover:bg-amber-300"
+                : "border border-white/10 text-white hover:bg-white/10"
                 }`}
             >
               Log in
@@ -461,7 +623,7 @@ export default function NsgramApp() {
                 </button>
               </div>
             </>
-          ) : auth?.currentUser && !auth.currentUser.emailVerified ? (
+          ) : authUser && !authUser.emailVerified ? (
             <>
               <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
                 <h2 className="text-xl font-extrabold tracking-tight text-white">
@@ -474,7 +636,7 @@ export default function NsgramApp() {
 
               <div className="space-y-6">
                 <p className="text-sm text-brand-300 leading-relaxed">
-                  We&apos;ve sent a verification link to <strong className="text-white">{auth?.currentUser?.email}</strong>.
+                  We&apos;ve sent a verification link to <strong className="text-white">{authUser.email}</strong>.
                 </p>
                 <p className="text-sm text-brand-300 leading-relaxed font-semibold text-amber-300">
                   Please verify your email before logging in. Check your inbox and spam folder.
@@ -564,8 +726,8 @@ export default function NsgramApp() {
                             type="button"
                             onClick={() => setAuthForm((prev) => ({ ...prev, avatar }))}
                             className={`flex-1 rounded-2xl border px-3 py-3 text-sm font-semibold transition ${authForm.avatar === avatar
-                                ? "border-amber-400 bg-amber-400/20 text-amber-200"
-                                : "border-white/10 bg-white/5 text-brand-300 hover:border-white/20"
+                              ? "border-amber-400 bg-amber-400/20 text-amber-200"
+                              : "border-white/10 bg-white/5 text-brand-300 hover:border-white/20"
                               }`}
                           >
                             {avatar === "boy" ? "👦 Boy" : "👧 Girl"}
