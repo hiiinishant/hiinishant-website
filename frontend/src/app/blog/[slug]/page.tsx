@@ -166,7 +166,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           <div className="text-right space-y-1">
             <p className="text-sm text-brand-400">
               Published on{" "}
-              {new Date(post.date).toLocaleDateString("en-US", {
+              {new Date(post.date.includes("T") ? post.date : `${post.date}T00:00:00`).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
@@ -180,7 +180,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
         {/* Divider 1 */}
         <hr className="border-white/10 my-8" />
-
 
         {/* Title */}
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-8 text-white leading-tight">

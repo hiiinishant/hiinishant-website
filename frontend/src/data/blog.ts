@@ -116,29 +116,41 @@ export function tiptapToHtml(jsonStr: string): string {
       switch (node.type) {
         case "text":
           return renderText(node);
+
         case "paragraph":
           return `<p class="text-brand-300 leading-relaxed text-lg mb-6">${childrenHtml || "<br/>"}</p>\n`;
+
         case "heading": {
           const level = typeof node.attrs?.level === "number" ? node.attrs.level : 1;
-          if (level === 1) {
-            return `<h1 class="text-3xl sm:text-4xl font-extrabold text-white mt-8 mb-4">${childrenHtml}</h1>\n`;
-          } else if (level === 2) {
-            return `<h2 class="text-2xl sm:text-3xl font-bold text-white mt-8 mb-4">${childrenHtml}</h2>\n`;
-          } else if (level === 3) {
-            return `<h3 class="text-xl sm:text-2xl font-bold text-white mt-6 mb-3">${childrenHtml}</h3>\n`;
-          }
+          if (level === 1) return `<h1 class="text-3xl sm:text-4xl font-extrabold text-white mt-8 mb-4">${childrenHtml}</h1>\n`;
+          if (level === 2) return `<h2 class="text-2xl sm:text-3xl font-bold text-white mt-8 mb-4">${childrenHtml}</h2>\n`;
+          if (level === 3) return `<h3 class="text-xl sm:text-2xl font-bold text-white mt-6 mb-3">${childrenHtml}</h3>\n`;
           return `<h4 class="text-lg sm:text-xl font-bold text-white mt-6 mb-2">${childrenHtml}</h4>\n`;
         }
+
         case "blockquote":
           return `<blockquote class="border-l-4 border-accent bg-white/5 pl-4 py-2 my-4 text-brand-300 italic">${childrenHtml}</blockquote>\n`;
+
         case "bulletList":
           return `<ul class="list-disc pl-6 my-4 space-y-2 text-brand-300">${childrenHtml}</ul>\n`;
+
         case "orderedList":
           return `<ol class="list-decimal pl-6 my-4 space-y-2 text-brand-300">${childrenHtml}</ol>\n`;
-        case "listItem":
-          return `<li>${childrenHtml}</li>\n`;
+
+        case "listItem": {
+          // Unwrap the wrapping paragraph TipTap adds inside each list item
+          let itemContent = childrenHtml;
+          if (node.content && node.content.length === 1 && node.content[0].type === "paragraph") {
+            itemContent = node.content[0].content
+              ? node.content[0].content.map(renderNode).join("")
+              : "";
+          }
+          return `<li>${itemContent}</li>\n`;
+        }
+
         case "codeBlock":
           return `<pre class="bg-zinc-950/80 border border-white/5 rounded-xl p-4 my-6 font-mono text-sm text-brand-200 overflow-x-auto"><code>${childrenHtml}</code></pre>\n`;
+
         case "image": {
           const src = typeof node.attrs?.src === "string" ? node.attrs.src : "";
           const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt : "";
@@ -164,8 +176,10 @@ export function tiptapToHtml(jsonStr: string): string {
             </figure>
           `;
         }
+
         case "hardBreak":
           return "<br/>";
+
         default:
           return childrenHtml;
       }
@@ -181,9 +195,9 @@ export function tiptapToHtml(jsonStr: string): string {
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
   try {
     // Avoid caching so blogs update immediately
-    const res = await fetch(apiUrl("/api/blog"), { cache: 'no-store' });
+    const res = await fetch(apiUrl("/api/blog"), { cache: "no-store" });
     if (!res.ok) return [];
-    
+
     const blogs = (await res.json()) as RawBlogPost[];
     return blogs.map((b) => ({
       ...b,
@@ -193,7 +207,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
           ? b.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
           : [],
       content: b.content,
-      html: b.contentType === "tiptap" ? tiptapToHtml(b.content) : markdownToHtml(b.content)
+      html: b.contentType === "tiptap" ? tiptapToHtml(b.content) : markdownToHtml(b.content),
     }));
   } catch (error) {
     console.error("Error reading blog posts:", error);

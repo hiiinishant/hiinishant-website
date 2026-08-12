@@ -22,6 +22,25 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ── Get single blog post by slug ──
+router.get('/:slug', async (req, res) => {
+  try {
+    if (!firestore) {
+      res.status(503).json({ error: "Database not available." });
+      return;
+    }
+    const { slug } = req.params;
+    const docSnap = await firestore.collection('blogs').doc(slug).get();
+    if (!docSnap.exists) {
+      res.status(404).json({ error: "Blog post not found." });
+      return;
+    }
+    res.status(200).json({ id: docSnap.id, ...docSnap.data() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch blog post" });
+  }
+});
+
 // ── Upload inline content image (used by rich-text editor) ──
 router.post('/upload-image', requireAuth, upload.single('image'), async (req, res) => {
   try {
@@ -45,6 +64,17 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   try {
     const { slug, title, excerpt, date, readTime, tags, featured, content, writtenBy, category, contentType, seoTitle } = req.body;
     if (!slug || !title || !content) { res.status(400).json({ error: "Slug, title, and content are required." }); return; }
+    if (!firestore) {
+      res.status(503).json({ error: "Database not available." });
+      return;
+    }
+
+    // Check if a post with this slug already exists
+    const existingDoc = await firestore.collection('blogs').doc(slug).get();
+    if (existingDoc.exists) {
+      res.status(400).json({ error: "A blog post with this slug already exists. Please use a unique slug or edit the existing post." });
+      return;
+    }
     
     let imageUrl = '';
     let imagePath = '';
@@ -60,13 +90,25 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
       imagePath = uploadResult.publicId;
     }
     
+    // Support tags both as Array (already parsed) or string from frontend form body
+    let tagsArray = tags || [];
+    if (typeof tags === 'string') {
+      try {
+        tagsArray = JSON.parse(tags);
+      } catch {
+        tagsArray = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
+    }
+
+    const isFeatured = typeof featured === 'boolean' ? featured : featured === 'true';
+
     const id = slug;
     await firestore.collection('blogs').doc(id).set({
       slug, title, excerpt,
       date: date || new Date().toISOString().split('T')[0],
       readTime: readTime || '1 min read',
-      tags: tags || [],
-      featured: !!featured,
+      tags: tagsArray,
+      featured: isFeatured,
       content,
       contentType: contentType || 'markdown',
       writtenBy: writtenBy || 'Nishant Kumar',
@@ -168,6 +210,7 @@ router.delete('/', requireAuth, async (req, res) => {
   try {
     const { slug } = req.body;
     if (!slug) { res.status(400).json({ error: "Slug is required." }); return; }
+    if (!firestore) { res.status(503).json({ error: "Database not available." }); return; }
     const docRef = firestore.collection('blogs').doc(slug);
     const doc = await docRef.get();
     if (!doc.exists) { res.status(404).json({ error: "Blog not found." }); return; }

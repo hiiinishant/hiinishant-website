@@ -530,7 +530,22 @@ export default function AdminClientPage() {
       const blogsData = await blogRes.json();
       setUpdates(Array.isArray(updatesData) ? updatesData : []);
       setMessages(Array.isArray(messagesData) ? messagesData : []);
-      setBlogs(Array.isArray(blogsData) ? blogsData : []);
+      
+      const normalizedBlogs = (Array.isArray(blogsData) ? blogsData : []).map((b: any) => {
+        let tags: string[] = [];
+        if (Array.isArray(b.tags)) {
+          tags = b.tags;
+        } else if (typeof b.tags === "string") {
+          try {
+            const parsed = JSON.parse(b.tags);
+            tags = Array.isArray(parsed) ? parsed : b.tags.split(",").map((t: string) => t.trim()).filter(Boolean);
+          } catch {
+            tags = b.tags.split(",").map((t: string) => t.trim()).filter(Boolean);
+          }
+        }
+        return { ...b, tags };
+      });
+      setBlogs(normalizedBlogs);
     } catch (e) {
       console.error("Failed to load admin databases:", e);
       // Don't show toast - it's expected when backend is not running
@@ -809,12 +824,28 @@ export default function AdminClientPage() {
         formData.append("originalSlug", editingBlogSlug || "");
       }
 
+      if (!blogForm.title.trim()) {
+        showToast("Title is required.", "error");
+        return;
+      }
+      if (!blogForm.slug.trim()) {
+        showToast("Slug is required.", "error");
+        return;
+      }
+      if (!blogForm.content || blogForm.content === '{"type":"doc"}' || blogForm.content === '{"type":"doc","content":[{"type":"paragraph"}]}') {
+        showToast("Blog content cannot be empty.", "error");
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/api/blog`, {
         method: isEdit ? "PUT" : "POST",
         headers: getAuthOnlyHeaders(),
         body: formData,
       });
-      if (!res.ok) throw new Error(isEdit ? "Failed to update blog." : "Failed to publish blog.");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || (isEdit ? "Failed to update blog." : "Failed to publish blog."));
+      }
       showToast(isEdit ? "Blog updated successfully!" : "Blog published successfully!", "success");
       fetchAdminData();
       setActiveTab("manage-blogs");
@@ -1250,6 +1281,18 @@ export default function AdminClientPage() {
 
   // ── Edit Blog ──
   const editBlog = (blog: BlogPost) => {
+    let tagsStr = "";
+    if (Array.isArray(blog.tags)) {
+      tagsStr = blog.tags.join(", ");
+    } else if (typeof blog.tags === "string") {
+      try {
+        const parsed = JSON.parse(blog.tags);
+        tagsStr = Array.isArray(parsed) ? parsed.join(", ") : blog.tags;
+      } catch {
+        tagsStr = blog.tags;
+      }
+    }
+
     setBlogForm({
       slug: blog.slug,
       title: blog.title,
@@ -1257,7 +1300,7 @@ export default function AdminClientPage() {
       excerpt: blog.excerpt,
       date: blog.date,
       readTime: blog.readTime,
-      tags: blog.tags.join(", "),
+      tags: tagsStr,
       featured: blog.featured ?? false,
       content: blog.content,
       writtenBy: blog.writtenBy || "Nishant Kumar",
@@ -2067,7 +2110,15 @@ export default function AdminClientPage() {
                         label="Title"
                         name="title"
                         value={blogForm.title}
-                        onChange={(e) => setBlogForm({ ...blogForm, title: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const autoSlug = val.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-");
+                          setBlogForm((prev) => ({
+                            ...prev,
+                            title: val,
+                            ...(!editingBlogSlug ? { slug: autoSlug } : {})
+                          }));
+                        }}
                         placeholder="Blog title"
                         required
                       />
@@ -2117,10 +2168,15 @@ export default function AdminClientPage() {
                         onChange={(e) => setBlogForm({ ...blogForm, category: e.target.value })}
                         options={[
                           { value: "All", label: "All" },
+                          { value: "Biography", label: "Biography" },
+                          { value: "Learning", label: "Learning" },
+                          { value: "Lifestyle", label: "Lifestyle" },
+                          { value: "Guides", label: "Guides" },
+                          { value: "Technology", label: "Technology" },
+                          { value: "Thoughts", label: "Thoughts" },
                           { value: "GATE", label: "GATE" },
                           { value: "JEE", label: "JEE" },
                           { value: "UPSC", label: "UPSC" },
-                          { value: "Lifestyle", label: "Lifestyle" },
                         ]}
                       />
                       <SelectField
