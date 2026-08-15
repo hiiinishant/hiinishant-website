@@ -23,6 +23,28 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get a single gallery photo by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const rawId = req.params.id;
+    const id: string = Array.isArray(rawId) ? rawId[0] : (rawId as string);
+    if (!firestore) {
+      res.status(404).json({ error: "Photo not found" });
+      return;
+    }
+
+    const doc = await firestore.collection('gallery').doc(id).get();
+    if (!doc.exists) {
+      res.status(404).json({ error: "Photo not found" });
+      return;
+    }
+
+    res.status(200).json({ id: doc.id, ...doc.data() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to fetch gallery photo" });
+  }
+});
+
 // Upload a new gallery photo
 router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   try {

@@ -298,6 +298,79 @@ router.get('/dates', async (_req: Request, res: Response) => {
   }
 });
 
+// GET /api/quiz/all
+// Returns all published quiz questions for sitemap & SEO indexing.
+// Response: { quizzes: QuizPublic[] }
+router.get('/all', async (_req: Request, res: Response) => {
+  try {
+    if (!firestore) { res.json({ quizzes: [] }); return; }
+
+    const snap = await firestore.collection(QUIZZES)
+      .where('status', '==', 'published')
+      .orderBy('publishDate', 'desc')
+      .get();
+
+    const quizzes = snap.docs.map(doc => {
+      const d = doc.data()!;
+      return {
+        id:            doc.id,
+        date:          d.publishDate || doc.id,
+        subject:       d.subject,
+        question:      d.question,
+        optionA:       d.optionA,
+        optionB:       d.optionB,
+        optionC:       d.optionC,
+        optionD:       d.optionD,
+        correctOption: d.correctOption,
+        attemptsCount: d.attemptsCount || 0,
+        updatedAt:     d.updatedAt || d.createdAt,
+      };
+    });
+
+    res.json({ quizzes });
+  } catch (err) {
+    console.error('[quiz/all] Error:', err);
+    res.status(500).json({ quizzes: [] });
+  }
+});
+
+// GET /api/quiz/q/:id
+// Returns a single published quiz by document ID for individual question SEO page.
+// Response: { quiz: QuizPublic | null }
+router.get('/q/:id', async (req: Request, res: Response) => {
+  try {
+    const rawId = req.params.id;
+    const id: string = Array.isArray(rawId) ? rawId[0] : (rawId as string);
+    if (!firestore) { res.json({ quiz: null }); return; }
+
+    const docSnap = await firestore.collection(QUIZZES).doc(id).get();
+    if (!docSnap.exists || docSnap.data()?.status !== 'published') {
+      res.status(404).json({ error: 'Quiz question not found', quiz: null });
+      return;
+    }
+
+    const d = docSnap.data()!;
+    const quiz = {
+      id:            docSnap.id,
+      date:          d.publishDate || docSnap.id,
+      subject:       d.subject,
+      question:      d.question,
+      optionA:       d.optionA,
+      optionB:       d.optionB,
+      optionC:       d.optionC,
+      optionD:       d.optionD,
+      correctOption: d.correctOption,
+      attemptsCount: d.attemptsCount || 0,
+      updatedAt:     d.updatedAt || d.createdAt,
+    };
+
+    res.json({ quiz });
+  } catch (err) {
+    console.error('[quiz/q] Error:', err);
+    res.status(500).json({ error: 'Failed to load quiz question', quiz: null });
+  }
+});
+
 
 // Returns a user's XP and streak stats. Public (userId is the Firebase UID).
 // Response: { stats: QuizStats | null }
