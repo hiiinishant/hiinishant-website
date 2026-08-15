@@ -6,6 +6,7 @@ import { isConfigured as isFirebaseConfigured } from "@/lib/firebase";
 import { API_BASE, LIVE_BACKEND_URL } from "@/lib/api";
 import BlogEditor from "@/components/admin/BlogEditor";
 import QuizManager from "@/components/admin/QuizManager";
+import AmazonPicksManager from "@/components/admin/AmazonPicksManager";
 import type { BlogPost, GalleryPhoto } from "@/types";
 
 const getBackendUrl = () => {
@@ -278,7 +279,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "vlog-settings" | "vlog-videos" | "manage-resume" | "quiz-management";
+type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "vlog-settings" | "vlog-videos" | "manage-resume" | "quiz-management" | "amazon-picks";
 
 interface ResumeItem {
   id: string;
@@ -1329,6 +1330,7 @@ export default function AdminClientPage() {
     { id: "vlog-videos", label: "Vlog Videos", icon: "🎥" },
     { id: "manage-resume", label: "Resume", icon: "📄" },
     { id: "quiz-management", label: "Quiz", icon: "❓" },
+    { id: "amazon-picks", label: "Nishant's Picks", icon: "🛍️" },
   ];
 
   if (checkingAuth) {
@@ -2724,6 +2726,13 @@ export default function AdminClientPage() {
                       showToast={showToast}
                       setConfirm={setConfirm}
                     />
+                  </div>
+                )}
+
+                {/* Amazon Picks (Nishant's Picks) Tab */}
+                {activeTab === "amazon-picks" && (
+                  <div>
+                    <AmazonPicksManager onShowToast={showToast} />
                   </div>
                 )}
               </>

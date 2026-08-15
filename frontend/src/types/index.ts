@@ -120,3 +120,18 @@ export interface DailyStatus {
   updatedAt: string;
 }
 
+export interface AmazonPick {
+  id: string;
+  title: string;
+  category: string;
+  affiliateUrl: string;
+  imageUrl?: string;
+  price?: string;
+  description?: string;
+  isFeatured?: boolean;
+  asin?: string;
+  rating?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+

@@ -8,6 +8,14 @@ import ImageExtension from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
 import LinkExtension from "@tiptap/extension-link";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { Youtube } from "@tiptap/extension-youtube";
+import { TaskList } from "@tiptap/extension-task-list";
+import { TaskItem } from "@tiptap/extension-task-item";
+import { Highlight } from "@tiptap/extension-highlight";
 import { useState, useRef, useEffect } from "react";
 import { API_BASE } from "@/lib/api";
 
@@ -78,6 +86,23 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
         HTMLAttributes: {
           class: "text-accent underline hover:text-accent-light",
         },
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Youtube.configure({
+        controls: true,
+        nocookie: true,
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      Highlight.configure({
+        multicolor: false,
       }),
       BubbleMenuExtension,
     ],
@@ -179,6 +204,27 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
     }
   };
 
+  const handleInsertYoutube = () => {
+    const url = prompt("Enter YouTube video URL:");
+    if (url) {
+      editor?.chain().focus().setYoutubeVideo({ src: url }).run();
+    }
+  };
+
+  const handleSetLink = () => {
+    const previousUrl = editor?.getAttributes("link").href;
+    const url = prompt("Enter link URL (e.g. https://example.com):", previousUrl);
+
+    if (url === null) return; // user cancelled
+
+    if (url === "") {
+      editor?.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    editor?.chain().focus().extendMarkRange("link").setLink({ href: url, target: "_blank" }).run();
+  };
+
   if (!editor) return null;
 
   // Selected image attributes overlay helpers
@@ -200,7 +246,7 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
 
   return (
     <div className="flex flex-col border border-white/5 rounded-xl bg-zinc-950/40 focus-within:border-accent/40 focus-within:ring-1 focus-within:ring-accent/20 focus-within:bg-zinc-950/70 transition-all overflow-hidden font-sans">
-      {/* Toolbar */}
+      {/* Main Toolbar */}
       <div className="flex flex-wrap gap-1 p-2 border-b border-white/5 bg-zinc-950/60 items-center justify-between">
         <div className="flex flex-wrap gap-1 items-center">
           {/* Text Formats */}
@@ -233,6 +279,26 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
             title="Strikethrough"
           >
             S
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleHighlight().run()}
+            className={`p-2 text-xs rounded-lg transition-colors font-bold ${
+              editor.isActive("highlight") ? "bg-amber-500/30 text-amber-300 border border-amber-500/40" : "text-brand-400 hover:text-white hover:bg-white/5"
+            }`}
+            title="Highlight Text"
+          >
+            🟡 Highlight
+          </button>
+          <button
+            type="button"
+            onClick={handleSetLink}
+            className={`p-2 text-xs rounded-lg transition-colors font-semibold ${
+              editor.isActive("link") ? "bg-accent/20 text-accent border border-accent/40" : "text-brand-400 hover:text-white hover:bg-white/5"
+            }`}
+            title="Insert / Edit Link"
+          >
+            🔗 Link
           </button>
           <button
             type="button"
@@ -278,7 +344,7 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
 
           <span className="w-px h-4 bg-white/10 mx-1"></span>
 
-          {/* Lists & Quotes */}
+          {/* Lists & Tasks */}
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -299,6 +365,20 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
           >
             1. List
           </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            className={`p-2 text-xs rounded-lg transition-colors ${
+              editor.isActive("taskList") ? "bg-accent/20 text-accent" : "text-brand-400 hover:text-white hover:bg-white/5"
+            }`}
+            title="Checklist / Task List"
+          >
+            ☑ Checklist
+          </button>
+
+          <span className="w-px h-4 bg-white/10 mx-1"></span>
+
+          {/* Blocks */}
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
@@ -322,7 +402,23 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
 
           <span className="w-px h-4 bg-white/10 mx-1"></span>
 
-          {/* Insert Image Button */}
+          {/* 📊 TABLE INSERTION */}
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 ${
+              editor.isActive("table")
+                ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                : "bg-white/5 text-brand-300 hover:text-white hover:bg-white/10 border-white/10"
+            }`}
+            title="Insert Table (3x3)"
+          >
+            📊 Insert Table
+          </button>
+
+          <span className="w-px h-4 bg-white/10 mx-1"></span>
+
+          {/* Media Inserts */}
           <input
             type="file"
             accept="image/*"
@@ -333,9 +429,17 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/5 text-brand-300 hover:text-white hover:bg-white/10 border border-white/10 flex items-center gap-1.5 transition-colors"
+            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white/5 text-brand-300 hover:text-white hover:bg-white/10 border border-white/10 flex items-center gap-1 transition-colors"
           >
-            🖼️ Insert Image
+            🖼️ Image
+          </button>
+
+          <button
+            type="button"
+            onClick={handleInsertYoutube}
+            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white/5 text-brand-300 hover:text-white hover:bg-white/10 border border-white/10 flex items-center gap-1 transition-colors"
+          >
+            🎥 YouTube
           </button>
         </div>
 
@@ -359,6 +463,87 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
           </button>
         </div>
       </div>
+
+      {/* 📊 DYNAMIC TABLE CONTROLS SUB-BAR (visible when cursor is inside a table) */}
+      {editor.isActive("table") && (
+        <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 bg-amber-500/10 border-b border-amber-500/20 text-xs text-amber-300 font-mono">
+          <span className="font-bold text-amber-400 mr-2 flex items-center gap-1">
+            📊 Table Editor:
+          </span>
+          
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().addRowBefore().run()}
+            className="px-2 py-1 rounded bg-white/5 hover:bg-white/15 border border-white/10 text-white transition-colors"
+            title="Add Row Above"
+          >
+            + Row Above
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().addRowAfter().run()}
+            className="px-2 py-1 rounded bg-white/5 hover:bg-white/15 border border-white/10 text-white transition-colors"
+            title="Add Row Below"
+          >
+            + Row Below
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().deleteRow().run()}
+            className="px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 transition-colors"
+            title="Delete Row"
+          >
+            - Delete Row
+          </button>
+
+          <span className="w-px h-4 bg-white/20 mx-1"></span>
+
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().addColumnBefore().run()}
+            className="px-2 py-1 rounded bg-white/5 hover:bg-white/15 border border-white/10 text-white transition-colors"
+            title="Add Column Left"
+          >
+            + Col Left
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().addColumnAfter().run()}
+            className="px-2 py-1 rounded bg-white/5 hover:bg-white/15 border border-white/10 text-white transition-colors"
+            title="Add Column Right"
+          >
+            + Col Right
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().deleteColumn().run()}
+            className="px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 transition-colors"
+            title="Delete Column"
+          >
+            - Delete Col
+          </button>
+
+          <span className="w-px h-4 bg-white/20 mx-1"></span>
+
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+            className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-semibold transition-colors"
+            title="Toggle Header Row"
+          >
+            📌 Header Row
+          </button>
+
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().deleteTable().run()}
+            className="px-2 py-1 rounded bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold ml-auto transition-colors"
+            title="Delete Table"
+          >
+            🗑️ Delete Table
+          </button>
+        </div>
+      )}
 
       {/* Upload Progress Indicator */}
       {uploadProgress !== null && (

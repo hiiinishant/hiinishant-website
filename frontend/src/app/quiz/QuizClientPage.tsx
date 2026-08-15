@@ -302,9 +302,60 @@ export default function QuizClientPage() {
         {/* ─── TWO-COLUMN GRID ─── */}
         <div className="flex flex-col lg:flex-row lg:gap-12 xl:gap-16 items-start">
 
-          {/* ══ LEFT COLUMN: Subject logos / menus (Sticky & Scrollable) ══ */}
-          <div className="w-full lg:w-[280px] shrink-0 space-y-6 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto pr-2 scrollbar-thin">
-            <div>
+          {/* ══ LEFT COLUMN: Subject logos / menus (Horizontal Chips on Mobile, Vertical Sidebar on Desktop) ══ */}
+          <div className="w-full lg:w-[280px] shrink-0 space-y-4 lg:space-y-6 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2">
+            
+            {/* 📱 Mobile Subject Chips (Horizontal Scroll Bar) */}
+            <div className="lg:hidden">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xs font-mono text-brand-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span>📚</span> Quiz Subjects
+                </h2>
+                <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 font-bold">
+                  {subjectsList.length + 1}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-hide -mx-5 px-5">
+                {/* Daily Challenge Chip */}
+                <button
+                  onClick={() => handleSubjectClick("Daily Challenge")}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold shrink-0 transition-all duration-300 ${
+                    activeSubject === "Daily Challenge"
+                      ? "bg-amber-500 text-black border-amber-400 shadow-[0_0_16px_rgba(245,158,11,0.3)] scale-[1.02]"
+                      : "bg-white/4 border-white/10 text-brand-300 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <span>🔥</span>
+                  <span>Daily Challenge</span>
+                </button>
+
+                {/* Dynamic Subject Chips */}
+                {subjectsList.map((subjectName) => {
+                  const style = getSubjectStyle(subjectName);
+                  const isActive = activeSubject === subjectName;
+                  return (
+                    <button
+                      key={subjectName}
+                      onClick={() => handleSubjectClick(subjectName)}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold shrink-0 transition-all duration-300 ${
+                        isActive
+                          ? "bg-amber-500 text-black border-amber-400 shadow-[0_0_16px_rgba(245,158,11,0.3)] scale-[1.02]"
+                          : "bg-white/4 border-white/10 text-brand-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] ${isActive ? "bg-black/20 text-black" : style.color}`}>
+                        {style.logo}
+                      </span>
+                      <span>{subjectName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 💻 Desktop Subject List (Vertical Sidebar) */}
+            <div className="hidden lg:block">
               <h2 className="text-xs font-mono text-brand-500 uppercase tracking-widest mb-3">Quiz Categories</h2>
               <div className="space-y-2">
                 {/* Daily Challenge Option */}
@@ -353,7 +404,7 @@ export default function QuizClientPage() {
           </div>
 
           {/* ══ RIGHT COLUMN: quiz question + options ══ */}
-          <div className="flex-1 min-w-0 space-y-10 mt-8 lg:mt-0 w-full">
+          <div className="flex-1 min-w-0 space-y-8 mt-4 lg:mt-0 w-full">
 
             {quizLoading ? (
               <div className="h-64 flex flex-col items-center justify-center gap-3">
@@ -416,35 +467,39 @@ export default function QuizClientPage() {
                         let cardState = "";
                         let labelBase = "w-9 h-9 lg:w-11 lg:h-11 rounded-xl flex items-center justify-center text-xs lg:text-sm font-bold font-mono shrink-0 transition-all duration-300";
                         let labelState = "";
-                        let textState = "text-brand-300";
+                        let textState = "text-brand-200";
 
                         if (isPastQuiz) {
-                          // Past challenge — reveal correct answer, all options locked
+                          // Past challenge — reveal correct answer, all options clearly visible
                           if (opt === quiz.correctOption) {
-                            cardState = "border-emerald-500/35 bg-emerald-500/8 shadow-[0_0_24px_rgba(16,185,129,0.08)] cursor-default";
-                            labelState = "bg-emerald-500/20 text-emerald-400";
-                            textState = "text-emerald-200 font-medium";
+                            cardState = "border-emerald-500/50 bg-emerald-500/12 shadow-[0_0_24px_rgba(16,185,129,0.15)] cursor-default";
+                            labelState = "bg-emerald-500/25 text-emerald-300 font-extrabold";
+                            textState = "text-emerald-100 font-semibold";
                           } else {
-                            cardState = "border-white/4 bg-white/1 opacity-40 cursor-default";
-                            labelState = "bg-white/5 text-brand-600";
-                            textState = "text-brand-500";
+                            cardState = "border-white/10 bg-white/4 cursor-default";
+                            labelState = "bg-white/10 text-brand-300 font-bold";
+                            textState = "text-brand-200 font-normal";
                           }
                         } else if (!hasAnswered) {
-                          cardState = "border-white/8 bg-white/2 hover:bg-amber-500/5 hover:border-amber-500/25 hover:shadow-[0_0_20px_rgba(245,158,11,0.06)] cursor-pointer";
-                          labelState = "bg-amber-500/10 text-amber-400 group-hover/opt:bg-amber-500/20 group-hover/opt:text-amber-300";
-                          textState = "text-brand-300 group-hover/opt:text-white";
+                          // Unanswered live quiz option — clear contrast and glowing hover state
+                          cardState = "border-white/12 bg-white/4 hover:bg-amber-500/10 hover:border-amber-500/40 hover:shadow-[0_0_24px_rgba(245,158,11,0.12)] cursor-pointer";
+                          labelState = "bg-amber-500/15 text-amber-300 group-hover/opt:bg-amber-500/30 group-hover/opt:text-amber-200 font-bold";
+                          textState = "text-brand-100 group-hover/opt:text-white font-medium";
                         } else if (isCorrectOpt) {
-                          cardState = "border-emerald-500/35 bg-emerald-500/8 shadow-[0_0_24px_rgba(16,185,129,0.08)] cursor-default";
-                          labelState = "bg-emerald-500/20 text-emerald-400";
-                          textState = "text-emerald-200 font-medium";
+                          // Correct option revealed
+                          cardState = "border-emerald-500/50 bg-emerald-500/12 shadow-[0_0_24px_rgba(16,185,129,0.15)] cursor-default";
+                          labelState = "bg-emerald-500/25 text-emerald-300 font-extrabold";
+                          textState = "text-emerald-100 font-semibold";
                         } else if (isSelected) {
-                          cardState = "border-red-500/35 bg-red-500/8 cursor-default";
-                          labelState = "bg-red-500/20 text-red-400";
-                          textState = "text-red-200 font-medium";
+                          // User selected wrong option
+                          cardState = "border-red-500/50 bg-red-500/12 shadow-[0_0_24px_rgba(239,68,68,0.15)] cursor-default";
+                          labelState = "bg-red-500/25 text-red-300 font-extrabold";
+                          textState = "text-red-100 font-semibold";
                         } else {
-                          cardState = "border-white/4 bg-white/1 opacity-40 cursor-default";
-                          labelState = "bg-white/5 text-brand-600";
-                          textState = "text-brand-500";
+                          // Other unselected options after answering — fully visible and readable
+                          cardState = "border-white/10 bg-white/4 cursor-default";
+                          labelState = "bg-white/10 text-brand-300 font-bold";
+                          textState = "text-brand-200 font-normal";
                         }
 
                         return (

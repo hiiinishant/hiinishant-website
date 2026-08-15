@@ -543,6 +543,42 @@ export default function Home() {
                 </svg>
               </div>
             </Link>
+
+            {/* Card 9: Nishant's Picks — Amazon Storefront */}
+            <Link
+              href="/amazon"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-amber-500/40 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.15)] card-spotlight"
+            >
+              <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
+              <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer pointer-events-none" />
+
+              <div>
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-2xl group-hover:scale-110 transition-transform duration-500">
+                    🛍️
+                  </div>
+                  <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center text-brand-400 group-hover:text-white group-hover:border-white/20 transition-all duration-300 group-hover:translate-x-1">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-amber-400 transition-colors">
+                  Nishant&apos;s Picks — Amazon
+                </h3>
+                <p className="text-sm text-brand-400 leading-relaxed max-w-sm">
+                  Curated tech gadgets, desk setup gear, books, and study essentials I personally use and recommend.
+                </p>
+              </div>
+
+              <div className="mt-8 flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
+                Explore Recommendations
+                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+            </Link>
           </div>
         </div>
       </section>

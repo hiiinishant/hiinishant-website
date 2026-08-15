@@ -58,3 +58,37 @@ export async function getAllQuizDates(): Promise<string[]> {
     return [];
   }
 }
+
+/**
+ * Fetch an individual quiz question by document ID.
+ * Used by /quiz/q/[id]/page.tsx for standalone Question SEO.
+ */
+export async function getQuizById(id: string): Promise<QuizItem | null> {
+  try {
+    const res = await fetch(`${getApiBase()}/api/quiz/q/${encodeURIComponent(id)}`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.quiz || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch all published quiz questions across all dates & subjects.
+ * Used by sitemap.ts to generate /quiz/q/[id] URLs for every question.
+ */
+export async function getAllQuizQuestions(): Promise<QuizItem[]> {
+  try {
+    const res = await fetch(`${getApiBase()}/api/quiz/all`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.quizzes) ? data.quizzes : [];
+  } catch {
+    return [];
+  }
+}

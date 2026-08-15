@@ -102,7 +102,6 @@ const socialIconMap: Record<SocialPlatform, React.ReactNode> = {
 
 const navPages = [
   { href: "/", label: "Home" },
-  { href: "/status", label: "Live Status" },
   { href: "/resume", label: "Resume" },
   { href: "/blog", label: "Blog" },
   { href: "/gallery", label: "Gallery" },

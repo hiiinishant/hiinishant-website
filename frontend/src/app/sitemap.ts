@@ -2,7 +2,8 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/data/site";
 import { getAllBlogPosts } from "@/data/blog";
 import { getAllStatuses } from "@/data/statusServer";
-import { getAllQuizDates } from "@/data/quizServer";
+import { getAllQuizDates, getAllQuizQuestions } from "@/data/quizServer";
+import { getAllGalleryPhotos } from "@/data/galleryServer";
 import { getAllVlogVideos } from "@/data/vlogsServer";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -36,10 +37,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     } else if (route === "/updates" || route === "/status" || route === "/quiz" || route === "/vlogs") {
       changeFrequency = "daily";
       priority = 0.8;
-    } else if (route === "/blog" || route === "/projects" || route === "/journey") {
+    } else if (route === "/blog" || route === "/projects" || route === "/journey" || route === "/gallery") {
       changeFrequency = "weekly";
       priority = 0.8;
-    } else if (route === "/contact" || route === "/resume" || route === "/universe" || route === "/links" || route === "/music" || route === "/gallery") {
+    } else if (route === "/contact" || route === "/resume" || route === "/universe" || route === "/links" || route === "/music") {
       changeFrequency = "monthly";
       priority = 0.7;
     }
@@ -79,7 +80,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  // 5. Fetch dynamic vlog videos and append them
+  // 5. Fetch all published individual quiz questions and append them (/quiz/q/[id])
+  const quizQuestions = await getAllQuizQuestions();
+  const dynamicQuestionRoutes = quizQuestions.map((q) => ({
+    url: `${baseUrl}/quiz/q/${q.id}`,
+    lastModified: new Date(q.date),
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }));
+
+  // 6. Fetch all gallery photos and append them (/gallery/[id])
+  const galleryPhotos = await getAllGalleryPhotos();
+  const dynamicGalleryRoutes = galleryPhotos.map((photo) => ({
+    url: `${baseUrl}/gallery/${photo.id}`,
+    lastModified: photo.date ? new Date(photo.date) : new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  // 7. Fetch dynamic vlog videos and append them
   const vlogVideos = await getAllVlogVideos();
   const dynamicVlogRoutes = vlogVideos.map((video) => ({
     url: `${baseUrl}/vlogs/${video.videoId}`,
@@ -88,5 +107,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...dynamicBlogRoutes, ...dynamicStatusRoutes, ...dynamicQuizRoutes, ...dynamicVlogRoutes];
+  return [
+    ...staticRoutes,
+    ...dynamicBlogRoutes,
+    ...dynamicStatusRoutes,
+    ...dynamicQuizRoutes,
+    ...dynamicQuestionRoutes,
+    ...dynamicGalleryRoutes,
+    ...dynamicVlogRoutes,
+  ];
 }

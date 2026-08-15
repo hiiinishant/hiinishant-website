@@ -574,3 +574,107 @@ html.light .hover\:text-white:hover { color: #0f172a; }
   height: 0;
 }
 
+/* ─────────────────────────────────────────────── */
+/*  Blog Table Styles (Editor & Reader)           */
+/* ─────────────────────────────────────────────── */
+.ProseMirror table,
+.prose table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.75rem 0 !important;
+  background: rgba(10, 10, 18, 0.7) !important;
+  border-radius: 0.75rem !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+.ProseMirror th,
+.prose th {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #f1f5f9 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.05em !important;
+  padding: 0.85rem 1.1rem !important;
+  border-bottom: 2px solid rgba(245, 158, 11, 0.3) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  text-align: left !important;
+}
+
+.ProseMirror td,
+.prose td {
+  padding: 0.75rem 1.1rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: #cbd5e1 !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.6 !important;
+}
+
+.ProseMirror tr:hover,
+.prose tr:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.ProseMirror th:last-child,
+.prose th:last-child,
+.ProseMirror td:last-child,
+.prose td:last-child {
+  border-right: none !important;
+}
+
+.ProseMirror table p,
+.prose table p {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ─────────────────────────────────────────────── */
+/*  YouTube Video Embed Styles                    */
+/* ─────────────────────────────────────────────── */
+.ProseMirror iframe,
+.prose iframe {
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 1rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  margin: 1.75rem 0 !important;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ─────────────────────────────────────────────── */
+/*  Highlight & Task List Styles                  */
+/* ─────────────────────────────────────────────── */
+.ProseMirror mark,
+.prose mark {
+  background-color: rgba(245, 158, 11, 0.25) !important;
+  color: #fef08a !important;
+  padding: 0.15em 0.4em !important;
+  border-radius: 0.25rem !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+.ProseMirror ul[data-type="taskList"],
+.prose ul[data-type="taskList"] {
+  list-style: none !important;
+  padding-left: 0.5rem !important;
+}
+
+.ProseMirror li[data-type="taskItem"],
+.prose li[data-type="taskItem"] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.ProseMirror li[data-type="taskItem"] input[type="checkbox"],
+.prose li[data-type="taskItem"] input[type="checkbox"] {
+  accent-color: #f59e0b !important;
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  cursor: pointer !important;
+}
+

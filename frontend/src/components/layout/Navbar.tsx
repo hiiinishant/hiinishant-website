@@ -15,6 +15,7 @@ const navLinks = [
 ];
 
 const moreLinks = [
+  { href: "/amazon", label: "🛍️ Nishant's Picks", match: "/amazon" },
   { href: "/support", label: "❤️ Support", match: "/support" },
   { href: "/contact", label: "📩 Contact", match: "/contact" },
   { href: "/universe", label: "🌐 Social Links", match: "/universe" },
@@ -31,13 +32,48 @@ function isActive(pathname: string, match: string) {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [clickedOpen, setClickedOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setMoreOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setMoreOpen(false);
+      setClickedOpen(false);
+    }, 150);
+  };
+
+  const handleMoreClick = () => {
+    if (!clickedOpen) {
+      // First click: keep open & mark as clicked
+      setMoreOpen(true);
+      setClickedOpen(true);
+    } else {
+      // Second click: close & reset clicked state
+      setMoreOpen(false);
+      setClickedOpen(false);
+    }
+  };
 
   const isMoreActive = moreLinks.some(
     (l) => l.href !== "/universe" && isActive(pathname, l.match)
   );
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,6 +89,7 @@ export default function Navbar() {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setMoreOpen(false);
+        setClickedOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -109,9 +146,14 @@ export default function Navbar() {
             })}
 
             {/* ─── MORE ▼ DROPDOWN ─── */}
-            <div className="relative ml-0.5" ref={dropdownRef}>
+            <div
+              className="relative ml-0.5"
+              ref={dropdownRef}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+            >
               <button
-                onClick={() => setMoreOpen((v) => !v)}
+                onClick={handleMoreClick}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-300 cursor-pointer ${
                   isMoreActive || moreOpen
                     ? "text-white bg-white/8 border border-white/10"
@@ -126,30 +168,38 @@ export default function Navbar() {
 
               {/* Dropdown Panel */}
               {moreOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] z-50" style={{ background: 'rgb(10,10,18)' }}>
-                  <div className="py-1.5">
-                    {moreLinks.map((link, idx) => {
-                      const active = isActive(pathname, link.match);
-                      const isLastGroup = idx === 3; // separator before Privacy/Terms
-                      return (
-                        <Fragment key={link.href + link.label}>
-                          {isLastGroup && (
-                            <div className="my-1 mx-3 border-t border-white/10" />
-                          )}
-                          <Link
-                            href={link.href}
-                            onClick={() => setMoreOpen(false)}
-                            className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-all duration-150 ${
-                              active
-                                ? "text-white bg-white/10"
-                                : "text-zinc-200 hover:text-white hover:bg-white/8"
-                            }`}
-                          >
-                            <span>{link.label}</span>
-                          </Link>
-                        </Fragment>
-                      );
-                    })}
+                <div className="absolute right-0 top-full pt-1.5 w-56 z-50">
+                  <div
+                    className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+                    style={{ background: 'rgb(10,10,18)' }}
+                  >
+                    <div className="py-1.5">
+                      {moreLinks.map((link, idx) => {
+                        const active = isActive(pathname, link.match);
+                        const isLastGroup = idx === 3; // separator before Privacy/Terms
+                        return (
+                          <Fragment key={link.href + link.label}>
+                            {isLastGroup && (
+                              <div className="my-1 mx-3 border-t border-white/10" />
+                            )}
+                            <Link
+                              href={link.href}
+                              onClick={() => {
+                                setMoreOpen(false);
+                                setClickedOpen(false);
+                              }}
+                              className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-all duration-150 ${
+                                active
+                                  ? "text-white bg-white/10"
+                                  : "text-zinc-200 hover:text-white hover:bg-white/8"
+                              }`}
+                            >
+                              <span>{link.label}</span>
+                            </Link>
+                          </Fragment>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
