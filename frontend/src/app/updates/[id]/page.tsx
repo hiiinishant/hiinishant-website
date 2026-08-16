@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllUpdates } from "@/data/updatesServer";
 
+export const dynamic = 'force-dynamic';
+
 interface UpdatePageProps {
   params: Promise<{ id: string }>;
 }
@@ -16,11 +18,6 @@ function getYouTubeEmbedUrl(href?: string) {
   if (!href) return undefined;
   const match = href.match(/[?&]v=([^&]+)/) || href.match(/youtu\.be\/([^?&]+)/) || href.match(/shorts\/([^?&]+)/);
   return match?.[1] ? `https://www.youtube.com/embed/${match[1]}` : undefined;
-}
-
-export async function generateStaticParams() {
-  const updates = await getAllUpdates();
-  return updates.map((update) => ({ id: update.id }));
 }
 
 export async function generateMetadata({ params }: UpdatePageProps): Promise<Metadata> {

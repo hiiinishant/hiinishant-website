@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import LatestUpdatesSection from "@/components/sections/LatestUpdatesSection";
 import { getAllUpdates } from "@/data/updatesServer";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "Latest Updates — Nishant Kumar | 2 AM Study",
   description: "Stay updated with the latest content from Nishant Kumar (hiiinishant) and 2 AM Study — new videos, Instagram posts, milestones, and announcements.",

@@ -1,13 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { isConfigured as isFirebaseConfigured } from "@/lib/firebase";
 import { API_BASE, LIVE_BACKEND_URL } from "@/lib/api";
-import BlogEditor from "@/components/admin/BlogEditor";
 import QuizManager from "@/components/admin/QuizManager";
 import AmazonPicksManager from "@/components/admin/AmazonPicksManager";
 import type { BlogPost, GalleryPhoto } from "@/types";
+
+// Isolate Tiptap/BlogEditor from Admin SSR — keep AdminClientPage SSR-capable.
+const BlogEditor = dynamic(() => import("@/components/admin/BlogEditor"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[400px] rounded-xl border border-white/10 bg-zinc-950/50 flex items-center justify-center text-brand-400 text-sm">
+      Loading editor…
+    </div>
+  ),
+});
 
 const getBackendUrl = () => {
   if (process.env.NEXT_PUBLIC_BACKEND_URL) {

@@ -107,6 +107,8 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
       BubbleMenuExtension,
     ],
     content: "",
+    // Required for Next.js: avoid SSR hydration mismatch with ProseMirror
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(JSON.stringify(editor.getJSON()));
     },
