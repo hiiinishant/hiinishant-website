@@ -135,3 +135,20 @@ export interface AmazonPick {
   updatedAt?: string;
 }
 
+export interface StudyPick {
+  id: string;
+  productId: string;
+  productUrl: string;
+  title: string;
+  imageUrl?: string;
+  price?: string;
+  salePrice?: string;
+  availability?: "In Stock" | "Out of Stock" | string;
+  description?: string;
+  isFeatured?: boolean;
+  displayOrder?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+

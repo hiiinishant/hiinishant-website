@@ -23,6 +23,7 @@ import resumeRoutes from './routes/resume';
 import visitorsRoutes, { setVisitorsIo } from './routes/visitors';
 import quizRoutes from './routes/quiz';
 import amazonPicksRoutes from './routes/amazonPicks';
+import studyPicksRoutes from './routes/studyPicks';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -65,6 +66,7 @@ app.use('/api/resume', resumeRoutes);
 app.use('/api/visitors', visitorsRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/amazon-picks', amazonPicksRoutes);
+app.use('/api/study-picks', studyPicksRoutes);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {

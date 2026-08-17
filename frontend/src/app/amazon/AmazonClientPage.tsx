@@ -317,16 +317,7 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
           </div>
         )}
 
-        {/* ─── AFFILIATE DISCLOSURE (Compliance Banner) ─── */}
-        <div className="mt-16 p-6 sm:p-8 rounded-3xl glass border border-white/5 text-center max-w-3xl mx-auto space-y-2">
-          <div className="flex items-center justify-center gap-2 text-xs font-mono uppercase tracking-widest text-brand-500 font-semibold">
-            <span>⚖️</span>
-            <span>Amazon Influencer & Affiliate Disclosure</span>
-          </div>
-          <p className="text-xs text-brand-400 leading-relaxed">
-            As an Amazon Associate / Influencer, I earn from qualifying purchases when you click through my links at no additional cost to you. I only recommend gear, gadgets, books, and accessories that I personally use, trust, and believe will bring value to your workflow.
-          </p>
-        </div>
+
       </div>
     </main>
   );

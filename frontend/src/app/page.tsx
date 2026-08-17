@@ -546,7 +546,7 @@ export default function Home() {
 
             {/* Card 9: Nishant's Picks — Amazon Storefront */}
             <Link
-              href="/amazon"
+              href="/amazon-feed"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-amber-500/40 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.15)] card-spotlight"
             >
               <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />

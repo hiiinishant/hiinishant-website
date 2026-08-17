@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { AmazonPick } from "@/types";
+import type { AmazonPick, StudyPick } from "@/types";
 import { API_BASE, LIVE_BACKEND_URL } from "@/lib/api";
 
 const getBackendUrl = () => {
@@ -27,6 +27,9 @@ interface AmazonPicksManagerProps {
 }
 
 export default function AmazonPicksManager({ onShowToast }: AmazonPicksManagerProps) {
+  const [activeTab, setActiveTab] = useState<"amazon" | "2amstudy">("amazon");
+
+  // Amazon Picks State
   const [picks, setPicks] = useState<AmazonPick[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState(false);
@@ -50,6 +53,23 @@ export default function AmazonPicksManager({ onShowToast }: AmazonPicksManagerPr
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 2 AM Study Picks State
+  const [studyPicks, setStudyPicks] = useState<StudyPick[]>([]);
+  const [loadingStudy, setLoadingStudy] = useState(true);
+  const [studyUrlInput, setStudyUrlInput] = useState("");
+  const [previewingStudy, setPreviewingStudy] = useState(false);
+  const [addingStudyPick, setAddingStudyPick] = useState(false);
+  const [studyPreview, setStudyPreview] = useState<{
+    productId: string;
+    title: string;
+    imageUrl: string;
+    price: string;
+    salePrice?: string;
+    availability: string;
+    canonicalUrl: string;
+    description?: string;
+  } | null>(null);
+
   // Fetch picks on mount
   const fetchPicks = async () => {
     try {
@@ -61,14 +81,29 @@ export default function AmazonPicksManager({ onShowToast }: AmazonPicksManagerPr
       }
     } catch (err) {
       console.error("Failed to fetch amazon picks:", err);
-      onShowToast("Failed to load Amazon picks", "error");
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchStudyPicks = async () => {
+    try {
+      setLoadingStudy(true);
+      const res = await fetch(`${getBackendUrl()}/api/study-picks`);
+      if (res.ok) {
+        const data = await res.json();
+        setStudyPicks(data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch study picks:", err);
+    } finally {
+      setLoadingStudy(false);
+    }
+  };
+
   useEffect(() => {
     fetchPicks();
+    fetchStudyPicks();
   }, []);
 
   // Auto-preview when Amazon link is entered
@@ -273,6 +308,129 @@ export default function AmazonPicksManager({ onShowToast }: AmazonPicksManagerPr
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // ─── 2 AM Study Preview & Add Workflow ────────────────────────────────────
+  const handlePreview2amStudy = async () => {
+    const trimmed = studyUrlInput.trim();
+    if (!trimmed) {
+      onShowToast("Please enter a 2 AM Study product URL", "error");
+      return;
+    }
+
+    try {
+      setPreviewingStudy(true);
+      const res = await fetch(`${getBackendUrl()}/api/study-picks/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to resolve 2 AM Study product");
+      }
+
+      const data = await res.json();
+      setStudyPreview(data);
+      onShowToast("Product preview loaded!", "success");
+    } catch (err: any) {
+      onShowToast(err.message || "Failed to preview 2 AM Study product", "error");
+    } finally {
+      setPreviewingStudy(false);
+    }
+  };
+
+  const handleAddStudyPick = async () => {
+    if (!studyPreview) return;
+
+    try {
+      setAddingStudyPick(true);
+      const token = sessionStorage.getItem("admin_token");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const payload = {
+        productUrl: studyPreview.canonicalUrl || studyUrlInput.trim(),
+        productId: studyPreview.productId,
+        title: studyPreview.title,
+        imageUrl: studyPreview.imageUrl,
+        price: studyPreview.price,
+        salePrice: studyPreview.salePrice,
+        availability: studyPreview.availability,
+        description: studyPreview.description,
+        isFeatured: false,
+        displayOrder: studyPicks.length,
+      };
+
+      const res = await fetch(`${getBackendUrl()}/api/study-picks`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save 2 AM Study product to picks");
+      }
+
+      onShowToast("📚 Product added to 2 AM Study Picks!", "success");
+      setStudyPreview(null);
+      setStudyUrlInput("");
+      fetchStudyPicks();
+    } catch (err: any) {
+      onShowToast(err.message || "Failed to add pick", "error");
+    } finally {
+      setAddingStudyPick(false);
+    }
+  };
+
+  const handleToggleStudyFeatured = async (pick: StudyPick) => {
+    try {
+      const token = sessionStorage.getItem("admin_token");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const updated = !pick.isFeatured;
+      setStudyPicks((prev) => prev.map((p) => (p.id === pick.id ? { ...p, isFeatured: updated } : p)));
+
+      const res = await fetch(`${getBackendUrl()}/api/study-picks/${pick.id}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ isFeatured: updated }),
+      });
+
+      if (!res.ok) {
+        fetchStudyPicks();
+        throw new Error("Failed to update status");
+      }
+      onShowToast(updated ? "Marked as ⭐ Featured!" : "Removed from Featured", "success");
+    } catch (err: any) {
+      onShowToast(err.message || "Failed to toggle status", "error");
+    }
+  };
+
+  const handleDeleteStudyPick = async (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+
+    try {
+      const token = sessionStorage.getItem("admin_token");
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      setStudyPicks((prev) => prev.filter((p) => p.id !== id));
+
+      const res = await fetch(`${getBackendUrl()}/api/study-picks/${id}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!res.ok) {
+        fetchStudyPicks();
+        throw new Error("Failed to delete");
+      }
+      onShowToast("2 AM Study pick deleted successfully", "success");
+    } catch (err: any) {
+      onShowToast(err.message || "Failed to delete pick", "error");
+    }
+  };
+
   const filteredPicks = picks.filter((pick) => {
     const matchesCat = selectedCategoryFilter === "All" || pick.category === selectedCategoryFilter;
     const matchesSearch = !searchQuery.trim() ||
@@ -283,8 +441,42 @@ export default function AmazonPicksManager({ onShowToast }: AmazonPicksManagerPr
 
   return (
     <div className="space-y-8 font-sans">
-      {/* ─── ADD / EDIT PRODUCT CARD (Minimal 3-Step Workflow) ─── */}
-      <div className="glass-strong border border-white/10 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+      {/* ─── TOP TAB SELECTOR ─── */}
+      <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab("amazon")}
+          className={`px-5 py-3 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${
+            activeTab === "amazon"
+              ? "bg-amber-500 text-black shadow-[0_0_25px_rgba(245,158,11,0.3)] scale-[1.02]"
+              : "bg-white/5 text-brand-300 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <span>🛍️</span>
+          <span>Amazon Picks ({picks.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("2amstudy")}
+          className={`px-5 py-3 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${
+            activeTab === "2amstudy"
+              ? "bg-amber-500 text-black shadow-[0_0_25px_rgba(245,158,11,0.3)] scale-[1.02]"
+              : "bg-white/5 text-brand-300 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <span>📚</span>
+          <span>2 AM Study Picks ({studyPicks.length})</span>
+        </button>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* TAB 1: 🛍️ AMAZON PICKS                                              */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeTab === "amazon" && (
+        <div className="space-y-8 animate-fade-in">
+          {/* ─── ADD / EDIT PRODUCT CARD (Minimal 3-Step Workflow) ─── */}
+          <div className="glass-strong border border-white/10 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -560,7 +752,7 @@ export default function AmazonPicksManager({ onShowToast }: AmazonPicksManagerPr
               <span>All Recommended Products ({picks.length})</span>
             </h3>
             <p className="text-xs text-brand-400 mt-0.5">
-              Live on website at <code className="text-amber-400 font-mono">/amazon</code> storefront.
+              Live on website at <code className="text-amber-400 font-mono">/amazon-feed</code> storefront.
             </p>
           </div>
 
@@ -700,6 +892,210 @@ export default function AmazonPicksManager({ onShowToast }: AmazonPicksManagerPr
           </div>
         )}
       </div>
+    </div>
+  )}
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* TAB 2: 📚 2 AM STUDY PICKS (Exact Minimal Requested Workflow)       */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeTab === "2amstudy" && (
+        <div className="space-y-8 animate-fade-in">
+          {/* Add 2 AM Study Product Card */}
+          <div className="glass-strong border border-white/10 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl space-y-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-mono uppercase tracking-widest mb-2 font-bold">
+                📚 2 AM Study Official Storefront
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                Add 2 AM Study Product
+              </h2>
+              <p className="text-xs text-brand-400 mt-1">
+                Minimal Workflow: Paste 2amstudy.com Product URL → Preview → Add to Picks
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-mono text-brand-400 uppercase tracking-wider">
+                Paste 2 AM Study Product URL
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="url"
+                  required
+                  placeholder="https://2amstudy.com/product/notebook"
+                  value={studyUrlInput}
+                  onChange={(e) => setStudyUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handlePreview2amStudy();
+                    }
+                  }}
+                  className="flex-1 bg-zinc-950/80 border border-white/10 rounded-2xl px-4 py-3.5 text-sm text-white placeholder-brand-600 focus:outline-none focus:border-amber-500/50 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handlePreview2amStudy}
+                  disabled={previewingStudy || !studyUrlInput.trim()}
+                  className="px-7 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold text-sm transition-all shrink-0 flex items-center justify-center gap-2 disabled:opacity-40 hover:-translate-y-0.5"
+                >
+                  {previewingStudy ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span>⚡ Preview</span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* PREVIEW CARD */}
+            {studyPreview && (
+              <div className="pt-6 border-t border-white/10 animate-fade-in space-y-3">
+                <p className="text-xs font-mono text-amber-400 uppercase tracking-wider font-semibold">
+                  Product Preview
+                </p>
+
+                <div className="max-w-sm rounded-3xl border border-amber-500/40 bg-zinc-950/90 p-5 space-y-4 shadow-[0_10px_35px_rgba(245,158,11,0.15)]">
+                  <div className="w-full aspect-square rounded-2xl bg-white/5 border border-white/5 overflow-hidden flex items-center justify-center p-4">
+                    <img
+                      src={studyPreview.imageUrl}
+                      alt={studyPreview.title}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h4 className="text-base font-bold text-white leading-snug">
+                      {studyPreview.title}
+                    </h4>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-lg font-mono font-bold text-amber-400">
+                        {studyPreview.price}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 font-mono">
+                        {studyPreview.availability || "In Stock"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddStudyPick}
+                    disabled={addingStudyPick}
+                    className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider transition-all duration-300 shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:-translate-y-0.5 disabled:opacity-50"
+                  >
+                    {addingStudyPick ? "Adding..." : "Add to Picks"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* LIST OF SAVED 2 AM STUDY PICKS */}
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>📚</span>
+                  <span>Active 2 AM Study Picks ({studyPicks.length})</span>
+                </h3>
+                <p className="text-xs text-brand-400 mt-0.5">
+                  Live on website with direct link to 2amstudy.com checkout.
+                </p>
+              </div>
+            </div>
+
+            {loadingStudy ? (
+              <div className="h-40 flex items-center justify-center border border-white/5 rounded-3xl bg-zinc-950/40">
+                <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+              </div>
+            ) : studyPicks.length === 0 ? (
+              <div className="p-12 text-center border border-white/5 rounded-3xl bg-zinc-950/30 space-y-3">
+                <span className="text-4xl">📚</span>
+                <h4 className="text-base font-bold text-white">No 2 AM Study picks added yet</h4>
+                <p className="text-xs text-brand-400 max-w-sm mx-auto">
+                  Paste a 2amstudy.com product URL above (e.g. notebook, GATE notes) to showcase official products.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {studyPicks.map((pick) => (
+                  <div
+                    key={pick.id}
+                    className={`glass border rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 relative group hover:border-amber-500/30 ${
+                      pick.isFeatured ? "border-amber-500/30 bg-amber-500/[0.03]" : "border-white/5 bg-zinc-950/40"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400 font-semibold">
+                          {pick.availability || "In Stock"}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStudyFeatured(pick)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors flex items-center gap-1 ${
+                            pick.isFeatured
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                              : "bg-white/5 text-brand-400 border-white/5 hover:text-white"
+                          }`}
+                        >
+                          <span>⭐</span>
+                          <span>{pick.isFeatured ? "Featured" : "Feature"}</span>
+                        </button>
+                      </div>
+
+                      <div className="flex gap-3 mb-3">
+                        <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 p-1">
+                          {pick.imageUrl ? (
+                            <img
+                              src={pick.imageUrl}
+                              alt={pick.title}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-xl">📚</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-amber-300 transition-colors">
+                            {pick.title}
+                          </h4>
+                          {pick.price ? (
+                            <p className="text-xs font-mono font-bold text-amber-400 mt-1">
+                              {pick.price}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+                      <a
+                        href={pick.productUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 transition-colors text-[11px]"
+                      >
+                        Shop on 2 AM Study ↗
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteStudyPick(pick.id, pick.title)}
+                        className="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors text-[11px]"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,7 +15,7 @@ const navLinks = [
 ];
 
 const moreLinks = [
-  { href: "/amazon", label: "🛍️ Nishant's Picks", match: "/amazon" },
+  { href: "/amazon-feed", label: "🛍️ Nishant's Picks", match: "/amazon-feed" },
   { href: "/support", label: "❤️ Support", match: "/support" },
   { href: "/contact", label: "📩 Contact", match: "/contact" },
   { href: "/universe", label: "🌐 Social Links", match: "/universe" },
