@@ -15,10 +15,8 @@ const navLinks = [
 ];
 
 const moreLinks = [
-  { href: "/amazon-feed", label: "🛍️ Nishant's Picks", match: "/amazon-feed" },
   { href: "/support", label: "❤️ Support", match: "/support" },
   { href: "/contact", label: "📩 Contact", match: "/contact" },
-  { href: "/universe", label: "🌐 Social Links", match: "/universe" },
   { href: "/faq", label: "❓ FAQ", match: "/faq" },
   { href: "/privacy", label: "🔒 Privacy Policy", match: "/privacy" },
   { href: "/terms", label: "📜 Terms of Service", match: "/terms" },
@@ -66,7 +64,7 @@ export default function Navbar() {
   };
 
   const isMoreActive = moreLinks.some(
-    (l) => l.href !== "/universe" && isActive(pathname, l.match)
+    (l) => isActive(pathname, l.match)
   );
 
   useEffect(() => {
