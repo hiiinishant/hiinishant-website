@@ -1,6 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import BlogClientPage from "./BlogClientPage";
 import { getAllBlogPosts } from "@/data/blog";
+
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Blog — Nishant Kumar | Thoughts on Education & Entrepreneurship",
@@ -27,5 +30,9 @@ export const metadata: Metadata = {
 
 export default async function BlogPage() {
   const blogPosts = await getAllBlogPosts();
-  return <BlogClientPage posts={blogPosts} />;
+  return (
+    <Suspense fallback={<div className="min-h-screen pt-24 text-center text-brand-400">Loading blog...</div>}>
+      <BlogClientPage posts={blogPosts} />
+    </Suspense>
+  );
 }

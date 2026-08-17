@@ -194,8 +194,8 @@ export function tiptapToHtml(jsonStr: string): string {
 
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
   try {
-    // Avoid caching so blogs update immediately
-    const res = await fetch(apiUrl("/api/blog"), { cache: "no-store" });
+    // Revalidate periodically
+    const res = await fetch(apiUrl("/api/blog"), { next: { revalidate: 60 } });
     if (!res.ok) return [];
 
     const blogs = (await res.json()) as RawBlogPost[];

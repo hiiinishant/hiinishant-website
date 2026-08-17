@@ -4,6 +4,8 @@ import { defaultVlogSettings } from "@/data/vlogs";
 import { apiUrl } from "@/lib/api";
 import type { VlogSettings } from "@/data/vlogs";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Vlog Corner — Nishant Kumar | Official Vlogs & Stories",
   description:
