@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, User, LogOut, MessageCircle, LayoutDashboard } from "lucide-react";
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from "firebase/auth";
 import { auth, isConfigured } from "@/lib/firebase";
 import { getLoginUrlWithRedirect } from "@/lib/auth-redirect";
@@ -30,16 +30,38 @@ function isActive(pathname: string, match: string) {
   return pathname.startsWith(match);
 }
 
+/** Returns initials from a display name or email */
+function getInitials(user: FirebaseUser): string {
+  if (user.displayName) {
+    return user.displayName
+      .split(" ")
+      .slice(0, 2)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  }
+  return (user.email?.[0] ?? "U").toUpperCase();
+}
+
+/** Returns the short display label (first name or email prefix) */
+function getShortName(user: FirebaseUser): string {
+  if (user.displayName) return user.displayName.split(" ")[0];
+  return user.email?.split("@")[0] ?? "User";
+}
+
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [clickedOpen, setClickedOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const userTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!isConfigured || !auth) return;
@@ -49,31 +71,26 @@ export default function Navbar() {
     return () => unsubscribe();
   }, []);
 
+  /* ─── More dropdown hover logic ─── */
   const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
     setMoreOpen(true);
   };
-
   const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setMoreOpen(false);
-      setClickedOpen(false);
-    }, 150);
+    timeoutRef.current = setTimeout(() => { setMoreOpen(false); setClickedOpen(false); }, 150);
+  };
+  const handleMoreClick = () => {
+    if (!clickedOpen) { setMoreOpen(true); setClickedOpen(true); }
+    else { setMoreOpen(false); setClickedOpen(false); }
   };
 
-  const handleMoreClick = () => {
-    if (!clickedOpen) {
-      // First click: keep open & mark as clicked
-      setMoreOpen(true);
-      setClickedOpen(true);
-    } else {
-      // Second click: close & reset clicked state
-      setMoreOpen(false);
-      setClickedOpen(false);
-    }
+  /* ─── User avatar dropdown hover logic ─── */
+  const handleUserMouseEnter = () => {
+    if (userTimeoutRef.current) { clearTimeout(userTimeoutRef.current); userTimeoutRef.current = null; }
+    setUserMenuOpen(true);
+  };
+  const handleUserMouseLeave = () => {
+    userTimeoutRef.current = setTimeout(() => setUserMenuOpen(false), 180);
   };
 
   const handleLogout = async () => {
@@ -81,19 +98,19 @@ export default function Navbar() {
     try {
       await signOut(auth);
       setAuthUser(null);
+      setUserMenuOpen(false);
       router.refresh();
     } catch (error) {
       console.error("Logout failed:", error);
     }
   };
 
-  const isMoreActive = moreLinks.some(
-    (l) => isActive(pathname, l.match)
-  );
+  const isMoreActive = moreLinks.some((l) => isActive(pathname, l.match));
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (userTimeoutRef.current) clearTimeout(userTimeoutRef.current);
     };
   }, []);
 
@@ -106,21 +123,22 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close "More" dropdown on outside click
+  /* Close "More" dropdown on outside click */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-        setClickedOpen(false);
+        setMoreOpen(false); setClickedOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Hide navbar on all NSGram pages — they use their own sidebar nav
+  /* Hide navbar on all NSGram pages */
   const [currentUrl, setCurrentUrl] = useState(pathname);
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       const full = (window.location.pathname + window.location.search + window.location.hash) || pathname;
@@ -128,9 +146,7 @@ export default function Navbar() {
     }
   }, [pathname]);
 
-  if (pathname?.startsWith("/nsgram")) {
-    return null;
-  }
+  if (pathname?.startsWith("/nsgram")) return null;
 
   const authTargetUrl = getLoginUrlWithRedirect(currentUrl);
 
@@ -139,7 +155,7 @@ export default function Navbar() {
       className={`fixed w-full z-50 transition-all duration-500 ${scrolled
         ? "glass-strong border-b border-white/8 shadow-[0_4px_32px_rgba(0,0,0,0.3)]"
         : "bg-transparent border-b border-transparent"
-        }`}
+      }`}
     >
       <div className="max-w-6xl mx-auto px-5 sm:px-8">
         <div className="flex justify-between items-center h-16 lg:h-20">
@@ -165,15 +181,11 @@ export default function Navbar() {
                   className={`relative px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${active
                     ? "text-white"
                     : "text-brand-300 hover:text-white hover:bg-white/5"
-                    }`}
+                  }`}
                 >
-                  {active && (
-                    <span className="absolute inset-0 rounded-lg bg-white/8 border border-white/10" />
-                  )}
+                  {active && <span className="absolute inset-0 rounded-lg bg-white/8 border border-white/10" />}
                   <span className="relative z-10">{link.label}</span>
-                  {active && (
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-accent" />
-                  )}
+                  {active && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-accent" />}
                 </Link>
               );
             })}
@@ -194,37 +206,27 @@ export default function Navbar() {
                 }`}
               >
                 <span>More</span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${moreOpen ? "rotate-180" : ""}`}
-                />
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${moreOpen ? "rotate-180" : ""}`} />
               </button>
 
-              {/* Dropdown Panel */}
               {moreOpen && (
                 <div className="absolute right-0 top-full pt-1.5 w-56 z-50">
                   <div
                     className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
-                    style={{ background: 'rgb(10,10,18)' }}
+                    style={{ background: "rgb(10,10,18)" }}
                   >
                     <div className="py-1.5">
                       {moreLinks.map((link, idx) => {
                         const active = isActive(pathname, link.match);
-                        const isLastGroup = idx === 3; // separator before Privacy/Terms
+                        const isLastGroup = idx === 3;
                         return (
                           <Fragment key={link.href + link.label}>
-                            {isLastGroup && (
-                              <div className="my-1 mx-3 border-t border-white/10" />
-                            )}
+                            {isLastGroup && <div className="my-1 mx-3 border-t border-white/10" />}
                             <Link
                               href={link.href}
-                              onClick={() => {
-                                setMoreOpen(false);
-                                setClickedOpen(false);
-                              }}
+                              onClick={() => { setMoreOpen(false); setClickedOpen(false); }}
                               className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-all duration-150 ${
-                                active
-                                  ? "text-white bg-white/10"
-                                  : "text-zinc-200 hover:text-white hover:bg-white/8"
+                                active ? "text-white bg-white/10" : "text-zinc-200 hover:text-white hover:bg-white/8"
                               }`}
                             >
                               <span>{link.label}</span>
@@ -238,15 +240,99 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Login / Logout Button on Header */}
+            {/* ─── USER AVATAR / LOGIN ─── */}
             {authUser ? (
-              <button
-                onClick={handleLogout}
-                className="group ml-2 relative px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:-translate-y-0.5 overflow-hidden flex items-center gap-1.5 cursor-pointer"
+              <div
+                className="relative ml-2"
+                ref={userMenuRef}
+                onMouseEnter={handleUserMouseEnter}
+                onMouseLeave={handleUserMouseLeave}
               >
-                <span className="relative z-10">Logout</span>
-                <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer" />
-              </button>
+                {/* Avatar Button */}
+                <button
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-xl hover:bg-white/8 border border-transparent hover:border-white/10 transition-all duration-200 cursor-pointer group"
+                >
+                  {/* Avatar Circle */}
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-xs font-extrabold shadow-[0_0_12px_rgba(245,158,11,0.3)] group-hover:shadow-[0_0_18px_rgba(245,158,11,0.45)] transition-shadow shrink-0">
+                    {getInitials(authUser)}
+                  </div>
+                  {/* Name */}
+                  <span className="text-sm font-semibold text-white max-w-[90px] truncate leading-none">
+                    {getShortName(authUser)}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-brand-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {/* User Dropdown */}
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full pt-2 w-60 z-50">
+                    <div
+                      className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.85)]"
+                      style={{ background: "rgb(10,10,18)" }}
+                    >
+                      {/* User Info Header */}
+                      <div className="px-4 py-3.5 border-b border-white/8">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-sm font-extrabold shadow-[0_0_14px_rgba(245,158,11,0.3)] shrink-0">
+                            {getInitials(authUser)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-white truncate leading-tight">
+                              {authUser.displayName ?? getShortName(authUser)}
+                            </p>
+                            <p className="text-[11px] text-brand-400 truncate mt-0.5 leading-tight">
+                              {authUser.email}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Menu Items */}
+                      <div className="py-1.5">
+                        <Link
+                          href="/nsgram"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 hover:text-white hover:bg-white/8 transition-all duration-150"
+                        >
+                          <MessageCircle className="w-4 h-4 text-brand-400 shrink-0" />
+                          <span>NSGram</span>
+                        </Link>
+
+                        <Link
+                          href="/nsgram/profile"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 hover:text-white hover:bg-white/8 transition-all duration-150"
+                        >
+                          <User className="w-4 h-4 text-brand-400 shrink-0" />
+                          <span>Profile</span>
+                        </Link>
+
+                        {authUser.email === "nishant@hiii.com" || authUser.email?.includes("admin") ? (
+                          <Link
+                            href="/admin"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 hover:text-white hover:bg-white/8 transition-all duration-150"
+                          >
+                            <LayoutDashboard className="w-4 h-4 text-brand-400 shrink-0" />
+                            <span>Admin Dashboard</span>
+                          </Link>
+                        ) : null}
+
+                        <div className="my-1 mx-3 border-t border-white/10" />
+
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/8 transition-all duration-150 cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4 shrink-0" />
+                          <span>Log Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link
                 href={authTargetUrl}
@@ -258,14 +344,19 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile controls */}
+          {/* ─── Mobile controls ─── */}
           <div className="flex lg:hidden items-center gap-2">
             {authUser ? (
               <button
-                onClick={handleLogout}
-                className="px-3.5 py-1.5 rounded-xl bg-accent text-black font-bold text-xs cursor-pointer"
+                onClick={() => setMobileOpen((v) => !v)}
+                className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-xl hover:bg-white/8 border border-white/10 transition-all cursor-pointer"
               >
-                Logout
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-[11px] font-extrabold shrink-0">
+                  {getInitials(authUser)}
+                </div>
+                <span className="text-xs font-semibold text-white max-w-[60px] truncate">
+                  {getShortName(authUser)}
+                </span>
               </button>
             ) : (
               <Link
@@ -290,13 +381,25 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* ─── Mobile Menu ─── */}
       <div
-        className={`lg:hidden overflow-hidden transition-all duration-400 ease-in-out ${mobileOpen ? "max-h-[40rem] opacity-100" : "max-h-0 opacity-0"
-          }`}
+        className={`lg:hidden overflow-hidden transition-all duration-400 ease-in-out ${mobileOpen ? "max-h-[44rem] opacity-100" : "max-h-0 opacity-0"}`}
       >
         <div className="px-5 pb-6 pt-2 space-y-1 border-t border-white/5 bg-background/95 backdrop-blur-xl">
-          {/* Regular nav links */}
+          {/* If logged in: show user card at top */}
+          {authUser && (
+            <div className="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl bg-white/5 border border-white/8">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-xs font-extrabold shrink-0">
+                {getInitials(authUser)}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white truncate">{authUser.displayName ?? getShortName(authUser)}</p>
+                <p className="text-[11px] text-brand-400 truncate">{authUser.email}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Nav links */}
           {navLinks.map((link) => {
             const active = isActive(pathname, link.match);
             return (
@@ -307,7 +410,7 @@ export default function Navbar() {
                 className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${active
                   ? "text-white bg-white/8 border border-white/10"
                   : "text-brand-300 hover:text-white hover:bg-white/5"
-                  }`}
+                }`}
               >
                 {active && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
                 {link.label}
@@ -315,12 +418,10 @@ export default function Navbar() {
             );
           })}
 
-          {/* More section divider */}
+          {/* More section */}
           <div className="pt-2 pb-1 px-4">
             <p className="text-[10px] uppercase font-bold tracking-widest text-brand-500">More</p>
           </div>
-
-          {/* More links */}
           {moreLinks.map((link) => {
             const active = isActive(pathname, link.match);
             return (
@@ -331,7 +432,7 @@ export default function Navbar() {
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${active
                   ? "text-white bg-white/8 border border-white/10"
                   : "text-brand-300 hover:text-white hover:bg-white/5"
-                  }`}
+                }`}
               >
                 {active && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
                 {link.label}
@@ -339,17 +440,34 @@ export default function Navbar() {
             );
           })}
 
-          <div className="pt-3">
+          {/* Auth section */}
+          <div className="pt-3 space-y-2">
             {authUser ? (
-              <button
-                onClick={() => {
-                  setMobileOpen(false);
-                  handleLogout();
-                }}
-                className="block w-full text-center px-5 py-3 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] cursor-pointer"
-              >
-                Logout
-              </button>
+              <>
+                <Link
+                  href="/nsgram"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 text-white text-sm font-medium transition-all"
+                >
+                  <MessageCircle className="w-4 h-4 text-brand-400" />
+                  NSGram
+                </Link>
+                <Link
+                  href="/nsgram/profile"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 text-white text-sm font-medium transition-all"
+                >
+                  <User className="w-4 h-4 text-brand-400" />
+                  Profile
+                </Link>
+                <button
+                  onClick={() => { setMobileOpen(false); handleLogout(); }}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-400 hover:text-red-300 text-sm font-semibold transition-all cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Log Out
+                </button>
+              </>
             ) : (
               <Link
                 href={authTargetUrl}
