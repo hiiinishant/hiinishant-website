@@ -3,15 +3,18 @@ import { Fragment } from "react";
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from "firebase/auth";
+import { auth, isConfigured } from "@/lib/firebase";
+import { getLoginUrlWithRedirect } from "@/lib/auth-redirect";
 
 const navLinks = [
   { href: "/projects", label: "Startups", match: "/projects" },
   { href: "/updates", label: "Updates", match: "/updates" },
   { href: "/blog", label: "Blog", match: "/blog" },
+  { href: "/quiz", label: "Quiz", match: "/quiz" },
   { href: "/music", label: "Music", match: "/music" },
-  { href: "/vlogs", label: "Vlogs", match: "/vlogs" },
 ];
 
 const moreLinks = [
@@ -32,9 +35,19 @@ export default function Navbar() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [clickedOpen, setClickedOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!isConfigured || !auth) return;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
@@ -60,6 +73,17 @@ export default function Navbar() {
       // Second click: close & reset clicked state
       setMoreOpen(false);
       setClickedOpen(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+      setAuthUser(null);
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed:", error);
     }
   };
 
@@ -95,9 +119,20 @@ export default function Navbar() {
   }, []);
 
   // Hide navbar on all NSGram pages — they use their own sidebar nav
+  const [currentUrl, setCurrentUrl] = useState(pathname);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const full = (window.location.pathname + window.location.search + window.location.hash) || pathname;
+      setCurrentUrl(full);
+    }
+  }, [pathname]);
+
   if (pathname?.startsWith("/nsgram")) {
     return null;
   }
+
+  const authTargetUrl = getLoginUrlWithRedirect(currentUrl);
 
   return (
     <nav
@@ -203,17 +238,43 @@ export default function Navbar() {
               )}
             </div>
 
-            <Link
-              href="/contact"
-              className="group ml-2 relative px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:-translate-y-0.5 overflow-hidden"
-            >
-              <span className="relative z-10">Get in Touch</span>
-              <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer" />
-            </Link>
+            {/* Login / Logout Button on Header */}
+            {authUser ? (
+              <button
+                onClick={handleLogout}
+                className="group ml-2 relative px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:-translate-y-0.5 overflow-hidden flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="relative z-10">Logout</span>
+                <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer" />
+              </button>
+            ) : (
+              <Link
+                href={authTargetUrl}
+                className="group ml-2 relative px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:-translate-y-0.5 overflow-hidden flex items-center gap-1.5"
+              >
+                <span className="relative z-10">Login</span>
+                <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer" />
+              </Link>
+            )}
           </div>
 
           {/* Mobile controls */}
           <div className="flex lg:hidden items-center gap-2">
+            {authUser ? (
+              <button
+                onClick={handleLogout}
+                className="px-3.5 py-1.5 rounded-xl bg-accent text-black font-bold text-xs cursor-pointer"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link
+                href={authTargetUrl}
+                className="px-3.5 py-1.5 rounded-xl bg-accent text-black font-bold text-xs"
+              >
+                Login
+              </Link>
+            )}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="relative w-10 h-10 rounded-xl flex items-center justify-center text-brand-300 hover:text-white hover:bg-white/5 transition-all duration-300"
@@ -279,13 +340,25 @@ export default function Navbar() {
           })}
 
           <div className="pt-3">
-            <Link
-              href="/contact"
-              onClick={() => setMobileOpen(false)}
-              className="block w-full text-center px-5 py-3 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.3)]"
-            >
-              Get in Touch
-            </Link>
+            {authUser ? (
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  handleLogout();
+                }}
+                className="block w-full text-center px-5 py-3 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] cursor-pointer"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link
+                href={authTargetUrl}
+                onClick={() => setMobileOpen(false)}
+                className="block w-full text-center px-5 py-3 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+              >
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </div>

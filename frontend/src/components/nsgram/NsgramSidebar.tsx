@@ -7,7 +7,7 @@ import { useNsgramAuth } from "./NsgramAuthProvider";
 
 export default function NsgramSidebar() {
   const pathname = usePathname();
-  const { profile, logout } = useNsgramAuth();
+  const { profile } = useNsgramAuth();
 
   const menuItems = [
     {
@@ -86,19 +86,6 @@ export default function NsgramSidebar() {
             );
           })}
         </nav>
-
-        {/* Footer/Logout Button */}
-        <div className="pt-4 border-t border-white/5">
-          <button
-            onClick={logout}
-            className="flex w-full items-center gap-4 px-4 py-3 rounded-2xl text-rose-400 border border-transparent hover:bg-rose-500/10 hover:border-rose-500/20 transition-all duration-300"
-          >
-            <svg className="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span className="text-sm font-semibold tracking-wide">Logout</span>
-          </button>
-        </div>
       </aside>
 
       {/* Mobile Bottom Navigation Bar */}
@@ -118,18 +105,6 @@ export default function NsgramSidebar() {
             </Link>
           );
         })}
-        <button
-          onClick={logout}
-          className="flex flex-col items-center justify-center flex-1 py-1 text-rose-400 transition-all duration-300 hover:text-rose-300"
-          aria-label="Logout"
-        >
-          <div className="mb-0.5">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </div>
-          <span className="text-[10px] font-medium tracking-wide">Logout</span>
-        </button>
       </nav>
     </>
   );

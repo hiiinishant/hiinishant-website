@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { NsgramAuthProvider, useNsgramAuth } from "@/components/nsgram/NsgramAuthProvider";
+import { getLoginUrlWithRedirect } from "@/lib/auth-redirect";
 import NsgramSidebar from "@/components/nsgram/NsgramSidebar";
 import NsgramHeader from "@/components/nsgram/NsgramHeader";
 import GlobalCallListener from "@/components/nsgram/GlobalCallListener";
@@ -18,10 +19,12 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
 
     if (
       !loading &&
-      (!authUser || !isVerified || !profile || !isProfileActivated) &&
-      pathname !== "/nsgram"
+      (!authUser || !isVerified || !profile || !isProfileActivated)
     ) {
-      router.replace("/nsgram");
+      const fullUrl = typeof window !== "undefined"
+        ? (window.location.pathname + window.location.search + window.location.hash) || pathname
+        : pathname;
+      router.replace(getLoginUrlWithRedirect(fullUrl || "/nsgram"));
     }
   }, [authUser, profile, loading, pathname, router]);
 
@@ -39,16 +42,20 @@ function NsgramLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Login page
-  if (pathname === "/nsgram") {
-    return <>{children}</>;
-  }
-
   const isVerified = authUser && authUser.emailVerified;
   const isProfileActivated = profile && profile.isActivated;
 
   if (!authUser || !isVerified || !profile || !isProfileActivated) {
-    return <section className="h-dvh bg-slate-950" />;
+    return (
+      <section className="flex h-dvh items-center justify-center bg-slate-950 px-4 text-brand-100">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-400 border-t-transparent" />
+          <p className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm tracking-wide">
+            Redirecting to login…
+          </p>
+        </div>
+      </section>
+    );
   }
 
   const isMessagesPage = pathname === "/nsgram/messages";

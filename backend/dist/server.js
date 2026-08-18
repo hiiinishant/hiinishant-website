@@ -59,6 +59,8 @@ const users_1 = __importDefault(require("./routes/users"));
 const resume_1 = __importDefault(require("./routes/resume"));
 const visitors_1 = __importStar(require("./routes/visitors"));
 const quiz_1 = __importDefault(require("./routes/quiz"));
+const amazonPicks_1 = __importDefault(require("./routes/amazonPicks"));
+const studyPicks_1 = __importDefault(require("./routes/studyPicks"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
 const ALLOWED_ORIGINS = new Set([
@@ -98,6 +100,8 @@ app.use('/api/users', users_1.default);
 app.use('/api/resume', resume_1.default);
 app.use('/api/visitors', visitors_1.default);
 app.use('/api/quiz', quiz_1.default);
+app.use('/api/amazon-picks', amazonPicks_1.default);
+app.use('/api/study-picks', studyPicks_1.default);
 const httpServer = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(httpServer, {
     cors: {
@@ -231,15 +235,65 @@ io.on('connection', (socket) => {
         console.log(`[typing-stop] User ${userId} stopped typing in room ${conversationId}`);
         socket.to(conversationId).emit('user-typing', { conversationId, userId, isTyping: false });
     });
+    // Track last offline call email sent timestamp between user pairs: "callerId_calleeId" -> timestamp
+    const offlineCallEmailTimestamps = new Map();
+    const OFFLINE_EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
     // ── WebRTC Voice Call Signaling ───────────────────────────────────────────
-    socket.on('call-user', (data) => {
+    socket.on('call-user', async (data) => {
         const { callerId, calleeId, callerName, callerAvatar, conversationId, callType } = data;
         const calleeSocketId = getUserSocketId(calleeId);
         if (calleeSocketId) {
             io.to(calleeSocketId).emit('incoming-call', { callerId, callerName, callerAvatar, conversationId, callType });
         }
         else {
-            socket.emit('call-declined', { reason: 'offline' });
+            // Callee is offline. Check 4-hour rate limit before sending email.
+            const pairKey = `${callerId}_${calleeId}`;
+            const lastSentTime = offlineCallEmailTimestamps.get(pairKey) || 0;
+            const now = Date.now();
+            const shouldSendEmail = (now - lastSentTime) >= OFFLINE_EMAIL_COOLDOWN_MS;
+            if (shouldSendEmail) {
+                offlineCallEmailTimestamps.set(pairKey, now);
+            }
+            // Allow 2.5 seconds of "Calling..." dial screen (Instagram style) before declining
+            setTimeout(async () => {
+                socket.emit('call-declined', {
+                    reason: 'offline',
+                    emailSent: shouldSendEmail,
+                });
+                if (shouldSendEmail && db_1.firestore) {
+                    try {
+                        const calleeDoc = await db_1.firestore.collection('users').doc(calleeId).get();
+                        if (calleeDoc.exists) {
+                            const calleeData = calleeDoc.data();
+                            const calleeEmail = calleeData?.email;
+                            const calleeName = calleeData?.displayName || calleeData?.username || "there";
+                            if (calleeEmail) {
+                                const { sendEmail } = await Promise.resolve().then(() => __importStar(require('./lib/mail')));
+                                await sendEmail({
+                                    to: calleeEmail,
+                                    subject: `📞 Missed ${callType === 'video' ? 'Video' : 'Voice'} Call on NSGram from ${callerName}`,
+                                    text: `Hi ${calleeName},\n\n${callerName} tried to call you on NSGram while you were offline.\n\nLog in to NSGram to connect back: https://hiiinishant.com/nsgram/messages`,
+                                    html: `
+                    <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; background: #0f172a; color: #f8fafc; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                      <h2 style="color: #f59e0b; margin-top: 0;">📞 Missed ${callType === 'video' ? 'Video' : 'Voice'} Call</h2>
+                      <p>Hi <strong>${calleeName}</strong>,</p>
+                      <p><strong>${callerName}</strong> tried to start a ${callType} call with you on NSGram, but you were offline or away from the website.</p>
+                      <div style="margin: 24px 0;">
+                        <a href="https://hiiinishant.com/nsgram/messages" style="background: #f59e0b; color: #020617; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Open NSGram Messages →</a>
+                      </div>
+                      <p style="color: #64748b; font-size: 12px; margin-bottom: 0;">Hiii Nishant • NSGram Notifications</p>
+                    </div>
+                  `,
+                                });
+                                console.log(`[call-user] Sent 4-hr rate-limited missed call email to ${calleeEmail} for caller ${callerName}`);
+                            }
+                        }
+                    }
+                    catch (mailErr) {
+                        console.error('[call-user] Failed to send missed call email:', mailErr);
+                    }
+                }
+            }, 2500);
         }
     });
     socket.on('call-accepted', (data) => {

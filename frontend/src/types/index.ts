@@ -129,6 +129,7 @@ export interface AmazonPick {
   price?: string;
   description?: string;
   isFeatured?: boolean;
+  inStock?: boolean;
   asin?: string;
   rating?: number;
   createdAt: string;
@@ -140,6 +141,7 @@ export interface StudyPick {
   productId: string;
   productUrl: string;
   title: string;
+  category?: string;
   imageUrl?: string;
   price?: string;
   salePrice?: string;

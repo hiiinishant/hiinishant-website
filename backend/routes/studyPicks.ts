@@ -30,11 +30,7 @@ function parse2amStudyUrl(inputUrl: string): { slug: string; canonicalUrl: strin
 
 function formatTitleFromSlug(slug: string): string {
   const words = slug.replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-  const formatted = words.join(' ');
-  if (!formatted.toLowerCase().includes('study')) {
-    return '💛- 2 AM Study ' + formatted;
-  }
-  return '💛 ' + formatted;
+  return words.join(' ');
 }
 
 
@@ -68,36 +64,67 @@ async function resolve2amProduct(inputUrl: string): Promise<{
           return {
             productId: data.id || slug,
             title: data.title || data.name || formatTitleFromSlug(slug),
-            imageUrl: data.imageUrl || data.image || data.thumbnail || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
-            price: data.price ? (`₹${data.price}`.replace('₹₹', '₹')) : '₹199',
-            salePrice: data.salePrice ? (`x��${data.salePrice}`.replace('₹₹', '₹')) : undefined,
+            imageUrl: data.imageUrl || data.image || data.thumbnail || '',
+            price: data.price ? (`₹${data.price}`.replace('₹₹', '₹')) : '',
+            salePrice: data.salePrice ? (`₹${data.salePrice}`.replace('₹₹', '₹')) : undefined,
             availability: data.inStock !== false && data.availability !== 'out_of_stock' ? 'In Stock' : 'Out of Stock',
             canonicalUrl: data.url || canonicalUrl,
-            description: data.description || 'Official 2 AM Study educational gear & learning resources.',
+            description: data.description || '',
           };
         }
       }
     } catch {}
   }
 
+  // Attempt HTML scraping for OpenGraph & Twitter tags
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const htmlRes = await fetch(canonicalUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (htmlRes.ok) {
+      const html = await htmlRes.text();
+      const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+                           html.match(/<meta[^>]*name=["']twitter:title["'][^>]*content=["']([^"']+)["']/i) ||
+                           html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+                           html.match(/<meta[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
+
+      let scrapedTitle = ogTitleMatch ? ogTitleMatch[1].trim() : '';
+      if (scrapedTitle.includes('|')) scrapedTitle = scrapedTitle.split('|')[0].trim();
+      if (scrapedTitle.includes('- 2 AM Study')) scrapedTitle = scrapedTitle.split('- 2 AM Study')[0].trim();
+      const scrapedImage = ogImageMatch ? ogImageMatch[1].trim() : '';
+
+      if (scrapedTitle || scrapedImage) {
+        return {
+          productId: slug,
+          title: scrapedTitle || formatTitleFromSlug(slug),
+          imageUrl: scrapedImage || '',
+          price: '',
+          availability: 'In Stock',
+          canonicalUrl,
+          description: '',
+        };
+      }
+    }
+  } catch {}
+
   const derivedTitle = formatTitleFromSlug(slug);
-  let defaultImage = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80';
-  if (slug.includes('notebook') || slug.includes('diary')) {
-    defaultImage = 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=800&auto=format&fit=crop&q=80';
-  } else if (slug.includes('gate') || slug.includes('notes') || slug.includes('book')) {
-    defaultImage = 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop&q=80';
-  } else if (slug.includes('bottle') || slug.includes('mug')) {
-    defaultImage = 'https://images.unsplash.com/photo-1602143407151-71111542de6e8?w=800&auto=format&fit=crop&q=80';
-  }
 
   return {
     productId: slug,
     title: derivedTitle,
-    imageUrl: defaultImage,
-    price: '₹199',
+    imageUrl: '',
+    price: '',
     availability: 'In Stock',
     canonicalUrl,
-    description: 'Official 2 AM Study learning resource & productivity essential.',
+    description: '',
   };
 }
 
@@ -147,7 +174,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       res.status(503).json({ error: 'Database unavailable' });
       return;
     }
-    const { productUrl, productId, title, imageUrl, price, salePrice, availability, description, isFeatured, displayOrder } = req.body;
+    const { productUrl, productId, title, category, imageUrl, price, salePrice, availability, description, isFeatured, displayOrder } = req.body;
     if (!productUrl || !productUrl.trim()) {
       res.status(400).json({ error: '2 AM Study Product URL is required' });
       return;
@@ -160,9 +187,10 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     const itemData = {
       productId: productId || resolvedData.productId || 'study-item',
       productUrl: productUrl.trim(),
+      category: (category?.trim() || '2 AM Study'),
       title: (title || resolvedData.title || '2 AM Study Product').trim(),
       imageUrl: (imageUrl || resolvedData.imageUrl || '').trim(),
-      price: (price || resolvedData.price || '₹199').trim(),
+      price: (price || resolvedData.price || '').trim(),
       salePrice: (salePrice || resolvedData.salePrice || '').trim(),
       availability: availability || resolvedData.availability || 'In Stock',
       description: (description || resolvedData.description || '').trim(),

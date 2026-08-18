@@ -306,6 +306,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       price: price?.trim() || '', // Never guessed or faked
       description: description?.trim() || '',
       isFeatured: !!isFeatured,
+      inStock: req.body.inStock !== false, // Default true if not provided
       asin: finalAsin || '',
       rating: typeof rating === 'number' ? rating : 5,
       createdAt: now,

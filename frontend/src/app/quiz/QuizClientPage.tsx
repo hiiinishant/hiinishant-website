@@ -599,10 +599,10 @@ export default function QuizClientPage() {
                           </div>
                         </div>
                         <Link
-                          href="/nsgram"
+                          href="/login?redirect=/quiz"
                           className="flex items-center justify-center gap-2 w-full py-3 bg-amber-500 text-black text-xs font-bold rounded-xl hover:bg-amber-400 transition-colors uppercase tracking-wider"
                         >
-                          Join Nsgram / Sign In →
+                          Sign In to Save Answer →
                         </Link>
                       </div>
                     )}
