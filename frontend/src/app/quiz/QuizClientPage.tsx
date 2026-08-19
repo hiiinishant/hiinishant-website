@@ -308,12 +308,7 @@ export default function QuizClientPage() {
       {/* ─── NAV BAR ─── */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-white/5">
         <div className="max-w-5xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-brand-400 hover:text-white transition-colors group">
-            <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-            </svg>
-            <span className="text-xs font-mono uppercase tracking-widest">Back</span>
-          </Link>
+
 
           {/* Stat pills & Leaderboard Toggle */}
           <div className="flex items-center gap-2">
@@ -344,10 +339,7 @@ export default function QuizClientPage() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-brand-600 uppercase tracking-widest">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                Live Challenge
-              </div>
+
             )}
           </div>
         </div>
@@ -495,139 +487,74 @@ export default function QuizClientPage() {
           <div className="flex-1 min-w-0 space-y-8 mt-4 lg:mt-0 w-full">
 
             {activeSubject === "Leaderboard" ? (
-              /* ══ SINGLE CLEAN LEADERBOARD LIST ══ */
-              <div className="space-y-6 animate-fade-in">
-                {/* Header Card */}
-                <div className="p-6 sm:p-7 rounded-3xl border border-amber-500/20 bg-gradient-to-b from-amber-500/10 via-zinc-950/80 to-zinc-950 relative overflow-hidden shadow-[0_10px_35px_rgba(245,158,11,0.08)]">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-amber-400 font-bold mb-1.5">
-                        <span>🏆</span>
-                        <span>Quiz Leaderboard</span>
-                      </div>
-                      <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                        Student Rankings
-                      </h1>
-                      <p className="text-xs sm:text-sm text-brand-300 mt-1 leading-relaxed">
-                        Top students ranked by quiz score and daily streaks.
-                      </p>
-                    </div>
-                    <button
-                      onClick={fetchLeaderboard}
-                      disabled={leaderboardLoading}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-brand-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-                    >
-                      <span className={leaderboardLoading ? "animate-spin" : ""}>🔄</span>
-                      <span className="hidden sm:inline">Refresh</span>
-                    </button>
-                  </div>
+              /* ══ PLAIN TEXT LEADERBOARD ══ */
+              <div className="space-y-4 animate-fade-in">
+
+                {/* Title */}
+                <div className="flex items-center justify-between">
+                  <h1 className="text-lg font-bold text-white">🏆 Student Rankings</h1>
+                  <button
+                    onClick={fetchLeaderboard}
+                    disabled={leaderboardLoading}
+                    className="text-xs text-brand-400 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {leaderboardLoading ? "Loading…" : "↻ Refresh"}
+                  </button>
                 </div>
 
                 {leaderboardLoading ? (
-                  <div className="h-64 flex flex-col items-center justify-center gap-3">
-                    <div className="w-8 h-8 border-2 border-amber-400/40 border-t-amber-400 rounded-full animate-spin" />
-                    <p className="text-xs font-mono text-brand-500 uppercase tracking-wider">Loading leaderboard...</p>
-                  </div>
+                  <p className="text-sm text-brand-500 py-4">Loading rankings…</p>
                 ) : leaderboard.length === 0 ? (
-                  <div className="p-10 sm:p-14 text-center border border-white/8 rounded-3xl bg-white/2 space-y-4">
-                    <span className="text-5xl block">🥇</span>
-                    <h3 className="text-lg font-bold text-white">No Scores Yet</h3>
-                    <p className="text-xs text-brand-400 max-w-md mx-auto leading-relaxed">
-                      Be the first student to attempt today&apos;s Daily Challenge and take the #1 rank on the leaderboard!
-                    </p>
+                  <div className="py-10 text-center">
+                    <p className="text-sm text-brand-400">No scores yet. Be the first!</p>
                     <button
                       onClick={() => handleSubjectClick("Daily Challenge")}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] cursor-pointer"
+                      className="mt-3 text-sm text-amber-400 hover:text-amber-300 underline cursor-pointer"
                     >
-                      <span>🔥 Solve Today&apos;s Quiz</span>
+                      Go to today&apos;s quiz →
                     </button>
                   </div>
                 ) : (
-                  /* ─── SINGLE RANKINGS LIST ─── */
-                  <div className="rounded-3xl border border-white/8 bg-zinc-950/70 overflow-hidden shadow-xl">
-                    <div className="divide-y divide-white/5">
-                      {leaderboard.map((item, idx) => {
-                        const isCurrentUser = user && item.userId === user.uid;
+                  <div className="space-y-3">
+                    {leaderboard.map((item, idx) => {
+                      const isCurrentUser = user && item.userId === user.uid;
 
-                        // Rank icon badge
-                        let rankBadge = (
-                          <span className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 text-brand-400 flex items-center justify-center text-xs font-mono font-bold shrink-0">
-                            #{idx + 1}
+                      const rankLabel =
+                        idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+
+                      const dpLabel =
+                        item.photoURL === "girl" ? "👧"
+                        : item.photoURL === "boy" ? "👦"
+                        : item.displayName.charAt(0).toUpperCase();
+
+                      return (
+                        <div
+                          key={item.userId || idx}
+                          className="flex items-center gap-3"
+                        >
+                          {/* Rank */}
+                          <span className="w-7 text-center text-sm shrink-0 font-mono text-brand-400">
+                            {rankLabel}
                           </span>
-                        );
 
-                        if (idx === 0) {
-                          rankBadge = (
-                            <span className="w-8 h-8 rounded-xl bg-amber-400 text-black flex items-center justify-center text-sm font-extrabold shadow-[0_0_12px_rgba(245,158,11,0.4)] shrink-0">
-                              🥇
-                            </span>
-                          );
-                        } else if (idx === 1) {
-                          rankBadge = (
-                            <span className="w-8 h-8 rounded-xl bg-slate-300 text-black flex items-center justify-center text-sm font-extrabold shadow-sm shrink-0">
-                              🥈
-                            </span>
-                          );
-                        } else if (idx === 2) {
-                          rankBadge = (
-                            <span className="w-8 h-8 rounded-xl bg-amber-700 text-white flex items-center justify-center text-sm font-extrabold shadow-sm shrink-0">
-                              🥉
-                            </span>
-                          );
-                        }
+                          {/* DP — plain emoji or initial, no circle */}
+                          <span className="text-base shrink-0">
+                            {dpLabel}
+                          </span>
 
-                        return (
-                          <div
-                            key={item.userId || idx}
-                            className={`p-4 sm:px-6 sm:py-4.5 flex items-center justify-between gap-3 transition-colors ${
-                              isCurrentUser
-                                ? "bg-amber-500/10 hover:bg-amber-500/15"
-                                : "hover:bg-white/3"
-                            }`}
-                          >
-                            {/* Left: Rank + Student Avatar + Name */}
-                            <div className="flex items-center gap-3.5 min-w-0">
-                              {rankBadge}
+                          {/* Name */}
+                          <span className={`flex-1 text-sm truncate ${isCurrentUser ? "text-amber-300 font-semibold" : "text-white"}`}>
+                            {item.displayName}
+                            {isCurrentUser && <span className="text-[10px] text-amber-500 ml-1">(You)</span>}
+                          </span>
 
-                              <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-amber-300 shrink-0 overflow-hidden">
-                                {item.photoURL ? (
-                                  <img
-                                    src={item.photoURL}
-                                    alt={item.displayName}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <span>{item.displayName.charAt(0).toUpperCase()}</span>
-                                )}
-                              </div>
-
-                              <div className="min-w-0">
-                                <p className={`text-sm sm:text-base font-bold truncate ${isCurrentUser ? "text-amber-300" : "text-white"}`}>
-                                  {item.displayName} {isCurrentUser && <span className="text-[10px] text-amber-400 font-mono font-normal">(You)</span>}
-                                </p>
-                                <p className="text-[11px] font-mono text-brand-500 truncate">
-                                  {item.username ? `@${item.username}` : `${item.totalAttempts} attempts`}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Right: Streak + Score */}
-                            <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
-                              {item.currentStreak > 0 && (
-                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-mono font-bold">
-                                  <span>🔥</span>
-                                  <span>{item.currentStreak}d</span>
-                                </div>
-                              )}
-
-                              <div className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs sm:text-sm font-mono font-extrabold shadow-sm">
-                                💎 {item.totalXP} XP
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          {/* Score — plain text */}
+                          <span className="text-sm text-amber-400 font-mono shrink-0">
+                            {item.totalXP} XP
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -839,18 +766,7 @@ export default function QuizClientPage() {
               )
             )}
 
-            {/* ─── CLOSE QUIZ (mobile/tablet only) ─── */}
-            <div className="flex justify-center pt-4 lg:hidden">
-              <Link
-                href="/"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/8 bg-white/3 text-sm font-semibold text-brand-300 hover:bg-white/6 hover:text-white hover:border-white/15 transition-all duration-300"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Close Quiz
-              </Link>
-            </div>
+
 
           </div>{/* end RIGHT COLUMN */}
 
