@@ -324,7 +324,7 @@ export default function QuizClientPage() {
               <span className="hidden sm:inline">Leaderboard</span>
             </button>
 
-            {stats && stats.totalAttempts > 0 ? (
+            {stats && stats.totalAttempts > 0 && (
               <>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-bold">
                   🔥 <span>{stats.currentStreak}</span>
@@ -338,8 +338,6 @@ export default function QuizClientPage() {
                   🎯 <span>{Math.round((stats.totalCorrect / stats.totalAttempts) * 100)}%</span>
                 </div>
               </>
-            ) : (
-
             )}
           </div>
         </div>
