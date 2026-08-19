@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import AuroraBackground from "@/components/AuroraBackground";
 import DailyQuizCard from "@/components/sections/DailyQuizCard";
+import PortalCard from "@/components/sections/PortalCard";
 
 export const metadata: Metadata = {
   title: "Nishant Kumar — Founder of 2 AM Study | Entrepreneur & Educator",
@@ -223,7 +224,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-8">
             {/* Card 1: Journey */}
-            <Link
+            <PortalCard
               href="/journey"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-violet-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(139,92,246,0.12)] card-spotlight"
             >
@@ -257,10 +258,10 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
 
             {/* Card: Gallery */}
-            <Link
+            <PortalCard
               href="/gallery"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-sky-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(14,165,233,0.12)] card-spotlight"
             >
@@ -293,10 +294,10 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
 
             {/* Card: Music Corner */}
-            <Link
+            <PortalCard
               href="/music"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-fuchsia-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(217,70,239,0.12)] card-spotlight"
             >
@@ -329,10 +330,10 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
 
             {/* Card 2: Projects */}
-            <Link
+            <PortalCard
               href="/projects"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-amber-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.12)] card-spotlight"
             >
@@ -366,10 +367,10 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
 
             {/* Card 3: Universe */}
-            <Link
+            <PortalCard
               href="/universe"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-emerald-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(16,185,129,0.12)] card-spotlight"
             >
@@ -403,10 +404,10 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
 
             {/* Card 4: Updates */}
-            <Link
+            <PortalCard
               href="/updates"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-rose-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(244,63,94,0.12)] card-spotlight"
             >
@@ -440,10 +441,10 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
 
             {/* Card 5: Nishant's Live Updates */}
-            <Link
+            <PortalCard
               href="/status"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-indigo-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(99,102,241,0.12)] card-spotlight flex"
             >
@@ -473,9 +474,9 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
 
-            <Link
+            <PortalCard
               href="/resume"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-accent/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.12)] card-spotlight"
             >
@@ -505,11 +506,11 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
             <DailyQuizCard />
 
             {/* Card 8: Nishant's Vlog Videos */}
-            <Link
+            <PortalCard
               href="/vlogs"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-red-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(239,68,68,0.15)] card-spotlight"
             >
@@ -542,10 +543,10 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
 
             {/* Card 9: Nishant's Picks — Amazon Storefront */}
-            <Link
+            <PortalCard
               href="/amazon-feed"
               className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-amber-500/40 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(245,158,11,0.15)] card-spotlight"
             >
@@ -578,7 +579,7 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </div>
-            </Link>
+            </PortalCard>
           </div>
         </div>
       </section>

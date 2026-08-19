@@ -84,7 +84,7 @@ export default function Navbar() {
     else { setMoreOpen(false); setClickedOpen(false); }
   };
 
-  /* ─── User avatar dropdown hover logic ─── */
+  /* ─── User dropdown hover logic ─── */
   const handleUserMouseEnter = () => {
     if (userTimeoutRef.current) { clearTimeout(userTimeoutRef.current); userTimeoutRef.current = null; }
     setUserMenuOpen(true);
@@ -123,7 +123,7 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  /* Close "More" dropdown on outside click */
+  /* Close dropdowns on outside click */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -199,10 +199,10 @@ export default function Navbar() {
             >
               <button
                 onClick={handleMoreClick}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-300 cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium border transition-colors duration-200 cursor-pointer ${
                   isMoreActive || moreOpen
-                    ? "text-white bg-white/8 border border-white/10"
-                    : "text-brand-300 hover:text-white hover:bg-white/5"
+                    ? "text-white bg-white/8 border-white/10"
+                    : "text-brand-300 hover:text-white hover:bg-white/5 border-transparent"
                 }`}
               >
                 <span>More</span>
@@ -210,31 +210,29 @@ export default function Navbar() {
               </button>
 
               {moreOpen && (
-                <div className="absolute right-0 top-full pt-1.5 w-56 z-50">
+                <div className="absolute right-0 top-full pt-2 w-48 z-50 animate-fadeIn">
                   <div
-                    className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
-                    style={{ background: "rgb(10,10,18)" }}
+                    className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] p-1.5 backdrop-blur-xl"
+                    style={{ background: "rgb(12,12,20)" }}
                   >
-                    <div className="py-1.5">
-                      {moreLinks.map((link, idx) => {
-                        const active = isActive(pathname, link.match);
-                        const isLastGroup = idx === 3;
-                        return (
-                          <Fragment key={link.href + link.label}>
-                            {isLastGroup && <div className="my-1 mx-3 border-t border-white/10" />}
-                            <Link
-                              href={link.href}
-                              onClick={() => { setMoreOpen(false); setClickedOpen(false); }}
-                              className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-all duration-150 ${
-                                active ? "text-white bg-white/10" : "text-zinc-200 hover:text-white hover:bg-white/8"
-                              }`}
-                            >
-                              <span>{link.label}</span>
-                            </Link>
-                          </Fragment>
-                        );
-                      })}
-                    </div>
+                    {moreLinks.map((link, idx) => {
+                      const active = isActive(pathname, link.match);
+                      const isLastGroup = idx === 3;
+                      return (
+                        <Fragment key={link.href + link.label}>
+                          {isLastGroup && <div className="my-1 mx-2 border-t border-white/10" />}
+                          <Link
+                            href={link.href}
+                            onClick={() => { setMoreOpen(false); setClickedOpen(false); }}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-150 ${
+                              active ? "text-white bg-white/10" : "text-zinc-300 hover:text-white hover:bg-white/8"
+                            }`}
+                          >
+                            <span>{link.label}</span>
+                          </Link>
+                        </Fragment>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -248,14 +246,21 @@ export default function Navbar() {
                 onMouseEnter={handleUserMouseEnter}
                 onMouseLeave={handleUserMouseLeave}
               >
-                {/* Avatar Button */}
                 <button
                   onClick={() => setUserMenuOpen((v) => !v)}
-                  className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-xl hover:bg-white/8 border border-transparent hover:border-white/10 transition-all duration-200 cursor-pointer group"
+                  className={`flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-xl transition-all duration-200 cursor-pointer group ${
+                    userMenuOpen
+                      ? "text-white bg-white/8 border border-white/10"
+                      : "hover:bg-white/8 border border-transparent hover:border-white/10"
+                  }`}
                 >
-                  {/* Avatar Circle */}
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-xs font-extrabold shadow-[0_0_12px_rgba(245,158,11,0.3)] group-hover:shadow-[0_0_18px_rgba(245,158,11,0.45)] transition-shadow shrink-0">
-                    {getInitials(authUser)}
+                  {/* Glowing Avatar Circle */}
+                  <div className="relative shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-black text-xs font-extrabold shadow-[0_0_14px_rgba(245,158,11,0.35)] group-hover:shadow-[0_0_22px_rgba(245,158,11,0.55)] transition-shadow">
+                      {getInitials(authUser)}
+                    </div>
+                    {/* Online dot */}
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-[rgb(10,10,18)] shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
                   </div>
                   {/* Name */}
                   <span className="text-sm font-semibold text-white max-w-[90px] truncate leading-none">
@@ -264,71 +269,29 @@ export default function Navbar() {
                   <ChevronDown className={`w-3.5 h-3.5 text-brand-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`} />
                 </button>
 
-                {/* User Dropdown */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full pt-2 w-60 z-50">
+                  <div className="absolute right-0 top-full pt-2 w-36 z-50 animate-fadeIn">
                     <div
-                      className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.85)]"
-                      style={{ background: "rgb(10,10,18)" }}
+                      className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] p-1.5 backdrop-blur-xl"
+                      style={{ background: "rgb(12,12,20)" }}
                     >
-                      {/* User Info Header */}
-                      <div className="px-4 py-3.5 border-b border-white/8">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-sm font-extrabold shadow-[0_0_14px_rgba(245,158,11,0.3)] shrink-0">
-                            {getInitials(authUser)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-white truncate leading-tight">
-                              {authUser.displayName ?? getShortName(authUser)}
-                            </p>
-                            <p className="text-[11px] text-brand-400 truncate mt-0.5 leading-tight">
-                              {authUser.email}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Menu Items */}
-                      <div className="py-1.5">
-                        <Link
-                          href="/nsgram"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 hover:text-white hover:bg-white/8 transition-all duration-150"
-                        >
-                          <MessageCircle className="w-4 h-4 text-brand-400 shrink-0" />
-                          <span>NSGram</span>
-                        </Link>
-
-                        <Link
-                          href="/nsgram/profile"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 hover:text-white hover:bg-white/8 transition-all duration-150"
-                        >
-                          <User className="w-4 h-4 text-brand-400 shrink-0" />
-                          <span>Profile</span>
-                        </Link>
-
-                        {authUser.email === "nishant@hiii.com" || authUser.email?.includes("admin") ? (
-                          <Link
-                            href="/admin"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 hover:text-white hover:bg-white/8 transition-all duration-150"
-                          >
-                            <LayoutDashboard className="w-4 h-4 text-brand-400 shrink-0" />
-                            <span>Admin Dashboard</span>
-                          </Link>
-                        ) : null}
-
-                        <div className="my-1 mx-3 border-t border-white/10" />
-
-                        <button
-                          onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/8 transition-all duration-150 cursor-pointer"
-                        >
-                          <LogOut className="w-4 h-4 shrink-0" />
-                          <span>Log Out</span>
-                        </button>
-                      </div>
+                      <Link
+                        href="/nsgram"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center px-3 py-2 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/8 transition-all duration-150"
+                      >
+                        <span>Nsgram</span>
+                      </Link>
+                      <div className="my-1 mx-2 border-t border-white/10" />
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center px-3 py-2 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-150 cursor-pointer text-left"
+                      >
+                        <span>Logout</span>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -444,28 +407,74 @@ export default function Navbar() {
           <div className="pt-3 space-y-2">
             {authUser ? (
               <>
-                <Link
-                  href="/nsgram"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 text-white text-sm font-medium transition-all"
-                >
-                  <MessageCircle className="w-4 h-4 text-brand-400" />
-                  NSGram
-                </Link>
+                <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-brand-600">My Space</p>
+
                 <Link
                   href="/nsgram/profile"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 text-white text-sm font-medium transition-all"
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-amber-400/20 text-white text-sm font-semibold transition-all"
                 >
-                  <User className="w-4 h-4 text-brand-400" />
-                  Profile
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold leading-tight">My Profile</p>
+                    <p className="text-[11px] text-brand-500">View &amp; edit your profile</p>
+                  </div>
                 </Link>
+
+                <Link
+                  href="/nsgram"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-sky-400/20 text-white text-sm font-semibold transition-all"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-sky-400/10 border border-sky-400/20 flex items-center justify-center shrink-0">
+                    <MessageCircle className="w-4 h-4 text-sky-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold leading-tight">Nsgram</p>
+                    <p className="text-[11px] text-brand-500">Messages &amp; community</p>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/nsgram/messages"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-purple-400/20 text-white text-sm font-semibold transition-all"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-purple-400/10 border border-purple-400/20 flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold leading-tight">Inbox</p>
+                    <p className="text-[11px] text-brand-500">Open your chat inbox</p>
+                  </div>
+                </Link>
+
+                {(authUser.email === "nishant@hiii.com" || authUser.email?.includes("admin")) && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-rose-400/20 text-white text-sm font-semibold transition-all"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-rose-400/10 border border-rose-400/20 flex items-center justify-center shrink-0">
+                      <LayoutDashboard className="w-4 h-4 text-rose-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold leading-tight">Admin Dashboard</p>
+                      <p className="text-[11px] text-brand-500">Manage site content</p>
+                    </div>
+                  </Link>
+                )}
+
                 <button
                   onClick={() => { setMobileOpen(false); handleLogout(); }}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-400 hover:text-red-300 text-sm font-semibold transition-all cursor-pointer"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/18 border border-red-500/20 hover:border-red-500/35 text-red-400 hover:text-white text-sm font-bold transition-all cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  Log Out
+                  Sign Out
                 </button>
               </>
             ) : (

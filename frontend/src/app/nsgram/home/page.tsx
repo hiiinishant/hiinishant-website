@@ -15,17 +15,32 @@ export default function NsgramHomePage() {
       <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-slate-900/50 p-8 sm:p-10 shadow-2xl backdrop-blur">
         {/* Glow effect */}
         <div className="pointer-events-none absolute -right-24 -top-24 w-80 h-80 rounded-full bg-amber-400/10 blur-[80px]" />
-        
-        <div className="relative z-10 max-w-2xl">
-          <p className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-300">
-            Nsgram Workspace
-          </p>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-5xl text-white">
-            Welcome back, <span className="text-gradient font-black">{profile.displayName}</span>!
-          </h1>
-          <p className="mt-4 text-base text-brand-300 sm:text-lg leading-relaxed">
-            Welcome to your clean, premium personal dashboard on Nsgram. Check messages, find other members, or update your space.
-          </p>
+
+        <div className="relative z-10 flex items-center justify-between gap-6">
+          {/* Text Content */}
+          <div className="flex-1 min-w-0">
+            <p className="inline-flex rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-300">
+              Nsgram Workspace
+            </p>
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-5xl text-white">
+              Welcome back, <span className="text-gradient font-black">{profile.displayName}</span>!
+            </h1>
+            <p className="mt-4 text-base text-brand-300 sm:text-lg leading-relaxed">
+              Welcome to your clean, premium personal dashboard on Nsgram. Check messages, find other members, or update your space.
+            </p>
+          </div>
+
+          {/* Illustration */}
+          <div className="hidden sm:flex shrink-0 items-center justify-center">
+            <div className="relative w-44 h-44 md:w-56 md:h-56 rounded-3xl overflow-hidden border-2 border-orange-500/40 bg-slate-950 shadow-[0_0_35px_rgba(249,115,22,0.25)] ring-2 ring-orange-400/30">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://c7.alamy.com/comp/2XPM36K/boy-and-girl-chatting-online-2XPM36K.jpg"
+                alt="Boy and girl chatting online illustration"
+                className="w-full h-full object-cover scale-115 object-center"
+              />
+            </div>
+          </div>
         </div>
       </section>
 

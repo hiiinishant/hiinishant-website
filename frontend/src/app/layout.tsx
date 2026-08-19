@@ -7,6 +7,7 @@ import FooterWrapper from "@/components/layout/FooterWrapper";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import SpotlightCursorLoader from "@/components/SpotlightCursorLoader";
+import LinkPreviewHider from "@/components/LinkPreviewHider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -264,6 +265,7 @@ export default function RootLayout({
         />
         <ThemeProvider>
           <SpotlightCursorLoader />
+          <LinkPreviewHider />
           <Navbar />
           <PageWrapper>{children}</PageWrapper>
           <FooterWrapper />
