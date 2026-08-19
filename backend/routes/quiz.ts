@@ -402,6 +402,64 @@ router.get('/stats/:userId', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/quiz/leaderboard
+// Returns top students sorted by totalXP (and tie-breaker currentStreak)
+// Response: { leaderboard: LeaderboardUser[] }
+router.get('/leaderboard', async (_req: Request, res: Response) => {
+  try {
+    if (!firestore) { res.json({ leaderboard: [] }); return; }
+
+    const snap = await firestore.collection(STATS)
+      .orderBy('totalXP', 'desc')
+      .limit(50)
+      .get();
+
+    if (snap.empty) {
+      res.json({ leaderboard: [] });
+      return;
+    }
+
+    const leaderboard = await Promise.all(snap.docs.map(async (doc, index) => {
+      const data = doc.data();
+      let displayName = data.displayName;
+      let username = data.username;
+      let photoURL = data.photoURL || data.avatar;
+
+      // If user profile details not cached on stats doc, fetch from users collection
+      if (!displayName) {
+        try {
+          const userDoc = await firestore!.collection('users').doc(doc.id).get();
+          if (userDoc.exists) {
+            const uData = userDoc.data()!;
+            displayName = uData.displayName || uData.name;
+            username = uData.username;
+            photoURL = uData.photoURL || uData.avatarUrl || uData.avatar;
+          }
+        } catch { /* silent */ }
+      }
+
+      return {
+        rank: index + 1,
+        userId: doc.id,
+        displayName: displayName || `Student ${doc.id.slice(0, 4)}`,
+        username: username || '',
+        photoURL: photoURL || '',
+        totalXP: data.totalXP || 0,
+        totalCorrect: data.totalCorrect || 0,
+        totalAttempts: data.totalAttempts || 0,
+        currentStreak: data.currentStreak || 0,
+        longestStreak: data.longestStreak || 0,
+        lastAnsweredDate: data.lastAnsweredDate || null,
+      };
+    }));
+
+    res.json({ leaderboard });
+  } catch (err) {
+    console.error('[quiz/leaderboard] Error:', err);
+    res.status(500).json({ error: 'Failed to load leaderboard', leaderboard: [] });
+  }
+});
+
 // POST /api/quiz/answer
 // Submit an answer to a quiz question. One attempt per user per question.
 // Requires Firebase ID Token.
@@ -438,12 +496,15 @@ router.post('/answer', async (req: Request, res: Response) => {
         .collection('responses').doc(quizDate);
     }
 
+    const userRef = firestore.collection('users').doc(uid);
+
     // ── Transaction: validate, record, update stats ───────────────────────────
     const result = await firestore.runTransaction(async (tx) => {
-      const [qSnap, rSnap, sSnap] = await Promise.all([
+      const [qSnap, rSnap, sSnap, uSnap] = await Promise.all([
         tx.get(quizRef),
         tx.get(responseRef),
         tx.get(statsRef),
+        tx.get(userRef),
       ]);
 
       // Quiz must exist and be published
@@ -486,6 +547,11 @@ router.post('/answer', async (req: Request, res: Response) => {
         lastAnsweredDate: null,
       };
 
+      const uData = uSnap.exists ? uSnap.data() : null;
+      const displayName = uData?.displayName || uData?.name || currentStats.displayName || 'Student';
+      const username = uData?.username || currentStats.username || '';
+      const photoURL = uData?.photoURL || uData?.avatarUrl || uData?.avatar || currentStats.photoURL || '';
+
       const last = currentStats.lastAnsweredDate as string | null;
       let newStreak: number;
 
@@ -509,10 +575,13 @@ router.post('/answer', async (req: Request, res: Response) => {
         currentStreak:    newStreak,
         longestStreak:    newLongest,
         lastAnsweredDate: today,
+        displayName,
+        username,
+        photoURL,
         updatedAt:        now,
       };
 
-      tx.set(statsRef, updatedStats);
+      tx.set(statsRef, updatedStats, { merge: true });
 
       // Increment attemptsCount on the quiz document
       const currentAttemptsCount = qSnap.data()?.attemptsCount || 0;
