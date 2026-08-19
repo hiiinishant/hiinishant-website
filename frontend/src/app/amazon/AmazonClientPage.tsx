@@ -120,7 +120,7 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
             data.forEach((p) => {
               const cleanDescription =
                 p.description &&
-                !p.description.toLowerCase().includes("official 2 am study")
+                  !p.description.toLowerCase().includes("official 2 am study")
                   ? p.description
                   : "";
               const cleanPrice = p.price === "₹199" ? "" : p.price || "";
@@ -246,11 +246,11 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
           </div>
 
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight animate-slide-up">
-            Gear, Books & <span className="text-gradient">Essentials</span> I Use
+            Good finds <span className="text-gradient">&</span> Better choices
           </h1>
 
           <p className="text-sm sm:text-base text-brand-300 leading-relaxed max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            Official 2 AM Study learning materials and handpicked recommendations for students, creators, and developers. Everything here is personally curated for late-night productivity, study sessions, and high-performance desk setups.
+            Not just recommendations... things I genuinely use, love, trust, and would happily recommend to you. Thank you for being here. ❤️
           </p>
 
           {/* Action Buttons: 2 AM Study Store & Amazon Storefront */}
@@ -290,8 +290,8 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
                 cat === "All"
                   ? picks.length
                   : cat === "2 AM Study"
-                  ? picks.filter((p) => p.category === "2 AM Study" || p.source === "2amstudy").length
-                  : picks.filter((p) => p.category === cat).length;
+                    ? picks.filter((p) => p.category === "2 AM Study" || p.source === "2amstudy").length
+                    : picks.filter((p) => p.category === cat).length;
 
               const isActive = selectedCategory === cat;
               const isStudyCat = cat === "2 AM Study";
@@ -300,25 +300,23 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
                 <button
                   key={cat}
                   onClick={() => handleCategoryChange(cat)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold shrink-0 transition-all duration-300 ${
-                    isActive
-                      ? "bg-amber-500 text-black border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)] scale-[1.02]"
-                      : isStudyCat
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold shrink-0 transition-all duration-300 ${isActive
+                    ? "bg-amber-500 text-black border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)] scale-[1.02]"
+                    : isStudyCat
                       ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
                       : "bg-white/4 border-white/8 text-brand-300 hover:bg-white/8 hover:text-white"
-                  }`}
+                    }`}
                 >
                   {isStudyCat && <span>📚</span>}
                   <span>{cat}</span>
                   {count > 0 && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                        isActive
-                          ? "bg-black/20 text-black font-bold"
-                          : isStudyCat
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isActive
+                        ? "bg-black/20 text-black font-bold"
+                        : isStudyCat
                           ? "bg-amber-500/20 text-amber-300"
                           : "bg-white/10 text-brand-400"
-                      }`}
+                        }`}
                     >
                       {count}
                     </span>
@@ -397,11 +395,10 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
               return (
                 <div
                   key={pick.id}
-                  className={`group relative flex flex-col justify-between rounded-xl lg:rounded-2xl border transition-all duration-300 overflow-hidden shadow-lg hover:-translate-y-1 ${
-                    pick.isFeatured
-                      ? "border-amber-500/40 bg-zinc-900/90 shadow-[0_10px_30px_rgba(245,158,11,0.15)] hover:border-amber-400/60"
-                      : "border-white/10 bg-zinc-900/70 hover:border-amber-500/30 hover:shadow-[0_15px_30px_rgba(0,0,0,0.6)]"
-                  }`}
+                  className={`group relative flex flex-col justify-between rounded-xl lg:rounded-2xl border transition-all duration-300 overflow-hidden shadow-lg hover:-translate-y-1 ${pick.isFeatured
+                    ? "border-amber-500/40 bg-zinc-900/90 shadow-[0_10px_30px_rgba(245,158,11,0.15)] hover:border-amber-400/60"
+                    : "border-white/10 bg-zinc-900/70 hover:border-amber-500/30 hover:shadow-[0_15px_30px_rgba(0,0,0,0.6)]"
+                    }`}
                 >
                   {/* Top Image Showcase Banner (h-44 profound-impact style) */}
                   <a
@@ -552,11 +549,10 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
                           key={p}
                           onClick={() => goToPage(p as number)}
                           aria-current={p === safePage ? "page" : undefined}
-                          className={`px-3 py-1.5 rounded text-sm font-medium transition-all duration-200 ${
-                            p === safePage
-                              ? "bg-amber-500 text-black font-bold shadow-[0_0_12px_rgba(245,158,11,0.3)]"
-                              : "bg-white/5 border border-white/10 text-brand-300 hover:text-white hover:bg-white/10 hover:border-white/20"
-                          }`}
+                          className={`px-3 py-1.5 rounded text-sm font-medium transition-all duration-200 ${p === safePage
+                            ? "bg-amber-500 text-black font-bold shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                            : "bg-white/5 border border-white/10 text-brand-300 hover:text-white hover:bg-white/10 hover:border-white/20"
+                            }`}
                         >
                           {p}
                         </button>

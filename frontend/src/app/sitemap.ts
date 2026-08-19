@@ -26,6 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/gallery",
     "/music",
     "/quiz",
+    "/amazon-feed",
   ].map((route) => {
     // Determine priority and change frequency based on the page
     let changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never" = "monthly";
@@ -37,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     } else if (route === "/updates" || route === "/status" || route === "/quiz" || route === "/vlogs") {
       changeFrequency = "daily";
       priority = 0.8;
-    } else if (route === "/blog" || route === "/projects" || route === "/journey" || route === "/gallery") {
+    } else if (route === "/blog" || route === "/projects" || route === "/journey" || route === "/gallery" || route === "/amazon-feed") {
       changeFrequency = "weekly";
       priority = 0.8;
     } else if (route === "/contact" || route === "/resume" || route === "/universe" || route === "/links" || route === "/music") {
