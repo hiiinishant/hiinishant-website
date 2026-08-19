@@ -170,12 +170,13 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed w-full z-50 transition-all duration-500 ${scrolled
-        ? "glass-strong border-b border-white/8 shadow-[0_4px_32px_rgba(0,0,0,0.3)]"
-        : "bg-transparent border-b border-transparent"
+      className={`fixed w-full z-50 transition-all duration-500 ${
+        scrolled || mobileOpen
+          ? "glass-strong border-b border-white/8 shadow-[0_4px_32px_rgba(0,0,0,0.3)] bg-zinc-950/90 backdrop-blur-xl"
+          : "bg-transparent border-b border-transparent"
       }`}
     >
-      <div className="max-w-6xl mx-auto px-5 sm:px-8">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 relative z-50">
         <div className="flex justify-between items-center h-16 lg:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
@@ -366,16 +367,16 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ─── Mobile Menu (full-screen overlay) ─── */}
+      {/* ─── Mobile Menu (starts below top header) ─── */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
+        <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-40">
           {/* Backdrop — tap to close */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          {/* Panel — 60% wide, right-aligned */}
-          <div className="relative z-10 mt-14 mr-3 mb-4 ml-auto w-[60%] rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-y-auto max-h-[calc(100vh-5rem)] animate-fade-in">
+          {/* Panel — 60% wide, right-aligned, placed just below header */}
+          <div className="relative z-10 mt-2 mr-3 mb-4 ml-auto w-[60%] rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-y-auto max-h-[calc(100vh-5.5rem)] animate-fade-in">
             <div className="px-5 pb-6 pt-4 space-y-1">
 
               {/* Nav links */}
