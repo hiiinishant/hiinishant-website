@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.hiiinishant.com" }],
+      "destination": "https://hiiinishant.com/:path*",
+      "permanent": true
+    }
+  ]
+}
