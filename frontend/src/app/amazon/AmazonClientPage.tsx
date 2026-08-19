@@ -517,10 +517,10 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
         {/* ─── PAGINATION BAR ─── */}
         {!loading && totalItems > 0 && (
           <div className="mt-10 pt-6 border-t border-white/10 mb-6">
-            <div className="flex justify-between items-center text-sm text-brand-400">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-brand-400">
               {/* Left: Page nav */}
               {totalPages > 1 ? (
-                <nav className="flex items-center gap-1.5" aria-label="Pagination">
+                <nav className="flex items-center gap-1.5 flex-wrap justify-center" aria-label="Pagination">
                   {/* Prev */}
                   <button
                     onClick={() => goToPage(safePage - 1)}
@@ -578,7 +578,7 @@ export default function AmazonClientPage({ initialPicks = [] }: AmazonClientPage
               )}
 
               {/* Right: Results count */}
-              <p className="text-sm text-brand-400">
+              <p className="text-sm text-brand-400 text-center sm:text-right">
                 Showing{" "}
                 <span className="font-semibold text-white">{pageStart + 1}</span>
                 {" "}to{" "}
