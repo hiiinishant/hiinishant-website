@@ -6,7 +6,8 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, User, LogOut, MessageCircle, LayoutDashboard } from "lucide-react";
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from "firebase/auth";
-import { auth, isConfigured } from "@/lib/firebase";
+import { auth, db, isConfigured } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 import { getLoginUrlWithRedirect } from "@/lib/auth-redirect";
 
 const navLinks = [
@@ -30,23 +31,23 @@ function isActive(pathname: string, match: string) {
   return pathname.startsWith(match);
 }
 
-/** Returns initials from a display name or email */
-function getInitials(user: FirebaseUser): string {
-  if (user.displayName) {
-    return user.displayName
+/** Returns initials from a display name string or firebase user's email */
+function getInitialsFromName(name: string | null | undefined, fallback: string): string {
+  if (name && name.trim()) {
+    return name.trim()
       .split(" ")
       .slice(0, 2)
       .map((n) => n[0])
       .join("")
       .toUpperCase();
   }
-  return (user.email?.[0] ?? "U").toUpperCase();
+  return fallback.toUpperCase();
 }
 
-/** Returns the short display label (first name or email prefix) */
-function getShortName(user: FirebaseUser): string {
-  if (user.displayName) return user.displayName.split(" ")[0];
-  return user.email?.split("@")[0] ?? "User";
+/** Returns the short display label (first name) */
+function getShortName(name: string | null | undefined, email: string | null | undefined): string {
+  if (name && name.trim()) return name.trim().split(" ")[0];
+  return email?.split("@")[0] ?? "User";
 }
 
 export default function Navbar() {
@@ -56,6 +57,8 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
+  // Nsgram profile — keeps name/avatar in sync after profile edits
+  const [nsgramProfile, setNsgramProfile] = useState<{ displayName?: string; avatar?: string } | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -67,9 +70,24 @@ export default function Navbar() {
     if (!isConfigured || !auth) return;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
+      // Reset nsgram profile on auth change
+      if (!user) setNsgramProfile(null);
     });
     return () => unsubscribe();
   }, []);
+
+  // Real-time listener for Nsgram profile (displayName + avatar)
+  useEffect(() => {
+    if (!authUser || !db || !isConfigured) return;
+    const userDoc = doc(db, "users", authUser.uid);
+    const unsubProfile = onSnapshot(userDoc, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setNsgramProfile({ displayName: data.displayName, avatar: data.avatar });
+      }
+    });
+    return () => unsubProfile();
+  }, [authUser]);
 
   /* ─── More dropdown hover logic ─── */
   const handleMouseEnter = () => {
@@ -254,17 +272,19 @@ export default function Navbar() {
                       : "hover:bg-white/8 border border-transparent hover:border-white/10"
                   }`}
                 >
-                  {/* Glowing Avatar Circle */}
+                  {/* Glowing Avatar Circle — shows Nsgram avatar emoji or initials */}
                   <div className="relative shrink-0">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-black text-xs font-extrabold shadow-[0_0_14px_rgba(245,158,11,0.35)] group-hover:shadow-[0_0_22px_rgba(245,158,11,0.55)] transition-shadow">
-                      {getInitials(authUser)}
+                      {nsgramProfile?.avatar
+                        ? (nsgramProfile.avatar === "girl" ? "👧" : "👦")
+                        : getInitialsFromName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email?.[0] ?? "U")}
                     </div>
                     {/* Online dot */}
                     <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-[rgb(10,10,18)] shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
                   </div>
-                  {/* Name */}
+                  {/* Name — prefer Nsgram display name over Firebase Auth name */}
                   <span className="text-sm font-semibold text-white max-w-[90px] truncate leading-none">
-                    {getShortName(authUser)}
+                    {getShortName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email)}
                   </span>
                   <ChevronDown className={`w-3.5 h-3.5 text-brand-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -310,17 +330,19 @@ export default function Navbar() {
           {/* ─── Mobile controls ─── */}
           <div className="flex lg:hidden items-center gap-2">
             {authUser ? (
-              <button
-                onClick={() => setMobileOpen((v) => !v)}
-                className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-xl hover:bg-white/8 border border-white/10 transition-all cursor-pointer"
+              <Link
+                href="/nsgram/profile"
+                className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-xl hover:bg-white/8 border border-white/10 transition-all"
               >
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-[11px] font-extrabold shrink-0">
-                  {getInitials(authUser)}
+                  {nsgramProfile?.avatar
+                    ? (nsgramProfile.avatar === "girl" ? "👧" : "👦")
+                    : getInitialsFromName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email?.[0] ?? "U")}
                 </div>
                 <span className="text-xs font-semibold text-white max-w-[60px] truncate">
-                  {getShortName(authUser)}
+                  {getShortName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email)}
                 </span>
-              </button>
+              </Link>
             ) : (
               <Link
                 href={authTargetUrl}
@@ -344,151 +366,85 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ─── Mobile Menu ─── */}
-      <div
-        className={`lg:hidden overflow-hidden transition-all duration-400 ease-in-out ${mobileOpen ? "max-h-[44rem] opacity-100" : "max-h-0 opacity-0"}`}
-      >
-        <div className="px-5 pb-6 pt-2 space-y-1 border-t border-white/5 bg-background/95 backdrop-blur-xl">
-          {/* If logged in: show user card at top */}
-          {authUser && (
-            <div className="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl bg-white/5 border border-white/8">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-xs font-extrabold shrink-0">
-                {getInitials(authUser)}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-white truncate">{authUser.displayName ?? getShortName(authUser)}</p>
-                <p className="text-[11px] text-brand-400 truncate">{authUser.email}</p>
-              </div>
-            </div>
-          )}
+      {/* ─── Mobile Menu (full-screen overlay) ─── */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          {/* Backdrop — tap to close */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          {/* Panel */}
+          <div className="relative z-10 mt-14 mx-3 mb-4 rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-y-auto max-h-[calc(100vh-5rem)] animate-fade-in">
+            <div className="px-5 pb-6 pt-4 space-y-1">
 
-          {/* Nav links */}
-          {navLinks.map((link) => {
-            const active = isActive(pathname, link.match);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${active
-                  ? "text-white bg-white/8 border border-white/10"
-                  : "text-brand-300 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                {active && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
-                {link.label}
-              </Link>
-            );
-          })}
-
-          {/* More section */}
-          <div className="pt-2 pb-1 px-4">
-            <p className="text-[10px] uppercase font-bold tracking-widest text-brand-500">More</p>
-          </div>
-          {moreLinks.map((link) => {
-            const active = isActive(pathname, link.match);
-            return (
-              <Link
-                key={link.href + link.label}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${active
-                  ? "text-white bg-white/8 border border-white/10"
-                  : "text-brand-300 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                {active && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
-                {link.label}
-              </Link>
-            );
-          })}
-
-          {/* Auth section */}
-          <div className="pt-3 space-y-2">
-            {authUser ? (
-              <>
-                <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-brand-600">My Space</p>
-
-                <Link
-                  href="/nsgram/profile"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-amber-400/20 text-white text-sm font-semibold transition-all"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
-                    <User className="w-4 h-4 text-amber-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold leading-tight">My Profile</p>
-                    <p className="text-[11px] text-brand-500">View &amp; edit your profile</p>
-                  </div>
-                </Link>
-
-                <Link
-                  href="/nsgram"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-sky-400/20 text-white text-sm font-semibold transition-all"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-sky-400/10 border border-sky-400/20 flex items-center justify-center shrink-0">
-                    <MessageCircle className="w-4 h-4 text-sky-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold leading-tight">Nsgram</p>
-                    <p className="text-[11px] text-brand-500">Messages &amp; community</p>
-                  </div>
-                </Link>
-
-                <Link
-                  href="/nsgram/messages"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-purple-400/20 text-white text-sm font-semibold transition-all"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-purple-400/10 border border-purple-400/20 flex items-center justify-center shrink-0">
-                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold leading-tight">Inbox</p>
-                    <p className="text-[11px] text-brand-500">Open your chat inbox</p>
-                  </div>
-                </Link>
-
-                {(authUser.email === "nishant@hiii.com" || authUser.email?.includes("admin")) && (
+              {/* Nav links */}
+              {navLinks.map((link) => {
+                const active = isActive(pathname, link.match);
+                return (
                   <Link
-                    href="/admin"
+                    key={link.href}
+                    href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/8 hover:border-rose-400/20 text-white text-sm font-semibold transition-all"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${active
+                      ? "text-white bg-white/8 border border-white/10"
+                      : "text-brand-300 hover:text-white hover:bg-white/5"
+                    }`}
                   >
-                    <div className="w-8 h-8 rounded-xl bg-rose-400/10 border border-rose-400/20 flex items-center justify-center shrink-0">
-                      <LayoutDashboard className="w-4 h-4 text-rose-400" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold leading-tight">Admin Dashboard</p>
-                      <p className="text-[11px] text-brand-500">Manage site content</p>
-                    </div>
+                    {active && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
+                    {link.label}
                   </Link>
-                )}
+                );
+              })}
 
+              {/* More section */}
+              <div className="pt-3 pb-1 px-4">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-brand-500">More</p>
+              </div>
+              {moreLinks.map((link) => {
+                const active = isActive(pathname, link.match);
+                return (
+                  <Link
+                    key={link.href + link.label}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${active
+                      ? "text-white bg-white/8 border border-white/10"
+                      : "text-brand-300 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {active && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
+                    {link.label}
+                  </Link>
+                );
+              })}
+
+              {/* Logout */}
+              {authUser && (
                 <button
                   onClick={() => { setMobileOpen(false); handleLogout(); }}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/18 border border-red-500/20 hover:border-red-500/35 text-red-400 hover:text-white text-sm font-bold transition-all cursor-pointer"
+                  className="flex items-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300 cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  Logout
                 </button>
-              </>
-            ) : (
-              <Link
-                href={authTargetUrl}
-                onClick={() => setMobileOpen(false)}
-                className="block w-full text-center px-5 py-3 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.3)]"
-              >
-                Login
-              </Link>
-            )}
+              )}
+
+              {/* Login */}
+              {!authUser && (
+                <Link
+                  href={authTargetUrl}
+                  onClick={() => setMobileOpen(false)}
+                  className="block w-full text-center px-5 py-3 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] mt-2"
+                >
+                  Login
+                </Link>
+              )}
+
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 }

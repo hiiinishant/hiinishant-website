@@ -495,264 +495,140 @@ export default function QuizClientPage() {
           <div className="flex-1 min-w-0 space-y-8 mt-4 lg:mt-0 w-full">
 
             {activeSubject === "Leaderboard" ? (
-              /* ══ FULL LEADERBOARD VIEW ══ */
-              <div className="space-y-8 animate-fade-in">
+              /* ══ SINGLE CLEAN LEADERBOARD LIST ══ */
+              <div className="space-y-6 animate-fade-in">
                 {/* Header Card */}
-                <div className="p-6 sm:p-8 rounded-3xl border border-amber-500/20 bg-gradient-to-b from-amber-500/10 via-zinc-950/80 to-zinc-950 relative overflow-hidden shadow-[0_10px_35px_rgba(245,158,11,0.08)]">
-                  <div className="absolute -top-12 -right-12 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                <div className="p-6 sm:p-7 rounded-3xl border border-amber-500/20 bg-gradient-to-b from-amber-500/10 via-zinc-950/80 to-zinc-950 relative overflow-hidden shadow-[0_10px_35px_rgba(245,158,11,0.08)]">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
-                      <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-amber-400 font-bold mb-2">
+                      <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-amber-400 font-bold mb-1.5">
                         <span>🏆</span>
-                        <span>Hall of Fame</span>
-                        <span className="text-brand-600">·</span>
-                        <span className="text-brand-400">Live Rankings</span>
+                        <span>Quiz Leaderboard</span>
                       </div>
                       <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                        Student Leaderboard
+                        Student Rankings
                       </h1>
-                      <p className="text-xs sm:text-sm text-brand-300 mt-1 max-w-xl leading-relaxed">
-                        Rankings are updated live based on total XP earned, quiz accuracy, and unbroken daily streaks. Answer daily to climb the ranks!
+                      <p className="text-xs sm:text-sm text-brand-300 mt-1 leading-relaxed">
+                        Top students ranked by quiz score and daily streaks.
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={fetchLeaderboard}
-                        disabled={leaderboardLoading}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-brand-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <span className={leaderboardLoading ? "animate-spin" : ""}>🔄</span>
-                        <span>Refresh</span>
-                      </button>
-                    </div>
+                    <button
+                      onClick={fetchLeaderboard}
+                      disabled={leaderboardLoading}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-brand-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      <span className={leaderboardLoading ? "animate-spin" : ""}>🔄</span>
+                      <span className="hidden sm:inline">Refresh</span>
+                    </button>
                   </div>
                 </div>
 
                 {leaderboardLoading ? (
                   <div className="h-64 flex flex-col items-center justify-center gap-3">
                     <div className="w-8 h-8 border-2 border-amber-400/40 border-t-amber-400 rounded-full animate-spin" />
-                    <p className="text-xs font-mono text-brand-500 uppercase tracking-wider">Loading rankings...</p>
+                    <p className="text-xs font-mono text-brand-500 uppercase tracking-wider">Loading leaderboard...</p>
                   </div>
                 ) : leaderboard.length === 0 ? (
                   <div className="p-10 sm:p-14 text-center border border-white/8 rounded-3xl bg-white/2 space-y-4">
                     <span className="text-5xl block">🥇</span>
-                    <h3 className="text-lg font-bold text-white">Be the First on the Leaderboard!</h3>
+                    <h3 className="text-lg font-bold text-white">No Scores Yet</h3>
                     <p className="text-xs text-brand-400 max-w-md mx-auto leading-relaxed">
-                      No students have scored on the leaderboard yet. Solve today&apos;s Daily Challenge to claim the #1 spot!
+                      Be the first student to attempt today&apos;s Daily Challenge and take the #1 rank on the leaderboard!
                     </p>
                     <button
                       onClick={() => handleSubjectClick("Daily Challenge")}
                       className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] cursor-pointer"
                     >
-                      <span>🔥 Solve Today&apos;s Challenge</span>
+                      <span>🔥 Solve Today&apos;s Quiz</span>
                     </button>
                   </div>
                 ) : (
-                  <>
-                    {/* ─── TOP 3 PODIUM ─── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 items-end pt-4 pb-2">
-                      {/* #2 Rank - Silver (Left on Desktop) */}
-                      {leaderboard[1] && (
-                        <div className="order-2 sm:order-1 p-5 rounded-2xl border border-slate-300/30 bg-gradient-to-b from-slate-400/10 to-zinc-950 text-center relative overflow-hidden shadow-[0_8px_25px_rgba(148,163,184,0.1)] hover:-translate-y-1 transition-all">
-                          <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-slate-300/20 text-slate-200 text-[10px] font-bold font-mono border border-slate-300/30">
-                            #2 SILVER
-                          </div>
-                          <div className="w-16 h-16 rounded-full mx-auto mb-3 bg-slate-400/20 border-2 border-slate-300/60 flex items-center justify-center text-2xl shadow-inner">
-                            {leaderboard[1].photoURL ? (
-                              <img src={leaderboard[1].photoURL} alt={leaderboard[1].displayName} className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              <span>🥈</span>
-                            )}
-                          </div>
-                          <h3 className="font-bold text-white text-sm sm:text-base truncate mb-0.5">
-                            {leaderboard[1].displayName}
-                          </h3>
-                          {leaderboard[1].username && (
-                            <p className="text-[11px] font-mono text-brand-400 truncate mb-3">@{leaderboard[1].username}</p>
-                          )}
-                          <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/8 text-xs">
-                            <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 font-mono font-bold">
-                              💎 {leaderboard[1].totalXP} XP
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-orange-500/15 text-orange-400 font-mono font-bold">
-                              🔥 {leaderboard[1].currentStreak}d
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                  /* ─── SINGLE RANKINGS LIST ─── */
+                  <div className="rounded-3xl border border-white/8 bg-zinc-950/70 overflow-hidden shadow-xl">
+                    <div className="divide-y divide-white/5">
+                      {leaderboard.map((item, idx) => {
+                        const isCurrentUser = user && item.userId === user.uid;
 
-                      {/* #1 Rank - Gold (Center, Elevated) */}
-                      {leaderboard[0] && (
-                        <div className="order-1 sm:order-2 p-6 rounded-3xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/20 via-zinc-900 to-zinc-950 text-center relative overflow-hidden shadow-[0_0_40px_rgba(245,158,11,0.25)] sm:-translate-y-3 hover:sm:-translate-y-4 transition-all">
-                          <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-400 text-black text-[10px] font-extrabold font-mono uppercase tracking-widest shadow-md">
-                            👑 #1 CHAMPION
-                          </div>
-                          <div className="w-20 h-20 rounded-full mx-auto mt-4 mb-3 bg-amber-500/25 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
-                            {leaderboard[0].photoURL ? (
-                              <img src={leaderboard[0].photoURL} alt={leaderboard[0].displayName} className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              <span>🥇</span>
-                            )}
-                          </div>
-                          <h3 className="font-extrabold text-white text-base sm:text-lg truncate mb-0.5">
-                            {leaderboard[0].displayName}
-                          </h3>
-                          {leaderboard[0].username && (
-                            <p className="text-xs font-mono text-amber-300/80 truncate mb-3">@{leaderboard[0].username}</p>
-                          )}
-                          <div className="flex items-center justify-center gap-2 pt-3 border-t border-amber-500/20 text-xs">
-                            <span className="px-2.5 py-1 rounded-lg bg-amber-400 text-black font-mono font-extrabold shadow-sm">
-                              💎 {leaderboard[0].totalXP} XP
-                            </span>
-                            <span className="px-2.5 py-1 rounded-lg bg-orange-500/20 text-orange-300 font-mono font-bold border border-orange-500/30">
-                              🔥 {leaderboard[0].currentStreak}d Streak
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* #3 Rank - Bronze (Right on Desktop) */}
-                      {leaderboard[2] && (
-                        <div className="order-3 p-5 rounded-2xl border border-amber-700/40 bg-gradient-to-b from-amber-700/15 to-zinc-950 text-center relative overflow-hidden shadow-[0_8px_25px_rgba(180,83,9,0.1)] hover:-translate-y-1 transition-all">
-                          <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-amber-700/30 text-amber-300 text-[10px] font-bold font-mono border border-amber-600/30">
-                            #3 BRONZE
-                          </div>
-                          <div className="w-16 h-16 rounded-full mx-auto mb-3 bg-amber-800/20 border-2 border-amber-600/50 flex items-center justify-center text-2xl shadow-inner">
-                            {leaderboard[2].photoURL ? (
-                              <img src={leaderboard[2].photoURL} alt={leaderboard[2].displayName} className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              <span>🥉</span>
-                            )}
-                          </div>
-                          <h3 className="font-bold text-white text-sm sm:text-base truncate mb-0.5">
-                            {leaderboard[2].displayName}
-                          </h3>
-                          {leaderboard[2].username && (
-                            <p className="text-[11px] font-mono text-brand-400 truncate mb-3">@{leaderboard[2].username}</p>
-                          )}
-                          <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/8 text-xs">
-                            <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 font-mono font-bold">
-                              💎 {leaderboard[2].totalXP} XP
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-orange-500/15 text-orange-400 font-mono font-bold">
-                              🔥 {leaderboard[2].currentStreak}d
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* ─── YOUR RANK CARD ─── */}
-                    {user && stats && (
-                      <div className="p-4 sm:p-5 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_20px_rgba(245,158,11,0.05)]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold font-mono">
-                            {leaderboard.findIndex((u) => u.userId === user.uid) !== -1
-                              ? `#${leaderboard.findIndex((u) => u.userId === user.uid) + 1}`
-                              : "🎯"}
-                          </div>
-                          <div>
-                            <p className="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">Your Ranking</p>
-                            <p className="text-sm font-bold text-white">
-                              {user.displayName || "You"} {leaderboard.findIndex((u) => u.userId === user.uid) !== -1 ? `(Rank #${leaderboard.findIndex((u) => u.userId === user.uid) + 1})` : "• Unranked"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-3 py-1 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-mono font-bold">
-                            💎 {stats.totalXP} XP
+                        // Rank icon badge
+                        let rankBadge = (
+                          <span className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 text-brand-400 flex items-center justify-center text-xs font-mono font-bold shrink-0">
+                            #{idx + 1}
                           </span>
-                          <span className="px-3 py-1 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-mono font-bold">
-                            🔥 {stats.currentStreak} Day Streak
-                          </span>
-                          <span className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
-                            🎯 {stats.totalAttempts > 0 ? Math.round((stats.totalCorrect / stats.totalAttempts) * 100) : 0}% Accuracy
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                        );
 
-                    {/* ─── FULL RANKINGS LIST ─── */}
-                    <div className="rounded-3xl border border-white/8 bg-zinc-950/70 overflow-hidden shadow-xl">
-                      <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between text-xs font-mono text-brand-400 uppercase tracking-wider">
-                        <span>Rank & Student</span>
-                        <div className="flex items-center gap-6 sm:gap-10">
-                          <span className="hidden sm:inline">Streak</span>
-                          <span className="hidden sm:inline">Accuracy</span>
-                          <span>Total Score</span>
-                        </div>
-                      </div>
+                        if (idx === 0) {
+                          rankBadge = (
+                            <span className="w-8 h-8 rounded-xl bg-amber-400 text-black flex items-center justify-center text-sm font-extrabold shadow-[0_0_12px_rgba(245,158,11,0.4)] shrink-0">
+                              🥇
+                            </span>
+                          );
+                        } else if (idx === 1) {
+                          rankBadge = (
+                            <span className="w-8 h-8 rounded-xl bg-slate-300 text-black flex items-center justify-center text-sm font-extrabold shadow-sm shrink-0">
+                              🥈
+                            </span>
+                          );
+                        } else if (idx === 2) {
+                          rankBadge = (
+                            <span className="w-8 h-8 rounded-xl bg-amber-700 text-white flex items-center justify-center text-sm font-extrabold shadow-sm shrink-0">
+                              🥉
+                            </span>
+                          );
+                        }
 
-                      <div className="divide-y divide-white/5">
-                        {leaderboard.map((item, idx) => {
-                          const isCurrentUser = user && item.userId === user.uid;
-                          const accuracy = item.totalAttempts > 0 ? Math.round((item.totalCorrect / item.totalAttempts) * 100) : 0;
+                        return (
+                          <div
+                            key={item.userId || idx}
+                            className={`p-4 sm:px-6 sm:py-4.5 flex items-center justify-between gap-3 transition-colors ${
+                              isCurrentUser
+                                ? "bg-amber-500/10 hover:bg-amber-500/15"
+                                : "hover:bg-white/3"
+                            }`}
+                          >
+                            {/* Left: Rank + Student Avatar + Name */}
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              {rankBadge}
 
-                          return (
-                            <div
-                              key={item.userId || idx}
-                              className={`px-5 py-4 flex items-center justify-between transition-colors ${
-                                isCurrentUser
-                                  ? "bg-amber-500/10 hover:bg-amber-500/15"
-                                  : "hover:bg-white/3"
-                              }`}
-                            >
-                              {/* Left: Rank + Avatar + Name */}
-                              <div className="flex items-center gap-3.5 min-w-0">
-                                <span
-                                  className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold font-mono shrink-0 ${
-                                    idx === 0
-                                      ? "bg-amber-400 text-black shadow-sm font-extrabold"
-                                      : idx === 1
-                                      ? "bg-slate-300 text-black font-extrabold"
-                                      : idx === 2
-                                      ? "bg-amber-700 text-white font-extrabold"
-                                      : "bg-white/5 text-brand-400"
-                                  }`}
-                                >
-                                  {idx + 1}
-                                </span>
-
-                                <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-amber-300 shrink-0 overflow-hidden">
-                                  {item.photoURL ? (
-                                    <img src={item.photoURL} alt={item.displayName} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <span>{item.displayName.charAt(0).toUpperCase()}</span>
-                                  )}
-                                </div>
-
-                                <div className="min-w-0">
-                                  <p className={`text-sm font-bold truncate ${isCurrentUser ? "text-amber-300" : "text-white"}`}>
-                                    {item.displayName} {isCurrentUser && <span className="text-[10px] text-amber-400 font-mono font-normal">(You)</span>}
-                                  </p>
-                                  <p className="text-[11px] font-mono text-brand-500 truncate">
-                                    {item.username ? `@${item.username}` : `${item.totalAttempts} quizzes solved`}
-                                  </p>
-                                </div>
+                              <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-amber-300 shrink-0 overflow-hidden">
+                                {item.photoURL ? (
+                                  <img
+                                    src={item.photoURL}
+                                    alt={item.displayName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <span>{item.displayName.charAt(0).toUpperCase()}</span>
+                                )}
                               </div>
 
-                              {/* Right: Streak + Accuracy + XP */}
-                              <div className="flex items-center gap-4 sm:gap-8 shrink-0">
-                                <div className="hidden sm:flex items-center gap-1 text-xs font-mono text-orange-400">
+                              <div className="min-w-0">
+                                <p className={`text-sm sm:text-base font-bold truncate ${isCurrentUser ? "text-amber-300" : "text-white"}`}>
+                                  {item.displayName} {isCurrentUser && <span className="text-[10px] text-amber-400 font-mono font-normal">(You)</span>}
+                                </p>
+                                <p className="text-[11px] font-mono text-brand-500 truncate">
+                                  {item.username ? `@${item.username}` : `${item.totalAttempts} attempts`}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Right: Streak + Score */}
+                            <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
+                              {item.currentStreak > 0 && (
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-mono font-bold">
                                   <span>🔥</span>
                                   <span>{item.currentStreak}d</span>
                                 </div>
+                              )}
 
-                                <div className="hidden sm:flex items-center gap-1 text-xs font-mono text-emerald-400">
-                                  <span>🎯</span>
-                                  <span>{accuracy}%</span>
-                                </div>
-
-                                <div className="px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono font-bold">
-                                  💎 {item.totalXP} XP
-                                </div>
+                              <div className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs sm:text-sm font-mono font-extrabold shadow-sm">
+                                💎 {item.totalXP} XP
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             ) : (

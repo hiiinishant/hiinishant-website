@@ -81,6 +81,20 @@ router.post('/profile', requireFirebaseAuth, async (req: Request, res: Response)
 
     await userRef.set(profileData, { merge: true });
 
+    // Sync updated name & avatar to quizStats if user has attempted quizzes
+    try {
+      const statsRef = firestore.collection('quizStats').doc(uid);
+      const statsSnap = await statsRef.get();
+      if (statsSnap.exists) {
+        await statsRef.set({
+          displayName: displayName !== undefined ? displayName : statsSnap.data()?.displayName,
+          username: username !== undefined ? username : statsSnap.data()?.username,
+          photoURL: avatar !== undefined ? avatar : statsSnap.data()?.photoURL,
+          avatar: avatar !== undefined ? avatar : statsSnap.data()?.avatar,
+        }, { merge: true });
+      }
+    } catch { /* silent stats sync */ }
+
     const updatedDoc = await userRef.get();
     const profile = updatedDoc.data();
 
