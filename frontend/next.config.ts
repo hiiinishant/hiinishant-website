@@ -17,16 +17,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: false,
   },
-  async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "www.hiiinishant.com" }],
-        destination: "https://hiiinishant.com/:path*",
-        permanent: true,
-      },
-    ];
-  },
 };
 
 export default nextConfig;
