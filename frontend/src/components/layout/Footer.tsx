@@ -102,6 +102,7 @@ const socialIconMap: Record<SocialPlatform, React.ReactNode> = {
 
 const navPages = [
   { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
   { href: "/resume", label: "Resume" },
   { href: "/blog", label: "Blog" },
   { href: "/gallery", label: "Gallery" },
@@ -288,6 +289,13 @@ export default function Footer() {
               <p className="text-xs text-brand-500 text-center sm:text-left">
                 &copy; {year} Nishant Kumar. All rights reserved.
               </p>
+              <span className="text-brand-700 hidden sm:inline">·</span>
+              <Link
+                href="/about"
+                className="text-xs text-brand-400 hover:text-white transition-colors duration-300"
+              >
+                About
+              </Link>
               <span className="text-brand-700 hidden sm:inline">·</span>
               <Link
                 href="/privacy"

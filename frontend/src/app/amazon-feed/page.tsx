@@ -18,13 +18,13 @@ export const metadata: Metadata = {
     "Productivity Tools Nishant Kumar",
   ],
   alternates: {
-    canonical: "https://www.hiiinishant.com/amazon-feed",
+    canonical: "https://hiiinishant.com/amazon-feed",
   },
   openGraph: {
     title: "Nishant's Picks — Amazon Storefront & Curated Recommendations",
     description:
       "Good finds & better choices. Handpicked Amazon gear, 2 AM Study materials, books, and productivity tools curated by Nishant Kumar.",
-    url: "https://www.hiiinishant.com/amazon-feed",
+    url: "https://hiiinishant.com/amazon-feed",
     siteName: "Hiii-Nishant",
     locale: "en_IN",
     type: "website",
@@ -55,11 +55,11 @@ export default function AmazonFeedPage() {
     name: "Nishant's Picks — Amazon Storefront & Curated Gear",
     description:
       "Curated recommendations, books, desk gear, and 2 AM Study materials handpicked by Nishant Kumar.",
-    url: "https://www.hiiinishant.com/amazon-feed",
+    url: "https://hiiinishant.com/amazon-feed",
     author: {
       "@type": "Person",
       name: "Nishant Kumar",
-      url: "https://www.hiiinishant.com",
+      url: "https://hiiinishant.com",
     },
   };
 

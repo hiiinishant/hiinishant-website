@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 1. Define all static paths
   const staticRoutes = [
     "",
+    "/about",
     "/vlogs",
     "/journey",
     "/links",
@@ -22,6 +23,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/projects",
     "/contact",
     "/privacy",
+    "/terms",
+    "/faq",
+    "/support",
     "/status",
     "/gallery",
     "/music",
@@ -35,13 +39,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (route === "") {
       changeFrequency = "daily";
       priority = 1.0;
+    } else if (route === "/about") {
+      changeFrequency = "weekly";
+      priority = 0.9;
     } else if (route === "/updates" || route === "/status" || route === "/quiz" || route === "/vlogs") {
       changeFrequency = "daily";
       priority = 0.8;
     } else if (route === "/blog" || route === "/projects" || route === "/journey" || route === "/gallery" || route === "/amazon-feed") {
       changeFrequency = "weekly";
       priority = 0.8;
-    } else if (route === "/contact" || route === "/resume" || route === "/universe" || route === "/links" || route === "/music") {
+    } else if (route === "/contact" || route === "/resume" || route === "/universe" || route === "/links" || route === "/music" || route === "/faq" || route === "/terms" || route === "/support" || route === "/privacy") {
       changeFrequency = "monthly";
       priority = 0.7;
     }

@@ -23,6 +23,8 @@ export default function BlogCard({ post }: BlogCardProps) {
           <img
             src={coverImage}
             alt={post.title}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {/* subtle gradient overlay at bottom */}

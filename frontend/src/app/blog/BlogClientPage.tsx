@@ -177,7 +177,7 @@ export default function BlogClientPage({ posts }: Props) {
                     {(featured.imageUrl || featured.imagePath) ? (
                       <div className="relative w-full h-[28rem] sm:h-[30rem] overflow-hidden bg-zinc-900">
                         <span className="absolute top-2 left-2 text-[0.65rem] font-medium text-yellow-300 bg-black/70 rounded px-2 py-0.5">★ Featured Post</span>
-                        <img src={featured.imageUrl || featured.imagePath} alt={featured.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <img src={featured.imageUrl || featured.imagePath} alt={featured.title} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/95 via-zinc-950/40 to-transparent pointer-events-none" />
                         <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
                             <div className="text-xs text-white font-medium mb-2">
