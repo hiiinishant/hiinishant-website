@@ -45,6 +45,126 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <>
+      {/* ─── SPLASH LANDING (NEW FIRST SECTION) ─── */}
+      <section
+        id="splash"
+        className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
+      >
+        {/* Background photo — 1.jpg with dark cinematic overlay */}
+        <div className="absolute inset-0 -z-10">
+          <Image
+            src="/1.jpg"
+            alt="Nishant Kumar"
+            fill
+            priority
+            className="object-cover object-top scale-105"
+            style={{ filter: "blur(2px) brightness(0.22) saturate(1.3)" }}
+          />
+        </div>
+
+        {/* Gradient vignette overlay */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/60 via-black/30 to-black/80" />
+
+        {/* Subtle radial glow behind text */}
+        <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none">
+          <div className="w-[600px] h-[600px] rounded-full bg-accent/10 blur-[120px]" />
+        </div>
+
+        {/* Animated grid lines */}
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:80px_80px]" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center text-center px-5">
+
+          {/* Live badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/25 bg-accent/8 backdrop-blur-sm mb-8 animate-fade-in">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-live-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+            </span>
+            <span className="text-[11px] font-semibold text-accent tracking-widest uppercase">
+              Student · Educator · Founder
+            </span>
+          </div>
+
+          {/* Greeting */}
+          <p
+            className="font-caveat text-2xl sm:text-3xl text-white/60 mb-3 animate-slide-up"
+            style={{ animationDelay: "0.1s" }}
+          >
+            Hiii, this is
+          </p>
+
+          {/* Typewriter Name — CSS letter-by-letter reveal */}
+          <h1
+            className="text-6xl sm:text-8xl md:text-9xl font-extrabold tracking-tight leading-none mb-4"
+            aria-label="Nishant Kumar"
+          >
+            <span className="typewriter-name typewriter-first text-gradient-white">Nishant</span>
+            <br />
+            <span className="typewriter-name typewriter-second text-gradient">
+              Kumar
+            </span>
+          </h1>
+
+          {/* Tagline */}
+          <p className="splash-tagline text-brand-300 text-base sm:text-lg max-w-md mt-4 leading-relaxed">
+            Founder of{" "}
+            <span className="text-white font-semibold">2 AM Study</span> ·
+            Building for students · Documenting the journey
+          </p>
+
+          {/* Scroll down CTA */}
+          <a
+            href="#hero"
+            aria-label="Scroll to explore"
+            className="splash-scroll mt-14 flex flex-col items-center gap-2 text-brand-400 hover:text-accent transition-colors duration-300 group"
+          >
+            <span className="text-[11px] uppercase tracking-widest font-semibold">Scroll</span>
+            <svg
+              className="w-5 h-5 animate-bounce group-hover:text-accent"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </a>
+        </div>
+
+        {/* Inline keyframes for typewriter & fadeIn */}
+        <style>{`
+          @keyframes typewriter {
+            from { clip-path: inset(0 100% 0 0); opacity: 0; }
+            5%   { opacity: 1; }
+            to   { clip-path: inset(0 0% 0 0); opacity: 1; }
+          }
+          @keyframes splashFadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          .typewriter-name {
+            display: inline-block;
+            clip-path: inset(0 100% 0 0);
+            opacity: 0;
+          }
+          .typewriter-first {
+            animation: typewriter 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s forwards;
+          }
+          .typewriter-second {
+            animation: typewriter 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.6s forwards;
+          }
+          .splash-tagline {
+            opacity: 0;
+            animation: splashFadeUp 0.9s ease 2.8s forwards;
+          }
+          .splash-scroll {
+            opacity: 0;
+            animation: splashFadeUp 0.9s ease 3.4s forwards;
+          }
+        `}</style>
+      </section>
+
       {/* ─── HERO & PROFILE ─── */}
       <section
         id="hero"
