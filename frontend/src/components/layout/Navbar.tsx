@@ -366,16 +366,16 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ─── Mobile Menu (full-screen overlay) ─── */}
+      {/* ─── Mobile Menu (dropdown below navbar) ─── */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
+        <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-40">
           {/* Backdrop — tap to close */}
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          {/* Panel */}
-          <div className="relative z-10 mt-14 mx-3 mb-4 rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-y-auto max-h-[calc(100vh-5rem)] animate-fade-in">
+          {/* Panel — ~55% height, drops from navbar */}
+          <div className="relative z-10 mx-3 mt-2 rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-y-auto max-h-[55vh] animate-fade-in">
             <div className="px-5 pb-6 pt-4 space-y-1">
 
               {/* Nav links */}
