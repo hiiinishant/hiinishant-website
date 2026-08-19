@@ -53,7 +53,7 @@ export default function Home() {
         {/* Background photo — 1.jpg with dark cinematic overlay */}
         <div className="absolute inset-0 -z-10">
           <Image
-            src="/1.jpg"
+            src="/hero.webp"
             alt="Nishant Kumar"
             fill
             priority
@@ -75,18 +75,6 @@ export default function Home() {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center text-center px-5">
-
-          {/* Live badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/25 bg-accent/8 backdrop-blur-sm mb-8 animate-fade-in">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-live-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
-            </span>
-            <span className="text-[11px] font-semibold text-accent tracking-widest uppercase">
-              Student · Educator · Founder
-            </span>
-          </div>
-
           {/* Greeting */}
           <p
             className="font-caveat text-2xl sm:text-3xl text-white/60 mb-3 animate-slide-up"
@@ -101,11 +89,11 @@ export default function Home() {
             aria-label="Nishant Kumar"
           >
             <span className="typewriter-name typewriter-first text-gradient-white">Nishant</span>
-            <br />
-            <span className="typewriter-name typewriter-second text-gradient">
-              Kumar
-            </span>
           </h1>
+
+          <p className="typewriter-name typewriter-second text-gradient text-base md:text-base">
+            What broke you doesn't have to define you...
+          </p>
 
           {/* Tagline */}
           <p className="splash-tagline text-brand-300 text-base sm:text-lg max-w-md mt-4 leading-relaxed">
@@ -115,21 +103,6 @@ export default function Home() {
           </p>
 
           {/* Scroll down CTA */}
-          <a
-            href="#hero"
-            aria-label="Scroll to explore"
-            className="splash-scroll mt-14 flex flex-col items-center gap-2 text-brand-400 hover:text-accent transition-colors duration-300 group"
-          >
-            <span className="text-[11px] uppercase tracking-widest font-semibold">Scroll</span>
-            <svg
-              className="w-5 h-5 animate-bounce group-hover:text-accent"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </a>
         </div>
 
         {/* Inline keyframes for typewriter & fadeIn */}
@@ -157,10 +130,6 @@ export default function Home() {
           .splash-tagline {
             opacity: 0;
             animation: splashFadeUp 0.9s ease 2.8s forwards;
-          }
-          .splash-scroll {
-            opacity: 0;
-            animation: splashFadeUp 0.9s ease 3.4s forwards;
           }
         `}</style>
       </section>
@@ -324,9 +293,15 @@ export default function Home() {
       </section>
 
       {/* ─── EXPLORE PORTAL ─── */}
-      <section id="explore" className="py-20 lg:py-28 relative overflow-hidden border-t border-white/5 bg-brand-950/10">
+      <section id="explore" className="py-20 lg:py-28 relative overflow-hidden border-t border-white/5 bg-brand-950/10 noise">
+        {/* Aurora background */}
+        <AuroraBackground />
+
+        {/* Animated grid */}
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:72px_72px]" />
+
         {/* Subtle background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-accent/3 blur-[140px] pointer-events-none -z-10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-accent/5 blur-[140px] pointer-events-none -z-10" />
 
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <div className="text-center mb-16">
