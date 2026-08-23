@@ -9,6 +9,7 @@ import {
   type UpdateItem,
 } from "@/data/updates";
 import { apiUrl } from "@/lib/api";
+import AuroraBackground from "@/components/AuroraBackground";
 /* ────────────────────────────────────────────
    ICON COMPONENTS
    ──────────────────────────────────────────── */
@@ -431,13 +432,8 @@ export default function LatestUpdatesSection({ initialUpdates }: { initialUpdate
 
   return (
     <section id="latest-updates" className="py-10 lg:py-16 relative overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-accent/5 blur-[140px]" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-emerald-500/3 blur-[160px]" />
-      </div>
-      <div className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:48px_48px]" />
+      {/* Dynamic Aurora background (smooth waves, no grid lines) */}
+      <AuroraBackground />
 
       <div className="max-w-7xl mx-auto px-5 sm:px-8 relative z-10">
 

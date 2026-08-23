@@ -38,6 +38,14 @@ export default function BlogCard({ post }: BlogCardProps) {
       <div className="flex flex-col flex-1 p-6">
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
+          {post.featured && (
+            <>
+              <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                ★ Featured
+              </span>
+              <span className="text-brand-700">·</span>
+            </>
+          )}
           <time className="text-[11px] text-brand-500">
             {new Date(post.date.includes("T") ? post.date : `${post.date}T00:00:00`).toLocaleDateString("en-US", {
               year: "numeric",

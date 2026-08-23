@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { firestore } from '../lib/firebaseAdmin';
+import admin, { firestore } from '../lib/firebaseAdmin';
 import { requireAuth } from '../middleware/auth';
 import { uploadBuffer, deleteImage } from '../lib/cloudinary';
 
@@ -38,6 +38,47 @@ router.get('/:slug', async (req, res) => {
     res.status(200).json({ id: docSnap.id, ...docSnap.data() });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to fetch blog post" });
+  }
+});
+
+// ── Record a view / increment read count atomically ──
+router.post('/:slug/view', async (req, res) => {
+  try {
+    if (!firestore) {
+      res.status(200).json({ success: false, message: "Database not available" });
+      return;
+    }
+    const { slug } = req.params;
+    let docRef = firestore.collection('blogs').doc(slug);
+    let docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      // Fallback: search by 'slug' field in case doc ID differs
+      const querySnap = await firestore.collection('blogs').where('slug', '==', slug).limit(1).get();
+      if (!querySnap.empty) {
+        docRef = querySnap.docs[0].ref;
+        docSnap = querySnap.docs[0];
+      }
+    }
+
+    if (!docSnap.exists) {
+      res.status(404).json({ error: "Blog post not found." });
+      return;
+    }
+
+    // Atomically increment reads in Firestore
+    await docRef.set(
+      { reads: admin.firestore.FieldValue.increment(1) },
+      { merge: true }
+    );
+
+    const updatedSnap = await docRef.get();
+    const currentReads = updatedSnap.data()?.reads ?? 1;
+
+    res.status(200).json({ success: true, reads: currentReads });
+  } catch (error: any) {
+    console.error(`[Blog View] Error incrementing views for ${req.params.slug}:`, error);
+    res.status(500).json({ error: error.message || "Failed to increment view count" });
   }
 });
 

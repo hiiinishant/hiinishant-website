@@ -257,6 +257,9 @@ export default function RootLayout({
       <head>
         {/* Preload the hero image so it loads as early as possible (improves LCP) */}
         <link rel="preload" href="/profile.jpg" as="image" />
+        {/* Google AdSense — site verification & monetisation */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4581242824312894" crossOrigin="anonymous"></script>
       </head>
       <body className="min-h-full flex flex-col selection:bg-accent/30 selection:text-accent-light">
         <script

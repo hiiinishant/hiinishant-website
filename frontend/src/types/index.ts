@@ -58,6 +58,7 @@ export interface BlogPost {
   category?: string;
   contentType?: "markdown" | "tiptap";
   seoTitle?: string;
+  reads?: number;
 }
 
 export interface Resource {

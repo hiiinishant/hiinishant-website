@@ -1246,7 +1246,7 @@ export default function AdminClientPage() {
     try {
       const formData = new FormData();
       formData.append("title", resumeForm.title);
-      formData.append("file", selectedResumeFile);
+      formData.append("resume", selectedResumeFile);
 
       const res = await fetch(`${getBackendUrl()}/api/resume`, {
         method: "POST",

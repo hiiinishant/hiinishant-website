@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import PageHeader from "@/components/layout/PageHeader";
-import { isConfigured } from "@/lib/firebase";
+import AuroraBackground from "@/components/AuroraBackground";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
+import { auth, isConfigured } from "@/lib/firebase";
 import type { GalleryPhoto } from "@/types";
 import { API_BASE } from "@/lib/api";
 
@@ -52,11 +55,28 @@ const MOCK_PHOTOS: GalleryPhoto[] = [
 ];
 
 export default function GalleryClientPage() {
+  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Monitor Firebase Auth status
+  useEffect(() => {
+    if (!isConfigured || !auth) {
+      setAuthChecking(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      setAuthChecking(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Open native fullscreen on the entire page
   const openFullscreen = useCallback(() => {
@@ -211,9 +231,9 @@ export default function GalleryClientPage() {
         />
       )}
 
-      {/* Background decoration */}
-      <div className={`absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[130px] pointer-events-none -z-10 transition-colors duration-300 ${isDark ? "bg-accent/3" : "bg-accent/10"}`} />
-      <div className={`absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[140px] pointer-events-none -z-10 transition-colors duration-300 ${isDark ? "bg-blue-500/2" : "bg-blue-500/5"}`} />
+      {/* Dynamic Aurora & Grid background effects (same as homepage) */}
+      {/* Dynamic Aurora background without grid lines */}
+      <AuroraBackground />
 
       <PageHeader
         label="Nishant's Gallery"
@@ -225,13 +245,67 @@ export default function GalleryClientPage() {
         description="A curated visual log of daily moments, academic highlights, startup achievements, and travel blogs."
       />
 
-      <div className="max-w-6xl mx-auto px-5 sm:px-8 mt-12">
-        {/* Firestore Alert if not configured */}
-        {!isConfigured && (
-          <div className={`mb-8 p-4 rounded-xl border font-mono text-xs text-center ${isDark ? "bg-amber-950/20 border-amber-500/30 text-amber-300" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
-            ⚠️ <strong>Admin Notice:</strong> Firebase API keys are not configured. Currently rendering sample memories. Please set up your `.env.local` to sync with Firestore.
+      {/* ── Auth Checking Loading State ── */}
+      {authChecking ? (
+        <div className="max-w-md mx-auto px-5 py-24 text-center">
+          <div className="w-10 h-10 border-3 border-accent/20 border-t-accent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-xs font-mono text-brand-400">Verifying access...</p>
+        </div>
+      ) : !authUser ? (
+        /* ── Login / Signup Required Wall ── */
+        <div className="max-w-xl mx-auto px-5 sm:px-8 mt-10">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
+            {/* Lock Icon */}
+            <div className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+              <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </div>
+
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-accent/10 border border-accent/20 text-accent mb-4 font-mono">
+              🔒 Members-Only Gallery
+            </span>
+
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 tracking-tight">
+              Log In to View Nishant&apos;s Gallery
+            </h2>
+            <p className="text-brand-300 text-sm sm:text-base leading-relaxed mb-8">
+              Nishant&apos;s personal photo memories, college milestones, and behind-the-scenes stories are available exclusively for logged-in members.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+              <Link
+                href="/login?redirect=/gallery"
+                className="inline-flex items-center justify-center px-6 py-3.5 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all shadow-[0_0_25px_rgba(245,158,11,0.25)] hover:scale-[1.02]"
+              >
+                Log In to View Gallery →
+              </Link>
+              <Link
+                href="/login?mode=signup&redirect=/gallery"
+                className="inline-flex items-center justify-center px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-sm transition-all hover:scale-[1.02]"
+              >
+                Create Free Account
+              </Link>
+            </div>
+
+            <div className="pt-6 border-t border-white/5 flex items-center justify-center gap-4 text-xs font-mono text-brand-400">
+              <span>✨ 100% Free</span>
+              <span className="text-white/20">•</span>
+              <span>⚡ Instant Access</span>
+              <span className="text-white/20">•</span>
+              <span>📸 Full HD Memories</span>
+            </div>
           </div>
-        )}
+        </div>
+      ) : (
+        /* ── Logged-in Member Gallery View ── */
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 mt-12">
+          {/* Firestore Alert if not configured */}
+          {!isConfigured && (
+            <div className={`mb-8 p-4 rounded-xl border font-mono text-xs text-center ${isDark ? "bg-amber-950/20 border-amber-500/30 text-amber-300" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+              ⚠️ <strong>Admin Notice:</strong> Firebase API keys are not configured. Currently rendering sample memories. Please set up your `.env.local` to sync with Firestore.
+            </div>
+          )}
 
         {/* Filters and Search Panel */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
@@ -317,24 +391,42 @@ export default function GalleryClientPage() {
                         : "bg-white border-slate-200/80 hover:border-slate-300 shadow-sm hover:shadow-md"
                     }`}
                   >
-                    {/* Image Area */}
-                    <div className="aspect-[4/3] overflow-hidden relative bg-black/10">
+                    {/* Image Area with 4 Protections */}
+                    <div
+                      className="aspect-[4/3] overflow-hidden relative bg-black/10 select-none"
+                      onContextMenu={(e) => e.preventDefault()}
+                    >
                       <img
                         src={photo.imageUrl}
                         alt={`${photo.title} — Nishant Kumar (hiiinishant) ${photo.category}`}
                         title={photo.title}
                         loading="lazy"
                         decoding="async"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        draggable={false}
+                        onDragStart={(e) => e.preventDefault()}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 select-none pointer-events-none"
                       />
+
+                      {/* Transparent Protection Overlay */}
+                      <div
+                        className="absolute inset-0 z-10 select-none"
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+
+                      {/* Visible Watermark — Hii Nishant */}
+                      <div className="absolute bottom-2.5 right-2.5 z-20 pointer-events-none select-none flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold text-white/80 tracking-wider border border-white/10 shadow-sm">
+                        <span className="text-accent text-[9px]">✦</span>
+                        <span>Hii Nishant</span>
+                      </div>
+
                       {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 z-10 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                         <span className="text-white bg-black/60 px-4 py-2 rounded-full text-xs font-mono border border-white/10 shadow-lg scale-90 group-hover:scale-100 transition-transform">
                           Expand View 🔎
                         </span>
                       </div>
                       {/* Tag Badge */}
-                      <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-md border border-white/10 text-accent text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg">
+                      <span className="absolute top-3 left-3 z-20 bg-black/75 backdrop-blur-md border border-white/10 text-accent text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg pointer-events-none select-none">
                         {photo.category}
                       </span>
                     </div>
@@ -366,11 +458,12 @@ export default function GalleryClientPage() {
         {/* Fullscreen Lightbox Overlay */}
       {lightboxIndex !== null && filteredPhotos[lightboxIndex] && (
         <div
-          className="fixed inset-0 z-50 bg-black flex flex-col"
+          className="fixed inset-0 z-50 bg-black flex flex-col select-none"
           style={{ height: "100dvh" }}
           onClick={handleClose}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
+          onContextMenu={(e) => e.preventDefault()}
         >
           {/* ── Top Bar ── */}
           <div
@@ -386,8 +479,8 @@ export default function GalleryClientPage() {
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-brand-500 text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <span className="text-brand-500 text-xs font-mono mr-2">
                 {lightboxIndex + 1} / {filteredPhotos.length}
               </span>
               {/* Close */}
@@ -401,10 +494,11 @@ export default function GalleryClientPage() {
             </div>
           </div>
 
-          {/* ── Image — fills ALL remaining height ── */}
+          {/* ── Image with 4 Protections — fills ALL remaining height ── */}
           <div
-            className="flex-1 relative flex items-center justify-center overflow-hidden px-12 md:px-20 py-4"
+            className="flex-1 relative flex items-center justify-center overflow-hidden px-12 md:px-20 py-4 select-none"
             onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
           >
             <img
               key={filteredPhotos[lightboxIndex].id}
@@ -412,9 +506,24 @@ export default function GalleryClientPage() {
               alt={`${filteredPhotos[lightboxIndex].title} — Nishant Kumar (hiiinishant) ${filteredPhotos[lightboxIndex].category}`}
               title={filteredPhotos[lightboxIndex].title}
               decoding="async"
-              className="max-h-full max-w-full w-auto h-auto object-contain select-none"
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
+              className="max-h-full max-w-full w-auto h-auto object-contain select-none pointer-events-none"
               style={{ display: "block" }}
             />
+
+            {/* Transparent Protection Overlay */}
+            <div
+              className="absolute inset-0 z-20 pointer-events-auto"
+              onContextMenu={(e) => e.preventDefault()}
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Visible Watermark — Hii Nishant */}
+            <div className="absolute bottom-6 right-6 md:right-24 z-30 pointer-events-none select-none flex items-center gap-1.5 bg-black/65 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-xs font-mono font-semibold text-white/90 tracking-widest border border-white/15 shadow-2xl">
+              <span className="text-accent">✦</span>
+              <span>Hii Nishant</span>
+            </div>
 
             {/* Left arrow */}
             <button
@@ -435,23 +544,26 @@ export default function GalleryClientPage() {
             </button>
           </div>
 
-          {/* ── Bottom Caption ── */}
+          {/* ── Bottom Caption & Story ── */}
           <div
-            className="shrink-0 bg-black/80 backdrop-blur-md border-t border-white/5 px-6 py-3 text-center"
+            className="shrink-0 bg-black/90 backdrop-blur-xl border-t border-white/10 px-5 sm:px-8 py-4 max-h-[38vh] overflow-y-auto text-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-sm md:text-base font-bold text-white leading-tight">
-              {filteredPhotos[lightboxIndex].title}
-            </h2>
-            {filteredPhotos[lightboxIndex].story && (
-              <p className="text-xs text-brand-400 leading-relaxed max-w-2xl mx-auto mt-1 line-clamp-2">
-                {filteredPhotos[lightboxIndex].story}
-              </p>
-            )}
+            <div className="max-w-3xl mx-auto space-y-2">
+              <h2 className="text-base sm:text-lg font-bold text-white leading-snug">
+                {filteredPhotos[lightboxIndex].title}
+              </h2>
+              {filteredPhotos[lightboxIndex].story && (
+                <p className="text-xs sm:text-sm text-brand-200 leading-relaxed font-normal whitespace-pre-line">
+                  {filteredPhotos[lightboxIndex].story}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

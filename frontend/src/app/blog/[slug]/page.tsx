@@ -3,6 +3,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getAllBlogPosts, getBlogPost } from "@/data/blog";
 import BlogCard from "@/components/BlogCard";
+import BlogReadTracker from "@/components/BlogReadTracker";
+import BlogShareBar from "@/components/BlogShareBar";
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -173,20 +175,35 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           {post.title}
         </h1>
 
-        {/* Author · Date · Read time */}
-        <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-brand-400">
-          <span className="font-semibold text-brand-300">{post.writtenBy || "Nishant Kumar"}</span>
-          <span className="text-brand-600">·</span>
-          <span>
-            {new Date(post.date.includes("T") ? post.date : `${post.date}T00:00:00`).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </span>
-          <span className="text-brand-600">·</span>
-          <span>{post.readTime}</span>
-        </div>
+        {/* Author Avatar · Author Name • Date • Read time • Reads */}
+        {(() => {
+          const authorName = post.writtenBy || "Nishant Kumar";
+          const initial = authorName.charAt(0).toUpperCase();
+          const formattedDate = post.date.includes("T")
+            ? post.date.split("T")[0]
+            : post.date.length === 10
+            ? post.date
+            : new Date(post.date).toISOString().split("T")[0];
+
+          return (
+            <div className="flex flex-wrap items-center justify-center gap-2.5 text-sm text-brand-400">
+              <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 text-accent font-bold flex items-center justify-center text-xs shrink-0 shadow-sm shadow-accent/20">
+                {initial}
+              </div>
+              <span className="font-semibold text-white">{authorName}</span>
+              <span className="text-brand-600 font-bold">•</span>
+              <time dateTime={formattedDate} className="text-brand-400 font-mono text-xs">
+                {formattedDate}
+              </time>
+              <span className="text-brand-600 font-bold">•</span>
+              <span className="text-brand-400">{post.readTime}</span>
+              <span className="text-brand-600 font-bold">•</span>
+              <span className="text-brand-400">
+                <BlogReadTracker slug={post.slug} initialReads={post.reads ?? 0} />
+              </span>
+            </div>
+          );
+        })()}
       </header>
 
       {/* ── Full-width Hero Image ── */}
@@ -211,11 +228,14 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           className="prose prose-invert prose-brand max-w-none text-brand-300 leading-relaxed text-xl"
           dangerouslySetInnerHTML={{ __html: post.html || "" }}
         />
+
+        {/* ── Share this article bar ── */}
+        <BlogShareBar title={post.title} slug={post.slug} />
       </div>
 
       {/* ── Latest Blog Posts ── */}
       {relatedPosts.length > 0 && (
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 mt-4">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 mt-14">
           <h2 className="text-2xl font-bold text-white mb-8">Latest Blog posts</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {relatedPosts.map((relatedPost) => (
