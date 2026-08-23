@@ -183,6 +183,7 @@ export default function RootLayout({
         "Education Technology",
         "Entrepreneurship",
         "Digital Content Creation",
+        "Nishant Kumar Chandighar University",
         "Student Community Building",
         "Online Learning Platforms",
         "EdTech",
