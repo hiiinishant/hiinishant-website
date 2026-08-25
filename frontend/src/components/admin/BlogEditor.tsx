@@ -59,6 +59,7 @@ interface BlogEditorProps {
 export default function BlogEditor({ value, onChange }: BlogEditorProps) {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tableZoom, setTableZoom] = useState(100); // percent: 50–150
 
   const editor = useEditor({
     extensions: [
@@ -544,6 +545,32 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
           >
             🗑️ Delete Table
           </button>
+
+          <span className="w-px h-4 bg-white/20 mx-1"></span>
+
+          {/* ── Zoom Controls ── */}
+          <span className="text-brand-500 text-[10px] font-bold uppercase tracking-wider ml-1">Zoom:</span>
+          <button
+            type="button"
+            onClick={() => setTableZoom((z) => Math.max(50, z - 10))}
+            disabled={tableZoom <= 50}
+            className="px-2 py-1 rounded bg-white/5 hover:bg-white/15 border border-white/10 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Zoom Out Table"
+          >
+            🔍−
+          </button>
+          <span className="px-2 py-1 rounded bg-zinc-900 border border-white/10 text-amber-300 font-mono text-[11px] min-w-[44px] text-center">
+            {tableZoom}%
+          </span>
+          <button
+            type="button"
+            onClick={() => setTableZoom((z) => Math.min(150, z + 10))}
+            disabled={tableZoom >= 150}
+            className="px-2 py-1 rounded bg-white/5 hover:bg-white/15 border border-white/10 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Zoom In Table"
+          >
+            🔍+
+          </button>
         </div>
       )}
 
@@ -564,7 +591,13 @@ export default function BlogEditor({ value, onChange }: BlogEditorProps) {
       )}
 
       {/* Editor Content Area */}
-      <div className="relative">
+      <div
+        className="relative"
+        style={tableZoom !== 100 ? { "--table-zoom": `${tableZoom / 100}` } as React.CSSProperties : undefined}
+      >
+        {tableZoom !== 100 && (
+          <style>{`.ProseMirror table { transform: scale(var(--table-zoom, 1)); transform-origin: top left; }`}</style>
+        )}
         <EditorContent editor={editor} />
 
         {/* Image bubble menu/editor for sizing, alignment & caption */}

@@ -230,7 +230,9 @@ router.put('/', requireAuth, upload.single('image'), async (req, res) => {
       category: category || currentData.category || 'General',
       seoTitle: seoTitle || currentData.seoTitle || '',
       imageUrl,
-      imagePath
+      imagePath,
+      // Preserve the existing read count — never reset it on edit
+      reads: currentData.reads ?? 0,
     };
 
     // If slug has changed, delete the old document and write the new one

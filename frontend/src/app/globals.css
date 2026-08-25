@@ -577,6 +577,22 @@ html.light .hover\:text-white:hover { color: #0f172a; }
 /* ─────────────────────────────────────────────── */
 /*  Blog Table Styles (Editor & Reader)           */
 /* ─────────────────────────────────────────────── */
+
+/* Responsive wrapper — lets wide tables scroll horizontally on mobile */
+.blog-table-wrap {
+  width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  margin: 1.75rem 0 !important;
+  border-radius: 0.75rem !important;
+}
+
+/* Remove margin from the table itself since the wrapper handles spacing */
+.blog-table-wrap table {
+  margin: 0 !important;
+  min-width: 480px !important; /* ensures columns don't collapse below readable size */
+}
+
 .ProseMirror table,
 .prose table {
   width: 100% !important;

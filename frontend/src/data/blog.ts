@@ -104,10 +104,21 @@ export function tiptapToHtml(jsonStr: string): string {
           } else if (mark.type === "link") {
             const href = typeof mark.attrs?.href === "string" ? mark.attrs.href : "#";
             html = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-accent underline hover:text-accent-light">${html}</a>`;
+          } else if (mark.type === "highlight") {
+            html = `<mark>${html}</mark>`;
           }
         }
       }
       return html;
+    };
+
+    // Helper: extract inner content of a cell node, unwrapping a single wrapping paragraph
+    const renderCellContent = (node: TiptapNode): string => {
+      if (!node.content) return "";
+      if (node.content.length === 1 && node.content[0].type === "paragraph") {
+        return node.content[0].content ? node.content[0].content.map(renderNode).join("") : "";
+      }
+      return node.content.map(renderNode).join("");
     };
 
     const renderNode = (node: TiptapNode): string => {
@@ -179,6 +190,35 @@ export function tiptapToHtml(jsonStr: string): string {
 
         case "hardBreak":
           return "<br/>";
+
+        // ── Table nodes ──────────────────────────────────────────────
+        case "table":
+          // Wrap in a responsive div so wide tables scroll on mobile
+          return `<div class="blog-table-wrap"><table>${childrenHtml}</table></div>\n`;
+
+        case "tableRow":
+          return `<tr>${childrenHtml}</tr>\n`;
+
+        case "tableHeader": {
+          const colspan = typeof node.attrs?.colspan === "number" && node.attrs.colspan > 1
+            ? ` colspan="${node.attrs.colspan}"`
+            : "";
+          const rowspan = typeof node.attrs?.rowspan === "number" && node.attrs.rowspan > 1
+            ? ` rowspan="${node.attrs.rowspan}"`
+            : "";
+          return `<th${colspan}${rowspan}>${renderCellContent(node)}</th>\n`;
+        }
+
+        case "tableCell": {
+          const colspan = typeof node.attrs?.colspan === "number" && node.attrs.colspan > 1
+            ? ` colspan="${node.attrs.colspan}"`
+            : "";
+          const rowspan = typeof node.attrs?.rowspan === "number" && node.attrs.rowspan > 1
+            ? ` rowspan="${node.attrs.rowspan}"`
+            : "";
+          return `<td${colspan}${rowspan}>${renderCellContent(node)}</td>\n`;
+        }
+        // ─────────────────────────────────────────────────────────────
 
         default:
           return childrenHtml;
