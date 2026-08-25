@@ -110,7 +110,10 @@ export default function LinkPreviewHider() {
       // Internal routing with Next.js router
       if (rawHref.startsWith("/")) {
         e.preventDefault();
-        router.push(rawHref);
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        router.push(rawHref, { scroll: true });
       }
     };
 
@@ -140,7 +143,10 @@ export default function LinkPreviewHider() {
             if (rawHref.startsWith("http") || link.getAttribute("target") === "_blank") {
               window.open(rawHref, "_blank", "noopener,noreferrer");
             } else {
-              router.push(rawHref);
+              window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+              router.push(rawHref, { scroll: true });
             }
           }
         }
