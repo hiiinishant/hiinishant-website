@@ -2,6 +2,7 @@
 
 import React, { useState, type FormEvent } from "react";
 import { doc, updateDoc } from "firebase/firestore";
+import { updateProfile } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { API_BASE } from "@/lib/api";
 import { useNsgramAuth, type AvatarType } from "@/components/nsgram/NsgramAuthProvider";
@@ -31,7 +32,8 @@ export default function NsgramProfilePage() {
     e.preventDefault();
     if (!profile || !db) return;
 
-    if (!displayName.trim()) {
+    const trimmedName = displayName.trim();
+    if (!trimmedName) {
       setNotice("Display name cannot be empty.");
       return;
     }
@@ -42,10 +44,29 @@ export default function NsgramProfilePage() {
     try {
       const userRef = doc(db, "users", profile.id);
       await updateDoc(userRef, {
-        displayName: displayName.trim(),
+        displayName: trimmedName,
         bio: bio.trim(),
         avatar,
       });
+
+      // Keep Firebase Auth user displayName in sync
+      if (authUser) {
+        try {
+          await updateProfile(authUser, { displayName: trimmedName });
+        } catch (authErr) {
+          console.warn("Failed to update authUser displayName:", authErr);
+        }
+      }
+
+      // Keep localStorage cached profile in sync for instant header rendering
+      try {
+        localStorage.setItem(`nsgram_profile_${profile.id}`, JSON.stringify({
+          displayName: trimmedName,
+          avatar,
+          bio: bio.trim(),
+          username: profile.username,
+        }));
+      } catch {}
 
       // Update via backend API too (optional, but good for database consistency if backend tracks login/profile history)
       const backendUrl = API_BASE;

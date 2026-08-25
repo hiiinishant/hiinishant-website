@@ -64,6 +64,29 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
         return;
       }
 
+      // Try reading cached profile immediately to prevent loading flicker
+      try {
+        const cached = localStorage.getItem(`nsgram_profile_${user.uid}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.displayName || parsed.avatar)) {
+            setProfile({
+              id: user.uid,
+              uid: user.uid,
+              email: user.email || "",
+              bio: parsed.bio || "",
+              avatar: parsed.avatar || "boy",
+              displayName: parsed.displayName || "",
+              username: parsed.username || user.email?.split("@")[0] || "user",
+              role: "user",
+              ...parsed,
+            });
+            clearTimeout(safetyTimer);
+            queueMicrotask(() => setLoading(false));
+          }
+        }
+      } catch {}
+
       const userRef = doc(db!, "users", user.uid);
       unsubscribeProfile?.();
       unsubscribeProfile = onSnapshot(
@@ -71,7 +94,16 @@ export function NsgramAuthProvider({ children }: { children: React.ReactNode }) 
         (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.data() as Partial<UserProfile>;
-            setProfile({ id: snapshot.id, uid: (data.uid as string) ?? snapshot.id, ...(data as object) } as UserProfile);
+            const latestProfile = { id: snapshot.id, uid: (data.uid as string) ?? snapshot.id, ...(data as object) } as UserProfile;
+            setProfile(latestProfile);
+            try {
+              localStorage.setItem(`nsgram_profile_${user.uid}`, JSON.stringify({
+                displayName: latestProfile.displayName,
+                avatar: latestProfile.avatar,
+                bio: latestProfile.bio,
+                username: latestProfile.username,
+              }));
+            } catch {}
           } else {
             setProfile(null);
           }

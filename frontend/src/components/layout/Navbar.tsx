@@ -56,9 +56,11 @@ export default function Navbar() {
   const [clickedOpen, setClickedOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [authResolved, setAuthResolved] = useState(false);
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   // Nsgram profile — keeps name/avatar in sync after profile edits
   const [nsgramProfile, setNsgramProfile] = useState<{ displayName?: string; avatar?: string } | null>(null);
+  const [profileResolved, setProfileResolved] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -67,11 +69,32 @@ export default function Navbar() {
   const userTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isConfigured || !auth) return;
+    if (!isConfigured || !auth) {
+      setAuthResolved(true);
+      setProfileResolved(true);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
-      // Reset nsgram profile on auth change
-      if (!user) setNsgramProfile(null);
+      setAuthResolved(true);
+      // Reset nsgram profile on logout
+      if (!user) {
+        setNsgramProfile(null);
+        setProfileResolved(true);
+        return;
+      }
+
+      // Try reading cached profile immediately to prevent 1-second name flicker
+      try {
+        const cached = localStorage.getItem(`nsgram_profile_${user.uid}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.displayName || parsed.avatar)) {
+            setNsgramProfile({ displayName: parsed.displayName, avatar: parsed.avatar });
+            setProfileResolved(true);
+          }
+        }
+      } catch {}
     });
     return () => unsubscribe();
   }, []);
@@ -80,12 +103,25 @@ export default function Navbar() {
   useEffect(() => {
     if (!authUser || !db || !isConfigured) return;
     const userDoc = doc(db, "users", authUser.uid);
-    const unsubProfile = onSnapshot(userDoc, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setNsgramProfile({ displayName: data.displayName, avatar: data.avatar });
+    const unsubProfile = onSnapshot(
+      userDoc,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          const latest = { displayName: data.displayName, avatar: data.avatar };
+          setNsgramProfile(latest);
+          setProfileResolved(true);
+          try {
+            localStorage.setItem(`nsgram_profile_${authUser.uid}`, JSON.stringify(latest));
+          } catch {}
+        } else {
+          setProfileResolved(true);
+        }
+      },
+      () => {
+        setProfileResolved(true);
       }
-    });
+    );
     return () => unsubProfile();
   }, [authUser]);
 
@@ -114,8 +150,15 @@ export default function Navbar() {
   const handleLogout = async () => {
     if (!auth) return;
     try {
+      if (authUser) {
+        try {
+          localStorage.removeItem(`nsgram_profile_${authUser.uid}`);
+        } catch {}
+      }
       await signOut(auth);
       setAuthUser(null);
+      setNsgramProfile(null);
+      setProfileResolved(false);
       setUserMenuOpen(false);
       router.refresh();
     } catch (error) {
@@ -258,7 +301,12 @@ export default function Navbar() {
             </div>
 
             {/* ─── USER AVATAR / LOGIN ─── */}
-            {authUser ? (
+            {!authResolved ? (
+              <div className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 ml-2">
+                <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse" />
+                <div className="w-14 h-4 rounded-md bg-white/10 animate-pulse hidden sm:block" />
+              </div>
+            ) : authUser ? (
               <div
                 className="relative ml-2"
                 ref={userMenuRef}
@@ -278,15 +326,19 @@ export default function Navbar() {
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-black text-xs font-extrabold shadow-[0_0_14px_rgba(245,158,11,0.35)] group-hover:shadow-[0_0_22px_rgba(245,158,11,0.55)] transition-shadow">
                       {nsgramProfile?.avatar
                         ? (nsgramProfile.avatar === "girl" ? "👧" : "👦")
-                        : getInitialsFromName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email?.[0] ?? "U")}
+                        : getInitialsFromName(nsgramProfile?.displayName ?? (profileResolved ? authUser.displayName : ""), authUser.email?.[0] ?? "U")}
                     </div>
                     {/* Online dot */}
                     <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-[rgb(10,10,18)] shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
                   </div>
-                  {/* Name — prefer Nsgram display name over Firebase Auth name */}
-                  <span className="text-sm font-semibold text-white max-w-[90px] truncate leading-none">
-                    {getShortName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email)}
-                  </span>
+                  {/* Name — show clean placeholder if profile is resolving, otherwise display latest name */}
+                  {!profileResolved && !nsgramProfile?.displayName ? (
+                    <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                  ) : (
+                    <span className="text-sm font-semibold text-white max-w-[90px] truncate leading-none">
+                      {getShortName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email)}
+                    </span>
+                  )}
                   <ChevronDown className={`w-3.5 h-3.5 text-brand-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`} />
                 </button>
 
@@ -330,7 +382,9 @@ export default function Navbar() {
 
           {/* ─── Mobile controls ─── */}
           <div className="flex lg:hidden items-center gap-2">
-            {authUser ? (
+            {!authResolved ? (
+              <div className="w-7 h-7 rounded-full bg-white/10 animate-pulse" />
+            ) : authUser ? (
               <Link
                 href="/nsgram/profile"
                 className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-xl hover:bg-white/8 border border-white/10 transition-all"
@@ -338,11 +392,15 @@ export default function Navbar() {
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-amber-300 flex items-center justify-center text-black text-[11px] font-extrabold shrink-0">
                   {nsgramProfile?.avatar
                     ? (nsgramProfile.avatar === "girl" ? "👧" : "👦")
-                    : getInitialsFromName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email?.[0] ?? "U")}
+                    : getInitialsFromName(nsgramProfile?.displayName ?? (profileResolved ? authUser.displayName : ""), authUser.email?.[0] ?? "U")}
                 </div>
-                <span className="text-xs font-semibold text-white max-w-[60px] truncate">
-                  {getShortName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email)}
-                </span>
+                {!profileResolved && !nsgramProfile?.displayName ? (
+                  <span className="inline-block w-10 h-3 rounded bg-white/10 animate-pulse" />
+                ) : (
+                  <span className="text-xs font-semibold text-white max-w-[60px] truncate">
+                    {getShortName(nsgramProfile?.displayName ?? authUser.displayName, authUser.email)}
+                  </span>
+                )}
               </Link>
             ) : (
               <Link
