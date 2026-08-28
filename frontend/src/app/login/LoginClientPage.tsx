@@ -334,19 +334,27 @@ export default function LoginClientPage() {
         const data = userSnap.data();
         setProfile({ id: userSnap.id, uid: data.uid ?? userSnap.id, ...data } as UserProfile);
 
-        const existingIdToken = await getIdToken(credential.user);
-        fetch(`${API_BASE}/api/users/profile`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${existingIdToken}`,
-          },
-          body: JSON.stringify({
-            uid: credential.user.uid,
-            email: credential.user.email,
-            isActivated: true,
-          }),
-        }).catch((err) => console.warn("Background profile update failed:", err));
+        // FIX #4: Await profile activation so isActivated is reliably set before redirect
+        try {
+          const existingIdToken = await getIdToken(credential.user);
+          const activateRes = await fetch(`${API_BASE}/api/users/profile`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${existingIdToken}`,
+            },
+            body: JSON.stringify({
+              uid: credential.user.uid,
+              email: credential.user.email,
+              isActivated: true,
+            }),
+          });
+          if (!activateRes.ok) {
+            console.warn("Profile activation sync failed:", activateRes.status);
+          }
+        } catch (err) {
+          console.warn("Profile activation sync error:", err);
+        }
       }
 
       setAuthUser(credential.user);
@@ -389,22 +397,28 @@ export default function LoginClientPage() {
         return;
       }
 
-      const usernameSnapshot = await getDocs(
-        query(collection(db, "users"), where("username", "==", username))
-      );
-      if (!usernameSnapshot.empty) {
-        setNotice({ text: "That username is already taken. Please choose another.", type: "error" });
-        return;
-      }
-
+      // FIX #1: Lock the form immediately before any async work to prevent double-submit race
       setAuthLoading(true);
       setNotice(null);
+
       try {
+        // Check username uniqueness with form already locked
+        const usernameSnapshot = await getDocs(
+          query(collection(db, "users"), where("username", "==", username))
+        );
+        if (!usernameSnapshot.empty) {
+          setNotice({ text: "That username is already taken. Please choose another.", type: "error" });
+          setAuthLoading(false);
+          return;
+        }
+
         const credential = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(credential.user);
 
         const idToken = await getIdToken(credential.user);
-        await fetch(`${API_BASE}/api/users/profile`, {
+
+        // FIX #2: Check API response and throw if profile creation fails
+        const profileRes = await fetch(`${API_BASE}/api/users/profile`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -420,6 +434,13 @@ export default function LoginClientPage() {
             isActivated: false,
           }),
         });
+
+        if (!profileRes.ok) {
+          // Firebase account created but profile save failed — clean up & inform user
+          await credential.user.delete().catch(() => {});
+          const errBody = await profileRes.json().catch(() => ({})) as { error?: string };
+          throw new Error(errBody?.error || `Profile save failed (${profileRes.status})`);
+        }
 
         setNotice({
           text: "Account created! A verification link has been sent to your email. Please check your inbox and spam folder.",
@@ -752,17 +773,21 @@ export default function LoginClientPage() {
                       />
                     </div>
 
-                    {/* Remember Me & Forgot Password */}
+                    {/* FIX #3: Remember Me only shown in login mode (no effect during signup) */}
                     <div className="flex items-center justify-between text-sm pt-1">
-                      <label className="flex items-center gap-2 cursor-pointer select-none text-brand-300 hover:text-white">
-                        <input
-                          type="checkbox"
-                          checked={authForm.rememberMe}
-                          onChange={(e) => setAuthForm({ ...authForm, rememberMe: e.target.checked })}
-                          className="w-4 h-4 rounded border-white/20 bg-zinc-900 text-amber-500 focus:ring-amber-500/30 cursor-pointer"
-                        />
-                        <span>Remember me</span>
-                      </label>
+                      {authMode === "login" ? (
+                        <label className="flex items-center gap-2 cursor-pointer select-none text-brand-300 hover:text-white">
+                          <input
+                            type="checkbox"
+                            checked={authForm.rememberMe}
+                            onChange={(e) => setAuthForm({ ...authForm, rememberMe: e.target.checked })}
+                            className="w-4 h-4 rounded border-white/20 bg-zinc-900 text-amber-500 focus:ring-amber-500/30 cursor-pointer"
+                          />
+                          <span>Remember me</span>
+                        </label>
+                      ) : (
+                        <span />
+                      )}
 
                       {authMode === "login" && (
                         <button

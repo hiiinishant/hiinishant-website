@@ -45,6 +45,27 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * Validates and normalizes date string in YYYY-MM-DD format.
+ * Returns the normalized date string if valid, or null if invalid.
+ */
+function parseAndValidateDate(dateInput?: string): string | null {
+  if (!dateInput || typeof dateInput !== 'string') return null;
+  const trimmed = dateInput.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  const parsed = new Date(trimmed);
+  if (isNaN(parsed.getTime())) return null;
+  const [year, month, day] = trimmed.split('-').map(Number);
+  if (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() + 1 === month &&
+    parsed.getUTCDate() === day
+  ) {
+    return trimmed;
+  }
+  return null;
+}
+
 // Upload a new gallery photo
 router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   try {
@@ -53,11 +74,14 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
       return;
     }
 
-    const { title, story, category } = req.body;
+    const { title, story, category, date } = req.body;
     if (!title || !category) {
       res.status(400).json({ error: "Title and category are required." });
       return;
     }
+
+    // Use submitted date if valid, otherwise fallback to today's date (YYYY-MM-DD)
+    const validDate = parseAndValidateDate(date) || new Date().toISOString().split('T')[0];
 
     // Upload to Cloudinary
     const uploadResult = await uploadBuffer(req.file.buffer, {
@@ -77,7 +101,7 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
       height: uploadResult.height,
       format: uploadResult.format,
       bytes: uploadResult.bytes,
-      date: new Date().toISOString().split('T')[0],
+      date: validDate,
       createdAt: new Date().toISOString(),
     };
 
@@ -93,7 +117,7 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
 // Update a gallery photo
 router.put('/', requireAuth, async (req, res) => {
   try {
-    const { id, title, story, category } = req.body;
+    const { id, title, story, category, date } = req.body;
     if (!id) {
       res.status(400).json({ error: "ID is required." });
       return;
@@ -103,6 +127,15 @@ router.put('/', requireAuth, async (req, res) => {
     if (title !== undefined) updateData.title = title.trim();
     if (story !== undefined) updateData.story = story.trim();
     if (category !== undefined) updateData.category = category.trim();
+    if (date !== undefined) {
+      const validDate = parseAndValidateDate(date);
+      if (validDate) {
+        updateData.date = validDate;
+      } else {
+        res.status(400).json({ error: "Invalid date format. Expected YYYY-MM-DD." });
+        return;
+      }
+    }
 
     await firestore.collection('gallery').doc(id).update(updateData);
     const doc = await firestore.collection('gallery').doc(id).get();

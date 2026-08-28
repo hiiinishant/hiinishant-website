@@ -5,7 +5,7 @@
  * Used by /quiz/[date]/page.tsx and sitemap.ts
  */
 
-const LIVE_BACKEND = "https://hiinishant-backend.onrender.com";
+const LIVE_BACKEND = "https://hiiinishant-backend.onrender.com";
 
 function getApiBase(): string {
   return process.env.NEXT_PUBLIC_API_URL || LIVE_BACKEND;

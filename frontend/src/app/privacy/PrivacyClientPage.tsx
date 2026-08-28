@@ -35,8 +35,8 @@ export default function PrivacyClientPage() {
     },
     {
       icon: Lock,
-      title: "Enterprise Security",
-      desc: "Protected by SSL/TLS encryption and Google Firebase's secure cloud infrastructure.",
+      title: "Secure Infrastructure",
+      desc: "We use HTTPS/TLS encryption and security features provided by our hosting and infrastructure providers to help protect your information.",
       color: "from-amber-500/20 to-amber-500/5 text-amber-400 border-amber-500/20",
     },
     {
@@ -240,7 +240,12 @@ export default function PrivacyClientPage() {
             </div>
             <div className="p-3 rounded-lg border border-white/5 bg-white/2">
               <strong className="text-white block mb-0.5">Right to Erasure</strong>
-              Request full deletion of your user account, comments, and community profile.
+              You may request permanent deletion of your Hiii Nishant account and associated personal data.
+              To submit a deletion request, please visit our{" "}
+              <Link href="/delete-account" className="text-accent hover:text-accent-light underline underline-offset-2 font-medium">
+                Account Deletion page
+              </Link>
+              .
             </div>
             <div className="p-3 rounded-lg border border-white/5 bg-white/2">
               <strong className="text-white block mb-0.5">Right to Correction</strong>
@@ -366,7 +371,13 @@ export default function PrivacyClientPage() {
 
         <h2 className="text-2xl font-bold text-white">Have Privacy Questions?</h2>
         <p className="text-sm text-brand-300 max-w-xl mx-auto leading-relaxed">
-          If you have any questions regarding this Privacy Policy, your rights, or data deletion requests, feel free to reach out directly.
+          If you have any questions regarding this Privacy Policy or your data
+          rights, feel free to reach out directly. To request account deletion,
+          please visit the{" "}
+          <Link href="/delete-account" className="text-accent hover:text-accent-light underline underline-offset-2 font-medium">
+            Account Deletion page
+          </Link>
+          .
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
