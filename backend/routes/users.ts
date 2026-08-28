@@ -25,6 +25,47 @@ async function requireFirebaseAuth(req: Request, res: Response, next: Function):
 }
 
 /**
+ * Check if a username is available (unauthenticated public lookup).
+ * GET /api/users/check-username?username=<username>
+ */
+router.get('/check-username', async (req: Request, res: Response) => {
+  try {
+    const rawUsername = req.query.username;
+    if (!rawUsername || typeof rawUsername !== 'string') {
+      res.status(400).json({ error: 'Username is required.' });
+      return;
+    }
+
+    const username = rawUsername.trim().toLowerCase();
+
+    // Username validation: 3-30 characters, alphanumeric & underscores only
+    if (username.length < 3 || username.length > 30 || !/^[a-z0-9_]+$/.test(username)) {
+      res.status(400).json({
+        error: 'Username must be 3-30 characters and contain only letters, numbers, and underscores.',
+      });
+      return;
+    }
+
+    if (!firestore) {
+      res.status(503).json({ error: 'Database not available.' });
+      return;
+    }
+
+    const snapshot = await firestore
+      .collection('users')
+      .where('username', '==', username)
+      .limit(1)
+      .get();
+
+    const available = snapshot.empty;
+    res.status(200).json({ available });
+  } catch (error: any) {
+    console.error('Check username error:', error);
+    res.status(500).json({ error: error.message || 'Failed to check username availability' });
+  }
+});
+
+/**
  * Create or update user profile in Firestore.
  * Requires a valid Firebase ID token — users can only update their own profile.
  * Role changes are blocked via this route (must be done in Firestore directly).

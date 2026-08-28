@@ -17,7 +17,7 @@ import {
   signInWithPopup,
   type User as FirebaseUser,
 } from "firebase/auth";
-import { doc, getDoc, getDocs, query, collection, where } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { auth, db, isConfigured } from "@/lib/firebase";
 import { API_BASE } from "@/lib/api";
 import { getSafeRedirect } from "@/lib/auth-redirect";
@@ -296,15 +296,20 @@ export default function LoginClientPage() {
         let attempts = 0;
 
         while (!isUnique && attempts < 10) {
-          const usernameCheck = await getDocs(
-            query(collection(db, "users"), where("username", "==", uniqueUsername))
-          );
-          if (usernameCheck.empty) {
-            isUnique = true;
-          } else {
-            attempts++;
-            uniqueUsername = `${baseUsername}${Math.floor(1000 + Math.random() * 9000)}`;
+          try {
+            const checkRes = await fetch(`${API_BASE}/api/users/check-username?username=${encodeURIComponent(uniqueUsername)}`);
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              if (checkData.available) {
+                isUnique = true;
+                break;
+              }
+            }
+          } catch {
+            // fallback if network issue
           }
+          attempts++;
+          uniqueUsername = `${baseUsername}${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
         const idToken = await getIdToken(credential.user);
@@ -402,14 +407,26 @@ export default function LoginClientPage() {
       setNotice(null);
 
       try {
-        // Check username uniqueness with form already locked
-        const usernameSnapshot = await getDocs(
-          query(collection(db, "users"), where("username", "==", username))
-        );
-        if (!usernameSnapshot.empty) {
-          setNotice({ text: "That username is already taken. Please choose another.", type: "error" });
-          setAuthLoading(false);
-          return;
+        // Check username uniqueness securely via backend API (bypasses unauthenticated Firestore rule restrictions)
+        try {
+          const checkRes = await fetch(`${API_BASE}/api/users/check-username?username=${encodeURIComponent(username)}`);
+          if (checkRes.ok) {
+            const checkData = await checkRes.json();
+            if (checkData.available === false) {
+              setNotice({ text: "That username is already taken. Please choose another.", type: "error" });
+              setAuthLoading(false);
+              return;
+            }
+          } else {
+            const errData = await checkRes.json().catch(() => ({})) as { error?: string };
+            if (checkRes.status === 400 && errData?.error) {
+              setNotice({ text: errData.error, type: "error" });
+              setAuthLoading(false);
+              return;
+            }
+          }
+        } catch (checkErr) {
+          console.warn("Username availability check network warning:", checkErr);
         }
 
         const credential = await createUserWithEmailAndPassword(auth, email, password);
