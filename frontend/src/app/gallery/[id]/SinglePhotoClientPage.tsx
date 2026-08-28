@@ -69,7 +69,7 @@ export default function SinglePhotoClientPage({ photo }: { photo: GalleryPhoto }
           <span className="text-xs font-mono uppercase tracking-widest">Back to Gallery</span>
         </Link>
 
-        {authUser && (
+        {authUser && authUser.emailVerified && (
           <button
             onClick={handleShare}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-brand-300 hover:text-white text-xs font-mono transition-colors cursor-pointer"
@@ -85,7 +85,7 @@ export default function SinglePhotoClientPage({ photo }: { photo: GalleryPhoto }
           <div className="w-10 h-10 border-3 border-accent/20 border-t-accent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-xs font-mono text-brand-400">Verifying access...</p>
         </div>
-      ) : !authUser ? (
+      ) : (!authUser || !authUser.emailVerified) ? (
         /* ── Login / Signup Required Wall ── */
         <div className="max-w-xl mx-auto px-5 sm:px-8 mt-10">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">

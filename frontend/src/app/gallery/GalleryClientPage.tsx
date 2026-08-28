@@ -251,7 +251,7 @@ export default function GalleryClientPage() {
           <div className="w-10 h-10 border-3 border-accent/20 border-t-accent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-xs font-mono text-brand-400">Verifying access...</p>
         </div>
-      ) : !authUser ? (
+      ) : (!authUser || !authUser.emailVerified) ? (
         /* ── Login / Signup Required Wall ── */
         <div className="max-w-xl mx-auto px-5 sm:px-8 mt-10">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">

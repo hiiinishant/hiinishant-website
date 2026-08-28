@@ -460,7 +460,7 @@ export default function LoginClientPage() {
         }
 
         setNotice({
-          text: "Account created! A verification link has been sent to your email. Please check your inbox and spam folder.",
+          text: "Account created! A verification link has been sent to your email. Please check your inbox and click the verification link to activate full NSGram, Quiz & Gallery access.",
           type: "success",
         });
         setAuthForm(emptyAuthForm);
@@ -486,8 +486,11 @@ export default function LoginClientPage() {
       const credential = await signInWithEmailAndPassword(auth, email, password);
 
       if (!credential.user.emailVerified) {
+        await signOut(auth);
+        setAuthUser(null);
+        setProfile(null);
         setNotice({
-          text: "Please verify your email before logging in. Check your inbox or click resend below.",
+          text: "Please check your inbox and click the verification link to activate full NSGram, Quiz & Gallery access before logging in.",
           type: "error",
         });
         setAuthLoading(false);
@@ -624,7 +627,7 @@ export default function LoginClientPage() {
                       <span>Verification Required for {authUser.email}</span>
                     </p>
                     <p className="text-brand-300 text-[11px]">
-                      Please check your inbox and click the verification link to activate full NSGram & Quiz access.
+                      Please check your inbox and click the verification link to activate full NSGram, Quiz & Gallery access.
                     </p>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <button
