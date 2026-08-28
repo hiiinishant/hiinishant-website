@@ -56,8 +56,99 @@ export default function TermsPage() {
             </p>
           </div>
 
+          {/* ── New sections ─────────────────────────────────────────────── */}
+
           <div className="glass-strong border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
-            <h2 className="text-white font-bold text-base">6. Contact</h2>
+            <h2 className="text-white font-bold text-base">6. User Accounts</h2>
+            <p>
+              To access features such as the Daily Quiz, Community, and Chat, you must create an account using Firebase Authentication. By creating an account you confirm that:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-brand-300">
+              <li>You are at least 13 years of age.</li>
+              <li>The information you provide is accurate and up to date.</li>
+              <li>You are responsible for maintaining the security of your account credentials.</li>
+              <li>You will not share your account with or transfer it to any other person.</li>
+            </ul>
+            <p>
+              We reserve the right to suspend or terminate accounts that violate these terms at any time without prior notice.
+            </p>
+          </div>
+
+          <div className="glass-strong border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+            <h2 className="text-white font-bold text-base">7. User-Generated Content</h2>
+            <p>
+              When you post content on this platform — including community posts, comments, or chat messages — you retain ownership of that content. However, by submitting content you grant Hiii Nishant a non-exclusive, royalty-free licence to display, moderate, and remove that content as necessary to operate the platform.
+            </p>
+            <p>
+              You are solely responsible for the content you post. We do not endorse any user-generated content and accept no liability for it.
+            </p>
+          </div>
+
+          <div className="glass-strong border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+            <h2 className="text-white font-bold text-base">8. Prohibited Content &amp; Conduct</h2>
+            <p>You agree not to post, share, or transmit any content that:</p>
+            <ul className="list-disc list-inside space-y-1 text-brand-300">
+              <li>Is abusive, harassing, threatening, or hateful towards any individual or group.</li>
+              <li>Is sexually explicit, violent, or otherwise inappropriate.</li>
+              <li>Violates the privacy or intellectual property rights of others.</li>
+              <li>Contains spam, unsolicited advertisements, or malicious links.</li>
+              <li>Is false, misleading, or impersonates another person.</li>
+              <li>Violates any applicable law or regulation.</li>
+            </ul>
+            <p>
+              Violation of this section may result in immediate account suspension or permanent ban without refund of any contributions.
+            </p>
+          </div>
+
+          <div className="glass-strong border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+            <h2 className="text-white font-bold text-base">9. Community &amp; Chat</h2>
+            <p>
+              The Community and one-to-one Chat features are provided for respectful interaction between registered users. Please be aware that:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-brand-300">
+              <li>Community posts are limited to 500 characters and must be text only.</li>
+              <li>Chat messages are stored permanently in our database and may be reviewed by the site administrator for moderation purposes.</li>
+              <li>There are no voice, video, file, or group chat features.</li>
+              <li>The administrator reserves the right to delete any post, comment, or message that violates these terms.</li>
+            </ul>
+          </div>
+
+          <div className="glass-strong border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+            <h2 className="text-white font-bold text-base">10. Quiz, XP &amp; Streaks</h2>
+            <p>
+              The Daily Quiz and subject quizzes award XP points and maintain streak counters for engagement purposes only. Please note:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-brand-300">
+              <li>XP, streaks, and leaderboard rankings have no monetary value and cannot be exchanged for any product, service, or reward.</li>
+              <li>Only today&apos;s Daily Challenge can be answered for XP. Past quizzes are available for review only.</li>
+              <li>One attempt per question is allowed. Duplicate submissions will be rejected.</li>
+              <li>We reserve the right to reset, adjust, or discontinue the XP and streak system at any time without prior notice.</li>
+            </ul>
+          </div>
+
+          <div className="glass-strong border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+            <h2 className="text-white font-bold text-base">11. Account Termination</h2>
+            <p>
+              You may delete your account at any time by following the process described on the{" "}
+              <Link href="/delete-account" className="text-accent hover:underline">
+                Delete Account
+              </Link>{" "}
+              page.
+            </p>
+            <p>
+              We reserve the right to suspend or permanently terminate your account, without prior notice, if we determine that you have violated these Terms of Service or that your activity poses a risk to other users or the platform.
+            </p>
+          </div>
+
+          <div className="glass-strong border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+            <h2 className="text-white font-bold text-base">12. Governing Law</h2>
+            <p>
+              These Terms of Service are governed by and construed in accordance with the laws of India. Any disputes arising in connection with these terms shall be subject to the exclusive jurisdiction of the courts in India.
+            </p>
+          </div>
+
+          <div className="glass-strong border border-white/10 rounded-2xl p-5 sm:p-6 space-y-3">
+            <h2 className="text-white font-bold text-base">13. Contact</h2>
             <p>
               For any questions regarding these terms, please use the{" "}
               <Link href="/contact" className="text-accent hover:underline">
