@@ -83,20 +83,6 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
     if (response || submitting) return;
 
     const quizId = quiz.id || quiz.date;
-    const correctOpt = quiz.correctOption || "A";
-    const isCorrect = option === correctOpt;
-    const xpEarned = isCorrect ? 10 : 2;
-
-    const optimisticResponse: UserResponse = {
-      selectedOption: option,
-      isCorrect,
-      xpEarned,
-      correctOption: correctOpt,
-    };
-
-    setResponse(optimisticResponse);
-    setQuiz((prev) => ({ ...prev, attemptsCount: (prev.attemptsCount || 0) + 1 }));
-
     setSubmitting(true);
     try {
       const apiBase = getApiBase();
@@ -115,6 +101,7 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
           correctOption: result.correctOption,
         });
         if (result.stats) setStats(result.stats);
+        setQuiz((prev) => ({ ...prev, attemptsCount: (prev.attemptsCount || 0) + 1 }));
       }
     } catch {
       /* silent */

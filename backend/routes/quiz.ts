@@ -81,7 +81,6 @@ router.get('/today', async (_req: Request, res: Response) => {
         optionB:       d.optionB,
         optionC:       d.optionC,
         optionD:       d.optionD,
-        correctOption: d.correctOption,
         attemptsCount: d.attemptsCount || 0,
       };
     });
@@ -202,7 +201,6 @@ router.get('/subject/:subject', async (req: Request, res: Response) => {
         optionB:       d.optionB,
         optionC:       d.optionC,
         optionD:       d.optionD,
-        correctOption: d.correctOption,
         attemptsCount: d.attemptsCount || 0,
       };
     });
@@ -219,7 +217,7 @@ router.get('/subject/:subject', async (req: Request, res: Response) => {
 
 // GET /api/quiz/date/:date
 // Returns all published quizzes for a specific publishDate (YYYY-MM-DD).
-// correctOption is ALWAYS exposed here — used by the SSR SEO page for archived quiz dates.
+// correctOption is exposed only for past archived dates — live today quizzes keep answer hidden.
 // Response: { quizzes: QuizPublic[], date: string }
 router.get('/date/:date', async (req: Request, res: Response) => {
   try {
@@ -249,6 +247,9 @@ router.get('/date/:date', async (req: Request, res: Response) => {
       }
     }
 
+    const today = todayKeyIST();
+    const isPast = date < today;
+
     const quizzes = docsList.map(doc => {
       const d = doc.data()!;
       return {
@@ -260,7 +261,7 @@ router.get('/date/:date', async (req: Request, res: Response) => {
         optionB:       d.optionB,
         optionC:       d.optionC,
         optionD:       d.optionD,
-        correctOption: d.correctOption,  // always exposed for SEO/archive
+        ...(isPast ? { correctOption: d.correctOption } : {}),
         attemptsCount: d.attemptsCount || 0,
       };
     });
@@ -310,8 +311,11 @@ router.get('/all', async (_req: Request, res: Response) => {
       .orderBy('publishDate', 'desc')
       .get();
 
+    const today = todayKeyIST();
+
     const quizzes = snap.docs.map(doc => {
       const d = doc.data()!;
+      const isPast = (d.publishDate || doc.id) < today;
       return {
         id:            doc.id,
         date:          d.publishDate || doc.id,
@@ -321,7 +325,7 @@ router.get('/all', async (_req: Request, res: Response) => {
         optionB:       d.optionB,
         optionC:       d.optionC,
         optionD:       d.optionD,
-        correctOption: d.correctOption,
+        ...(isPast ? { correctOption: d.correctOption } : {}),
         attemptsCount: d.attemptsCount || 0,
         updatedAt:     d.updatedAt || d.createdAt,
       };
@@ -350,6 +354,9 @@ router.get('/q/:id', async (req: Request, res: Response) => {
     }
 
     const d = docSnap.data()!;
+    const today = todayKeyIST();
+    const isPast = (d.publishDate || docSnap.id) < today;
+
     const quiz = {
       id:            docSnap.id,
       date:          d.publishDate || docSnap.id,
@@ -359,7 +366,7 @@ router.get('/q/:id', async (req: Request, res: Response) => {
       optionB:       d.optionB,
       optionC:       d.optionC,
       optionD:       d.optionD,
-      correctOption: d.correctOption,
+      ...(isPast ? { correctOption: d.correctOption } : {}),
       attemptsCount: d.attemptsCount || 0,
       updatedAt:     d.updatedAt || d.createdAt,
     };

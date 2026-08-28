@@ -213,41 +213,10 @@ export default function QuizClientPage() {
     loadQuiz(subject);
   };
 
-  const handleOptionClick = async (quizId: string, option: "A" | "B" | "C" | "D", targetDate?: string, quizObj?: Quiz) => {
+  const handleOptionClick = async (quizId: string, option: "A" | "B" | "C" | "D", targetDate?: string) => {
     if (!user) { setShowLoginPrompt(true); return; }
     if (responses[quizId] || submittingMap[quizId]) return;
 
-    // Determine correct option (from quiz object or existing responses)
-    const correctOpt = quizObj?.correctOption || "A";
-    const isCorrect = option === correctOpt;
-    const xpEarned = isCorrect ? 10 : 2;
-
-    // ⚡ INSTANT OPTIMISTIC RESPONSE (0ms delay!)
-    const respItem: UserResponse = {
-      selectedOption: option,
-      isCorrect,
-      xpEarned,
-      correctOption: correctOpt,
-    };
-
-    setResponses((prev) => ({ ...prev, [quizId]: respItem, [targetDate || ""]: respItem }));
-
-    // Optimistically bump stats & attempt count
-    setStats((prev) => {
-      if (!prev) return { totalXP: xpEarned, totalCorrect: isCorrect ? 1 : 0, totalAttempts: 1, currentStreak: 1, longestStreak: 1 };
-      return {
-        ...prev,
-        totalXP: prev.totalXP + xpEarned,
-        totalCorrect: prev.totalCorrect + (isCorrect ? 1 : 0),
-        totalAttempts: prev.totalAttempts + 1,
-      };
-    });
-
-    setQuizzes((prev) =>
-      prev.map((q) => (q.id === quizId || q.date === targetDate ? { ...q, attemptsCount: (q.attemptsCount || 0) + 1 } : q))
-    );
-
-    // Silent background sync to Firestore
     setSubmittingMap((prev) => ({ ...prev, [quizId]: true }));
     try {
       const apiBase = getApiBase();
@@ -267,6 +236,9 @@ export default function QuizClientPage() {
         };
         setResponses((prev) => ({ ...prev, [quizId]: serverRespItem, [targetDate || ""]: serverRespItem }));
         if (result.stats) setStats(result.stats);
+        setQuizzes((prev) =>
+          prev.map((q) => (q.id === quizId || q.date === targetDate ? { ...q, attemptsCount: (q.attemptsCount || 0) + 1 } : q))
+        );
       }
     } catch {
       /* silent background catch */
@@ -658,7 +630,7 @@ export default function QuizClientPage() {
                             <button
                               key={opt}
                               disabled={hasAnswered || submitting || isPastQuiz}
-                              onClick={() => handleOptionClick(quizId, opt, quiz.date, quiz)}
+                              onClick={() => handleOptionClick(quizId, opt, quiz.date)}
                               className={`${cardBase} ${cardState}`}
                             >
                               <span className={`${labelBase} ${labelState}`}>
