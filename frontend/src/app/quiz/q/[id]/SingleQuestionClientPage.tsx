@@ -35,6 +35,7 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
   const [response, setResponse] = useState<UserResponse | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [expired, setExpired] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -80,7 +81,7 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
 
   const handleOptionClick = async (option: "A" | "B" | "C" | "D") => {
     if (!user) { setShowLoginPrompt(true); return; }
-    if (response || submitting) return;
+    if (response || submitting || expired) return;
 
     const quizId = quiz.id || quiz.date;
     setSubmitting(true);
@@ -92,6 +93,13 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ selectedOption: option, quizId, quizDate: quiz.date }),
       });
+
+      if (res.status === 410) {
+        // QUIZ_EXPIRED — backend rejected submission; do NOT set any answer or XP
+        setExpired(true);
+        return;
+      }
+
       if (res.ok) {
         const result = await res.json();
         setResponse({
@@ -214,7 +222,7 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
             return (
               <button
                 key={opt}
-                disabled={!!response || submitting || isPastQuiz}
+                disabled={!!response || submitting || isPastQuiz || expired}
                 onClick={() => handleOptionClick(opt)}
                 className={`relative flex items-center gap-4 w-full text-left px-5 py-4 rounded-2xl border transition-all duration-300 ${cardState}`}
               >
@@ -239,6 +247,19 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
           <p className="text-center text-xs font-mono text-amber-400 animate-pulse">Saving your answer...</p>
         )}
 
+        {/* Expired banner — shown when backend returns 410 QUIZ_EXPIRED */}
+        {expired && !response && (
+          <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 flex items-start gap-3 animate-fade-in">
+            <span className="text-lg mt-0.5">⏰</span>
+            <div>
+              <p className="text-sm font-bold text-amber-300">Daily Challenge Expired</p>
+              <p className="text-xs text-brand-400 mt-0.5 leading-relaxed">
+                Only today&apos;s Daily Challenge can be answered for XP. This question&apos;s submission window has closed.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Result banner */}
         {response && (
           <div className={`p-5 rounded-2xl border space-y-2 ${
@@ -254,7 +275,7 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
         )}
 
         {/* Login prompt */}
-        {showLoginPrompt && !response && !isPastQuiz && (
+        {showLoginPrompt && !response && !isPastQuiz && !expired && (
           <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-3">
             <p className="text-xs text-amber-300 font-semibold">Sign in to save your answer and earn XP!</p>
             <Link

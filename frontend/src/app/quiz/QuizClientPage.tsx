@@ -93,6 +93,8 @@ export default function QuizClientPage() {
   const [submittingMap, setSubmittingMap] = useState<Record<string, boolean>>({});
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [subjectsList, setSubjectsList] = useState<string[]>([]);
+  // Tracks quiz IDs rejected by the backend with HTTP 410 QUIZ_EXPIRED
+  const [expiredQuizIds, setExpiredQuizIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!auth) return;
@@ -215,7 +217,7 @@ export default function QuizClientPage() {
 
   const handleOptionClick = async (quizId: string, option: "A" | "B" | "C" | "D", targetDate?: string) => {
     if (!user) { setShowLoginPrompt(true); return; }
-    if (responses[quizId] || submittingMap[quizId]) return;
+    if (responses[quizId] || submittingMap[quizId] || expiredQuizIds.has(quizId)) return;
 
     setSubmittingMap((prev) => ({ ...prev, [quizId]: true }));
     try {
@@ -226,6 +228,13 @@ export default function QuizClientPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ selectedOption: option, quizId, quizDate: targetDate }),
       });
+
+      if (res.status === 410) {
+        // QUIZ_EXPIRED — backend rejected; do NOT update any answer/XP state
+        setExpiredQuizIds((prev) => new Set(prev).add(quizId));
+        return;
+      }
+
       if (res.ok) {
         const result = await res.json();
         const serverRespItem: UserResponse = {
@@ -241,7 +250,7 @@ export default function QuizClientPage() {
         );
       }
     } catch {
-      /* silent background catch */
+      /* silent — network errors leave no state change */
     } finally {
       setSubmittingMap((prev) => ({ ...prev, [quizId]: false }));
     }
@@ -549,6 +558,7 @@ export default function QuizClientPage() {
                   const response = responses[quizId] || responses[quiz.date];
                   const hasAnswered = !!response;
                   const submitting = !!submittingMap[quizId];
+                  const isExpired = expiredQuizIds.has(quizId);
                   // Past quiz: backend only returns correctOption for past subject quizzes (publishDate < today)
                   const isPastQuiz = !!quiz.correctOption && activeSubject !== "Daily Challenge" && quiz.date < todayIST;
 
@@ -629,7 +639,7 @@ export default function QuizClientPage() {
                           return (
                             <button
                               key={opt}
-                              disabled={hasAnswered || submitting || isPastQuiz}
+                              disabled={hasAnswered || submitting || isPastQuiz || isExpired}
                               onClick={() => handleOptionClick(quizId, opt, quiz.date)}
                               className={`${cardBase} ${cardState}`}
                             >
@@ -663,8 +673,21 @@ export default function QuizClientPage() {
                         </div>
                       )}
 
+                      {/* ─── EXPIRED BANNER (backend rejected with 410) ─── */}
+                      {isExpired && !hasAnswered && (
+                        <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 flex items-start gap-3 animate-fade-in">
+                          <span className="text-lg mt-0.5">⏰</span>
+                          <div>
+                            <p className="text-sm font-bold text-amber-300">Daily Challenge Expired</p>
+                            <p className="text-xs text-brand-400 mt-0.5 leading-relaxed">
+                              Only today&apos;s Daily Challenge can be answered for XP. This question&apos;s submission window has closed.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       {/* ─── PAST QUIZ CLOSED BANNER ─── */}
-                      {isPastQuiz && !hasAnswered && (
+                      {isPastQuiz && !hasAnswered && !isExpired && (
                         <div className="p-4 rounded-2xl border border-white/10 bg-white/3 flex items-start gap-3 animate-fade-in">
                           <span className="text-lg mt-0.5">🔒</span>
                           <div>
