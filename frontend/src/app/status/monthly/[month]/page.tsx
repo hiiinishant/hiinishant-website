@@ -104,6 +104,7 @@ export default async function MonthlyStatusPage({ params }: Props) {
         monthKey={monthKey}
         stats={stats}
         availableMonths={availableMonths}
+        dailyRecords={monthStatuses}
       />
     </>
   );

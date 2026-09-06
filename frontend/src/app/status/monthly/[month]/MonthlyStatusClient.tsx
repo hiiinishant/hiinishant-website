@@ -15,13 +15,17 @@ import {
   ArrowLeft,
   Share2,
   Check,
+  TrendingUp,
 } from "lucide-react";
 import type { MonthlyStats } from "@/data/statusServer";
+import type { DailyStatus } from "@/types";
+import TrendCharts, { TREND_OPTIONS, type TrendKey } from "./TrendCharts";
 
 interface Props {
   monthKey: string;
   stats: MonthlyStats;
   availableMonths: { key: string; label: string; count: number }[];
+  dailyRecords: DailyStatus[];
 }
 
 function moodEmoji(m: number) {
@@ -43,15 +47,22 @@ export default function MonthlyStatusClient({
   monthKey,
   stats,
   availableMonths,
+  dailyRecords,
 }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [trendsOpen, setTrendsOpen] = useState(false);
+  const [activeTrend, setActiveTrend] = useState<TrendKey>("study");
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const trendsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (trendsRef.current && !trendsRef.current.contains(event.target as Node)) {
+        setTrendsOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -151,6 +162,51 @@ export default function MonthlyStatusClient({
                           {m.count} {m.count === 1 ? "log" : "logs"}
                         </span>
                       </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Monthly Trends Dropdown */}
+            <div className="relative" ref={trendsRef}>
+              <button
+                type="button"
+                onClick={() => setTrendsOpen((prev) => !prev)}
+                className="inline-flex items-center justify-between gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3.5 py-1.5 rounded-xl transition-all font-semibold hover:border-accent/30 cursor-pointer"
+                aria-haspopup="true"
+                aria-expanded={trendsOpen}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                  {TREND_OPTIONS.find((t) => t.key === activeTrend)?.icon}{" "}
+                  {TREND_OPTIONS.find((t) => t.key === activeTrend)?.label ?? "Monthly Trends"}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-brand-400 transition-transform duration-200 ${trendsOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {trendsOpen && (
+                <div className="absolute right-0 mt-1.5 w-52 rounded-xl border border-zinc-700/80 bg-[#09090b]/95 backdrop-blur-xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-white/5">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-brand-400 px-2.5 py-1">
+                    Monthly Trends
+                  </div>
+                  <div className="pt-1 space-y-0.5">
+                    {TREND_OPTIONS.map((t) => (
+                      <button
+                        key={t.key}
+                        onClick={() => { setActiveTrend(t.key); setTrendsOpen(false); }}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-xs rounded-lg transition-colors text-left ${
+                          t.key === activeTrend
+                            ? "bg-accent/15 text-accent font-bold"
+                            : "text-zinc-300 hover:text-white hover:bg-white/10"
+                        }`}
+                      >
+                        <span className="text-sm leading-none">{t.icon}</span>
+                        <span className="font-medium">{t.label}</span>
+                        {t.key === activeTrend && (
+                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+                        )}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -318,6 +374,9 @@ export default function MonthlyStatusClient({
             </div>
           </article>
         </div>
+
+        {/* ── Trend Chart Panel ── */}
+        <TrendCharts trendKey={activeTrend} records={dailyRecords} />
 
       </div>
     </div>
