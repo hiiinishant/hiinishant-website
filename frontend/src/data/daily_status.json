@@ -9,6 +9,36 @@
       "Updated Live Status dashboard with real-time logs and automated database seeders.",
       "Refined animations and hover effects on cards for a smoother, premium browsing experience."
     ],
+    "study": {
+      "hours": 7.5,
+      "subject": "Discrete Mathematics & Graph Theory",
+      "questions": 45,
+      "mock": "GATE Test #5 (74/100)"
+    },
+    "project": {
+      "hours": 5.0,
+      "tasks": [
+        "Integrated YouTube vlogs feed",
+        "Connected live status seeders",
+        "Optimized mobile responsiveness"
+      ]
+    },
+    "content": {
+      "videos": 1,
+      "blogs": 1,
+      "posts": 2
+    },
+    "health": {
+      "sleep": 7.5,
+      "healthyEating": 5
+    },
+    "finance": {
+      "income": 4500,
+      "expense": 1200
+    },
+    "mood": 9,
+    "bestMoment": "Successfully shipped the live activity tracker and connected the community feed!",
+    "lessonLearned": "Deep focus sprints in early morning produce 3x better code architecture than late nights.",
     "updatedAt": "2026-06-29T11:30:00.000Z"
   },
   {
@@ -21,6 +51,36 @@
       "Implemented floating quote background movements and animations.",
       "Started building the Live Current Status dashboard for users to track daily work logs."
     ],
+    "study": {
+      "hours": 6.0,
+      "subject": "Operating Systems — Concurrency & Deadlocks",
+      "questions": 30,
+      "mock": "OS Sectional Test (82/100)"
+    },
+    "project": {
+      "hours": 4.5,
+      "tasks": [
+        "Hero section spacing refactor",
+        "Sticky profile card layout",
+        "Floating quote animations"
+      ]
+    },
+    "content": {
+      "videos": 0,
+      "blogs": 1,
+      "posts": 1
+    },
+    "health": {
+      "sleep": 7.0,
+      "healthyEating": 4
+    },
+    "finance": {
+      "income": 3200,
+      "expense": 850
+    },
+    "mood": 8,
+    "bestMoment": "Completed the entire OS concurrency chapter notes and solved all previous year GATE questions.",
+    "lessonLearned": "Breaking large problems into 25-minute Pomodoro sessions eliminates procrastination completely.",
     "updatedAt": "2026-06-11T20:30:00.000Z"
   },
   {
@@ -32,6 +92,35 @@
       "Met with student community coordinators from Delhi University colleges.",
       "Drafted syllabus details for the upcoming GATE CSE 2027 preparation courses."
     ],
+    "study": {
+      "hours": 5.0,
+      "subject": "Data Structures & Algorithms — Dynamic Programming",
+      "questions": 25,
+      "mock": "DSA Challenge (100%)"
+    },
+    "project": {
+      "hours": 3.5,
+      "tasks": [
+        "Drafted GATE CSE curriculum portal",
+        "Community coordinator meeting integration"
+      ]
+    },
+    "content": {
+      "videos": 2,
+      "blogs": 0,
+      "posts": 3
+    },
+    "health": {
+      "sleep": 6.5,
+      "healthyEating": 4
+    },
+    "finance": {
+      "income": 2800,
+      "expense": 600
+    },
+    "mood": 8,
+    "bestMoment": "Met inspiring student coordinators who are actively leading 2 AM Study circles in their colleges.",
+    "lessonLearned": "Teaching a concept to someone else is the fastest way to master it yourself.",
     "updatedAt": "2026-06-10T18:45:00.000Z"
   }
 ]

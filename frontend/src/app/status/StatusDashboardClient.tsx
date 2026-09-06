@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { apiUrl } from "@/lib/api";
 import {
@@ -20,6 +20,7 @@ import {
   Trophy,
   Utensils,
   IndianRupee,
+  ChevronDown,
 } from "lucide-react";
 
 interface DailyStatus {
@@ -103,6 +104,8 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
   const [statuses, setStatuses] = useState<DailyStatus[]>(initialStatuses);
   const [visibleCount, setVisibleCount] = useState(5);
   const [refreshing, setRefreshing] = useState(false);
+  const [monthlyDropdownOpen, setMonthlyDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchLatest = async (showIndicator = false) => {
     if (showIndicator) setRefreshing(true);
@@ -131,6 +134,54 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setMonthlyDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const availableMonths = useMemo(() => {
+    const map = new Map<string, number>();
+    statuses.forEach((s) => {
+      if (s.date && s.date.length >= 7) {
+        const key = s.date.slice(0, 7);
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+    });
+
+    if (map.size === 0) {
+      const nowKey = new Date().toISOString().slice(0, 7);
+      map.set(nowKey, 0);
+    }
+
+    const sortedKeys = Array.from(map.keys()).sort((a, b) => b.localeCompare(a));
+    return sortedKeys.map((key) => {
+      let label = key;
+      try {
+        const [yearStr, monthStr] = key.split("-");
+        const year = parseInt(yearStr, 10);
+        const month = parseInt(monthStr, 10);
+        if (!isNaN(year) && !isNaN(month)) {
+          label = new Date(year, month - 1, 1).toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          });
+        }
+      } catch {
+        // fallback
+      }
+      return {
+        key,
+        label,
+        count: map.get(key) || 0,
+      };
+    });
+  }, [statuses]);
 
   const filteredStatuses = statuses.filter((s) => {
     if (!searchQuery) return true;
@@ -214,14 +265,54 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-col sm:items-end gap-2 shrink-0 w-full sm:w-auto">
             <Link
               href="/admin"
-              className="inline-flex items-center gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-4 py-2 rounded-xl transition-all font-semibold hover:border-accent/30"
+              className="inline-flex items-center justify-center gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-4 py-2 rounded-xl transition-all font-semibold hover:border-accent/30 w-full sm:w-auto"
             >
               <PlusCircle className="w-3.5 h-3.5 text-accent" />
               Admin
             </Link>
+
+            {/* See Monthly button — located just below admin button */}
+            <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setMonthlyDropdownOpen((prev) => !prev)}
+                className="inline-flex items-center justify-between sm:justify-start gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-4 py-2 rounded-xl transition-all font-semibold hover:border-accent/30 w-full sm:w-auto cursor-pointer"
+                aria-haspopup="true"
+                aria-expanded={monthlyDropdownOpen}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-yellow-400" />
+                  See Monthly
+                </span>
+                <ChevronDown className={`w-3 h-3 text-brand-400 transition-transform duration-200 ${monthlyDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {monthlyDropdownOpen && (
+                <div className="absolute right-0 mt-1.5 w-48 rounded-xl border border-zinc-700/80 bg-[#09090b]/95 backdrop-blur-xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-white/5">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-brand-400 px-2.5 py-1">
+                    Select Month
+                  </div>
+                  <div className="pt-1 max-h-60 overflow-y-auto space-y-0.5">
+                    {availableMonths.map((m) => (
+                      <Link
+                        key={m.key}
+                        href={`/status/monthly/${m.key}`}
+                        onClick={() => setMonthlyDropdownOpen(false)}
+                        className="flex items-center justify-between px-2.5 py-2 text-xs text-zinc-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors group"
+                      >
+                        <span className="font-medium group-hover:text-yellow-400 transition-colors">{m.label}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono group-hover:text-zinc-400">
+                          {m.count} {m.count === 1 ? "log" : "logs"}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
