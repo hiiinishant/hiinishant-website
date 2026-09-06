@@ -369,7 +369,6 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                           {status.date ? new Date(status.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : status.date}
                         </span>
                       </span>
-                      <span className="text-[10px] text-brand-500 group-hover:text-accent transition-colors">↗</span>
                     </Link>
 
                     {/* Right side: 2 lines on phone, 1 line on desktop */}
