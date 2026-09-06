@@ -615,10 +615,121 @@ export default function MusicClientPage({
               />
             </div>
 
-            {/* Control Buttons & Volume */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4 pt-1">
+            {/* ── Mobile Player Controls (Clean single unified row + compact volume) ── */}
+            <div className="flex sm:hidden flex-col gap-3 pt-1">
+              {/* Row 1: Shuffle · SkipBack · Play/Pause · SkipForward · Loop */}
+              <div className="flex items-center justify-between px-2 max-w-sm mx-auto w-full">
+                {/* Shuffle */}
+                <button
+                  onClick={toggleShuffle}
+                  disabled={!playerReady}
+                  className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
+                    isShuffle
+                      ? "bg-accent/20 border-accent/40 text-accent shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                      : "bg-white/5 border-white/10 text-brand-400 active:text-white"
+                  }`}
+                  title="Toggle Shuffle"
+                  aria-label="Toggle Shuffle"
+                >
+                  <Shuffle className="w-4 h-4" />
+                </button>
+
+                {/* SkipBack */}
+                <button
+                  onClick={() => {
+                    try {
+                      playerRef.current?.previousVideo();
+                    } catch {}
+                  }}
+                  disabled={!playerReady}
+                  className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-300 active:text-white active:bg-white/10 transition-all disabled:opacity-40 cursor-pointer"
+                  aria-label="Previous track"
+                >
+                  <SkipBack className="w-5 h-5" />
+                </button>
+
+                {/* Play / Pause Hero Button */}
+                <button
+                  onClick={togglePlay}
+                  disabled={playerInitializing}
+                  className="w-14 h-14 rounded-2xl bg-accent hover:bg-accent-hover text-black flex items-center justify-center transition-all shadow-[0_0_24px_rgba(245,158,11,0.45)] active:scale-95 disabled:opacity-50 cursor-pointer"
+                  aria-label={playing ? "Pause" : "Play"}
+                >
+                  {playerInitializing ? (
+                    <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : playing ? (
+                    <Pause className="w-7 h-7 fill-current" />
+                  ) : (
+                    <Play className="w-7 h-7 fill-current ml-0.5" />
+                  )}
+                </button>
+
+                {/* SkipForward */}
+                <button
+                  onClick={() => {
+                    try {
+                      playerRef.current?.nextVideo();
+                    } catch {}
+                  }}
+                  disabled={!playerReady}
+                  className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-300 active:text-white active:bg-white/10 transition-all disabled:opacity-40 cursor-pointer"
+                  aria-label="Next track"
+                >
+                  <SkipForward className="w-5 h-5" />
+                </button>
+
+                {/* Loop */}
+                <button
+                  onClick={toggleLoop}
+                  disabled={!playerReady}
+                  className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
+                    isLoop
+                      ? "bg-accent/20 border-accent/40 text-accent shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                      : "bg-white/5 border-white/10 text-brand-400 active:text-white"
+                  }`}
+                  title="Toggle Loop"
+                  aria-label="Toggle Loop"
+                >
+                  <Repeat className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Row 2: Compact Centered Volume Slider */}
+              <div className="flex items-center justify-center pt-1">
+                <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-full px-3.5 py-1.5 shadow-sm">
+                  <button
+                    onClick={toggleMute}
+                    disabled={!playerReady}
+                    className="text-brand-300 hover:text-white transition-colors cursor-pointer"
+                    aria-label={isMuted ? "Unmute" : "Mute"}
+                  >
+                    {isMuted || volume === 0 ? (
+                      <VolumeX className="w-3.5 h-3.5 text-red-400" />
+                    ) : (
+                      <Volume2 className="w-3.5 h-3.5 text-brand-300" />
+                    )}
+                  </button>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    disabled={!playerReady}
+                    className="w-36 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-accent focus:outline-none"
+                    aria-label="Volume slider"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Desktop Player Controls (Original 3-Column Layout Untouched) ── */}
+            <div className="hidden sm:grid sm:grid-cols-3 items-center gap-4 pt-1">
               {/* Left: Shuffle & Loop Toggles */}
-              <div className="flex items-center justify-center sm:justify-start gap-2.5">
+              <div className="flex items-center justify-start gap-2.5">
                 <button
                   onClick={toggleShuffle}
                   disabled={!playerReady}
@@ -648,7 +759,7 @@ export default function MusicClientPage({
                 </button>
               </div>
 
-              {/* Center: Main Playback Controls (Vertically aligned under 1 / 6) */}
+              {/* Center: Main Playback Controls */}
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={() => {
@@ -696,7 +807,7 @@ export default function MusicClientPage({
               </div>
 
               {/* Right: Volume Slider */}
-              <div className="flex items-center justify-center sm:justify-end">
+              <div className="flex items-center justify-end">
                 <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
                   <button
                     onClick={toggleMute}
