@@ -100,20 +100,45 @@ export default function MonthlyStatusClient({
       <div className="max-w-2xl mx-auto px-5 relative z-10 space-y-6">
 
         {/* ── Top Navigation & Actions ── */}
-        <div className="flex items-center justify-between gap-4">
-          <Link
-            href="/status"
-            className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-white transition-colors font-mono group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-            Back to Status Dashboard
-          </Link>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <Link
+              href="/status"
+              className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-white transition-colors font-mono group"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+              <span>Back to Status Dashboard</span>
+            </Link>
 
-          <div className="flex items-center gap-2">
-            {/* Share / Copy Button */}
+            {/* Mobile Share button */}
+            <div className="sm:hidden">
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-2.5 py-1.5 rounded-xl transition-all font-mono"
+                title="Copy link"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span className="text-emerald-400 text-[11px]">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3 h-3 text-brand-400" />
+                    <span className="text-[11px]">Share</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
+            {/* Desktop Share button */}
             <button
+              type="button"
               onClick={handleCopyLink}
-              className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3 py-1.5 rounded-xl transition-all font-mono"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3 py-1.5 rounded-xl transition-all font-mono"
               title="Copy link"
             >
               {copied ? (
@@ -130,23 +155,23 @@ export default function MonthlyStatusClient({
             </button>
 
             {/* Month Switcher Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative flex-1 sm:flex-none" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen((prev) => !prev)}
-                className="inline-flex items-center justify-between gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3.5 py-1.5 rounded-xl transition-all font-semibold hover:border-accent/30 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-between gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl transition-all font-semibold hover:border-accent/30 cursor-pointer"
                 aria-haspopup="true"
                 aria-expanded={dropdownOpen}
               >
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-yellow-400" />
-                  {stats.monthLabel}
+                <span className="inline-flex items-center gap-1.5 truncate">
+                  <Calendar className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                  <span className="truncate">{stats.monthLabel}</span>
                 </span>
-                <ChevronDown className={`w-3 h-3 text-brand-400 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-3 h-3 text-brand-400 shrink-0 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 mt-1.5 w-48 rounded-xl border border-zinc-700/80 bg-[#09090b]/95 backdrop-blur-xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-white/5">
+                <div className="absolute left-0 sm:left-auto sm:right-0 mt-1.5 w-48 rounded-xl border border-zinc-700/80 bg-[#09090b]/95 backdrop-blur-xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-white/5">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-brand-400 px-2.5 py-1">
                     Select Month
                   </div>
@@ -178,22 +203,24 @@ export default function MonthlyStatusClient({
             </div>
 
             {/* Monthly Trends Dropdown */}
-            <div className="relative" ref={trendsRef}>
+            <div className="relative flex-1 sm:flex-none" ref={trendsRef}>
               <button
                 type="button"
                 onClick={() => setTrendsOpen((prev) => !prev)}
-                className="inline-flex items-center justify-between gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3.5 py-1.5 rounded-xl transition-all font-semibold hover:border-accent/30 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-between gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl transition-all font-semibold hover:border-accent/30 cursor-pointer"
                 aria-haspopup="true"
                 aria-expanded={trendsOpen}
               >
-                <span className="inline-flex items-center gap-1.5">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                  {activeTrend
-                    ? <>{TREND_OPTIONS.find((t) => t.key === activeTrend)?.icon}{" "}{TREND_OPTIONS.find((t) => t.key === activeTrend)?.label}</>
-                    : "Monthly Trends"
-                  }
+                <span className="inline-flex items-center gap-1.5 truncate">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="truncate">
+                    {activeTrend
+                      ? <>{TREND_OPTIONS.find((t) => t.key === activeTrend)?.icon}{" "}{TREND_OPTIONS.find((t) => t.key === activeTrend)?.label}</>
+                      : "Monthly Trends"
+                    }
+                  </span>
                 </span>
-                <ChevronDown className={`w-3 h-3 text-brand-400 transition-transform duration-200 ${trendsOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-3 h-3 text-brand-400 shrink-0 transition-transform duration-200 ${trendsOpen ? "rotate-180" : ""}`} />
               </button>
 
               {trendsOpen && (
@@ -247,20 +274,21 @@ export default function MonthlyStatusClient({
         <div className="rounded-2xl border border-zinc-700/70 bg-[#09090b]/90 backdrop-blur-xl transition-all duration-300 shadow-lg shadow-black/50 overflow-hidden">
           <article>
             {/* Card Header */}
-            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/5 bg-white/2">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 border-b border-white/5 bg-white/2">
+              <div className="flex items-center gap-2 min-w-0">
                 <Calendar className="w-3.5 h-3.5 text-accent shrink-0" />
-                <span className="text-sm font-bold text-white">
+                <span className="text-sm font-bold text-white truncate">
                   {stats.monthLabel}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              {/* Right side: 2 lines on phone, 1 line on desktop */}
+              <div className="flex flex-col items-end sm:flex-row sm:items-center gap-0.5 sm:gap-2 text-right shrink-0">
                 {stats.avgMood > 0 && (
-                  <span className="text-xs font-semibold text-amber-400">
+                  <span className="text-[11px] sm:text-xs font-semibold text-amber-400 leading-tight">
                     {moodEmoji(Math.round(stats.avgMood))} {stats.avgMood.toFixed(1)}/10
                   </span>
                 )}
-                <span className="text-[10px] text-zinc-300 font-mono shrink-0">
+                <span className="text-[10px] text-zinc-400 sm:text-zinc-300 font-mono shrink-0 leading-tight">
                   {stats.daysLogged} {stats.daysLogged === 1 ? "day" : "days"} logged
                 </span>
               </div>
