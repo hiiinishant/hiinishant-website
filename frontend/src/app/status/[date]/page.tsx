@@ -196,20 +196,32 @@ export default async function StatusDatePage({ params }: Props) {
         <div className="rounded-2xl border border-zinc-700/70 bg-[#09090b]/90 backdrop-blur-xl shadow-lg shadow-black/50 overflow-hidden">
           <article>
             {/* Card Header */}
-            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/5 bg-white/2">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-3.5 h-3.5 text-accent shrink-0" />
-                <span className="text-sm font-bold text-white">
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 border-b border-white/5 bg-white/2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Calendar className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5 sm:mt-0" />
+                {/* Laptop / Desktop: 1 line */}
+                <span className="hidden sm:inline text-sm font-bold text-white">
                   {formatDate(status.date)}
                 </span>
+                {/* Phone user: 2 lines */}
+                <span className="sm:hidden flex flex-col leading-tight text-left">
+                  <span className="text-xs font-bold text-white">
+                    {status.date ? new Date(status.date).toLocaleDateString("en-US", { weekday: "long" }) : ""}
+                  </span>
+                  <span className="text-[10.5px] text-zinc-400 font-medium">
+                    {status.date ? new Date(status.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : status.date}
+                  </span>
+                </span>
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Right side: 2 lines on phone, 1 line on desktop */}
+              <div className="flex flex-col items-end sm:flex-row sm:items-center gap-0.5 sm:gap-2 text-right shrink-0">
                 {status.mood != null && (
-                  <span className="text-xs font-semibold text-amber-400">
+                  <span className="text-[11px] sm:text-xs font-semibold text-amber-400 leading-tight">
                     {moodEmoji(status.mood)} {status.mood}/10
                   </span>
                 )}
-                <span className="text-[10px] text-zinc-300 font-mono shrink-0">
+                <span className="text-[10px] text-zinc-400 sm:text-zinc-300 font-mono shrink-0 leading-tight">
                   {formatTime(status.updatedAt)}
                 </span>
               </div>
