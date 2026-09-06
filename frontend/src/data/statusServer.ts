@@ -208,7 +208,7 @@ export function calculateMonthlyStats(monthKey: string, monthStatuses: DailyStat
   };
 }
 
-export async function getAvailableMonths(): Promise<{ key: string; label: string; count: number }[]> {
+export async function getAvailableMonths(includeMonth?: string): Promise<{ key: string; label: string; count: number }[]> {
   const statuses = await getAllStatuses();
   const map = new Map<string, number>();
 
@@ -219,10 +219,15 @@ export async function getAvailableMonths(): Promise<{ key: string; label: string
     }
   });
 
-  // If no dates, add current month
-  if (map.size === 0) {
-    const nowKey = new Date().toISOString().slice(0, 7);
-    map.set(nowKey, 0);
+  // Always include the current month
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  if (!map.has(currentMonth)) {
+    map.set(currentMonth, 0);
+  }
+
+  // Include requested month if provided (e.g. "2026-08")
+  if (includeMonth && /^\d{4}-\d{2}$/.test(includeMonth) && !map.has(includeMonth)) {
+    map.set(includeMonth, 0);
   }
 
   const sortedKeys = Array.from(map.keys()).sort((a, b) => b.localeCompare(a));

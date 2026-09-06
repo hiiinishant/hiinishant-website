@@ -9,17 +9,11 @@ import {
   formatMonthKeyToLabel,
 } from "@/data/statusServer";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+export const dynamicParams = true;
 
 interface Props {
   params: Promise<{ month: string }>;
-}
-
-export async function generateStaticParams() {
-  const months = await getAvailableMonths();
-  return months.map((m) => ({
-    month: encodeURIComponent(m.key),
-  }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -61,7 +55,7 @@ export default async function MonthlyStatusPage({ params }: Props) {
 
   const [monthStatuses, availableMonths] = await Promise.all([
     getStatusesByMonth(monthKey),
-    getAvailableMonths(),
+    getAvailableMonths(monthKey),
   ]);
 
   const isMonthFormat = /^\d{4}-\d{2}$/.test(monthKey);

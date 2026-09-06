@@ -265,25 +265,25 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
             </p>
           </div>
 
-          <div className="flex flex-col sm:items-end gap-2 shrink-0 w-full sm:w-auto">
+          <div className="flex items-center sm:flex-col sm:items-end gap-2 shrink-0 w-auto sm:w-auto">
             <Link
               href="/admin"
-              className="inline-flex items-center justify-center gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-4 py-2 rounded-xl transition-all font-semibold hover:border-accent/30 w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl transition-all font-semibold hover:border-accent/30 w-auto"
             >
               <PlusCircle className="w-3.5 h-3.5 text-accent" />
               Admin
             </Link>
 
             {/* See Monthly button — located just below admin button */}
-            <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+            <div className="relative w-auto sm:w-auto" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setMonthlyDropdownOpen((prev) => !prev)}
-                className="inline-flex items-center justify-between sm:justify-start gap-2 text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-4 py-2 rounded-xl transition-all font-semibold hover:border-accent/30 w-full sm:w-auto cursor-pointer"
+                className="inline-flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-brand-300 hover:text-white border border-white/8 bg-white/2 hover:bg-white/5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl transition-all font-semibold hover:border-accent/30 w-auto cursor-pointer"
                 aria-haspopup="true"
                 aria-expanded={monthlyDropdownOpen}
               >
-                <span className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 sm:gap-2">
                   <Calendar className="w-3.5 h-3.5 text-yellow-400" />
                   See Monthly
                 </span>
@@ -349,23 +349,39 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
                 >
                   <article>
                   {/* ── Card Header ── */}
-                  <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/5 bg-white/2">
+                  <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 border-b border-white/5 bg-white/2">
                     <Link
                       href={`/status/${encodeURIComponent(status.date || status.id)}`}
-                      className="flex items-center gap-2 group transition-colors"
+                      className="flex items-center gap-2 group transition-colors min-w-0"
                       title={`Permalink for ${status.date}`}
                     >
-                      <Calendar className="w-3.5 h-3.5 text-accent shrink-0" />
-                      <span className="text-sm font-bold text-white group-hover:text-accent transition-colors">{formatDate(status.date)}</span>
+                      <Calendar className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5 sm:mt-0" />
+                      {/* Laptop / Desktop: 1 line */}
+                      <span className="hidden sm:inline text-sm font-bold text-white group-hover:text-accent transition-colors">
+                        {formatDate(status.date)}
+                      </span>
+                      {/* Phone user: 2 lines */}
+                      <span className="sm:hidden flex flex-col leading-tight text-left">
+                        <span className="text-xs font-bold text-white group-hover:text-accent transition-colors">
+                          {status.date ? new Date(status.date).toLocaleDateString("en-US", { weekday: "long" }) : ""}
+                        </span>
+                        <span className="text-[10.5px] text-zinc-400 font-medium">
+                          {status.date ? new Date(status.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : status.date}
+                        </span>
+                      </span>
                       <span className="text-[10px] text-brand-500 group-hover:text-accent transition-colors">↗</span>
                     </Link>
-                    <div className="flex items-center gap-2">
+
+                    {/* Right side: 2 lines on phone, 1 line on desktop */}
+                    <div className="flex flex-col items-end sm:flex-row sm:items-center gap-0.5 sm:gap-2 text-right shrink-0">
                       {status.mood != null && (
-                        <span className="text-xs font-semibold text-amber-400">
+                        <span className="text-[11px] sm:text-xs font-semibold text-amber-400 leading-tight">
                           {moodEmoji(status.mood)} {status.mood}/10
                         </span>
                       )}
-                      <span className="text-[10px] text-zinc-300 font-mono shrink-0">{formatTime(status.updatedAt)}</span>
+                      <span className="text-[10px] text-zinc-400 sm:text-zinc-300 font-mono shrink-0 leading-tight">
+                        {formatTime(status.updatedAt)}
+                      </span>
                     </div>
                   </div>
 

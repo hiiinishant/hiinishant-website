@@ -51,7 +51,7 @@ export default function MonthlyStatusClient({
 }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [trendsOpen, setTrendsOpen] = useState(false);
-  const [activeTrend, setActiveTrend] = useState<TrendKey>("study");
+  const [activeTrend, setActiveTrend] = useState<TrendKey | null>(null);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const trendsRef = useRef<HTMLDivElement>(null);
@@ -68,6 +68,11 @@ export default function MonthlyStatusClient({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // When month changes, reset trend back to default (Monthly Trends / Monthly logs)
+  useEffect(() => {
+    setActiveTrend(null);
+  }, [monthKey]);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -150,7 +155,11 @@ export default function MonthlyStatusClient({
                       <Link
                         key={m.key}
                         href={`/status/monthly/${m.key}`}
-                        onClick={() => setDropdownOpen(false)}
+                        prefetch={false}
+                        onClick={() => {
+                          setActiveTrend(null);
+                          setDropdownOpen(false);
+                        }}
                         className={`flex items-center justify-between px-2.5 py-2 text-xs rounded-lg transition-colors group ${
                           m.key === monthKey
                             ? "bg-accent/15 text-accent font-bold"
@@ -179,8 +188,10 @@ export default function MonthlyStatusClient({
               >
                 <span className="inline-flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                  {TREND_OPTIONS.find((t) => t.key === activeTrend)?.icon}{" "}
-                  {TREND_OPTIONS.find((t) => t.key === activeTrend)?.label ?? "Monthly Trends"}
+                  {activeTrend
+                    ? <>{TREND_OPTIONS.find((t) => t.key === activeTrend)?.icon}{" "}{TREND_OPTIONS.find((t) => t.key === activeTrend)?.label}</>
+                    : "Monthly Trends"
+                  }
                 </span>
                 <ChevronDown className={`w-3 h-3 text-brand-400 transition-transform duration-200 ${trendsOpen ? "rotate-180" : ""}`} />
               </button>
@@ -191,6 +202,22 @@ export default function MonthlyStatusClient({
                     Monthly Trends
                   </div>
                   <div className="pt-1 space-y-0.5">
+                    {/* Default: Monthly Trends (displays monthly logs) */}
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTrend(null); setTrendsOpen(false); }}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-xs rounded-lg transition-colors text-left ${
+                        activeTrend === null
+                          ? "bg-accent/15 text-accent font-bold"
+                          : "text-zinc-300 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      <TrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="font-medium">Monthly Trends</span>
+                      {activeTrend === null && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+                      )}
+                    </button>
                     {TREND_OPTIONS.map((t) => (
                       <button
                         key={t.key}
@@ -215,7 +242,8 @@ export default function MonthlyStatusClient({
           </div>
         </div>
 
-        {/* ── Single Box (Exact Daily Logs Style) ── */}
+        {/* ── Single Box (Exact Daily Logs Style) — only when no trend selected (Monthly Trends default) ── */}
+        {activeTrend === null && (
         <div className="rounded-2xl border border-zinc-700/70 bg-[#09090b]/90 backdrop-blur-xl transition-all duration-300 shadow-lg shadow-black/50 overflow-hidden">
           <article>
             {/* Card Header */}
@@ -374,9 +402,16 @@ export default function MonthlyStatusClient({
             </div>
           </article>
         </div>
+        )}
 
-        {/* ── Trend Chart Panel ── */}
-        <TrendCharts trendKey={activeTrend} records={dailyRecords} />
+        {/* ── Trend Chart Panel — only when a trend is selected ── */}
+        {activeTrend !== null && (
+          <TrendCharts
+            trendKey={activeTrend}
+            records={dailyRecords}
+            onClose={() => setActiveTrend(null)}
+          />
+        )}
 
       </div>
     </div>
