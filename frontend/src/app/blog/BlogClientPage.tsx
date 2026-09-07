@@ -124,7 +124,7 @@ export default function BlogClientPage({ posts }: Props) {
         <div className="max-w-2xl mx-auto mb-5 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-xl shadow-black/20 p-3">
 
           {/* Row: Search | Sort | Count */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-2">
 
             {/* Search input */}
             <div className="relative flex-1">
@@ -155,36 +155,39 @@ export default function BlogClientPage({ posts }: Props) {
               )}
             </div>
 
-            {/* Divider */}
-            <div className="h-7 w-px bg-white/10 shrink-0" />
+            {/* Controls group: Sort + Article count (cleanly organized on mobile, inline on desktop) */}
+            <div className="flex items-center justify-between sm:justify-start gap-2 shrink-0">
+              {/* Desktop divider */}
+              <div className="hidden sm:block h-7 w-px bg-white/10 shrink-0" />
 
-            {/* Sort dropdown */}
-            <div className="relative shrink-0">
-              <select
-                id="blog-sort"
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortOption)}
-                className="appearance-none bg-white/5 border border-white/8 text-white text-xs font-medium rounded-xl pl-3 pr-8 py-2.5 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-all duration-200 cursor-pointer"
-              >
-                <option value="featured" className="bg-zinc-900">Sort: Featured</option>
-                <option value="latest" className="bg-zinc-900">Sort: Latest</option>
-                <option value="oldest" className="bg-zinc-900">Sort: Oldest</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-brand-500">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
+              {/* Sort dropdown */}
+              <div className="relative shrink-0">
+                <select
+                  id="blog-sort"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortOption)}
+                  className="appearance-none bg-white/5 border border-white/8 text-white text-xs font-medium rounded-xl pl-3 pr-8 py-2.5 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-all duration-200 cursor-pointer"
+                >
+                  <option value="featured" className="bg-zinc-900">Sort: Featured</option>
+                  <option value="latest" className="bg-zinc-900">Sort: Latest</option>
+                  <option value="oldest" className="bg-zinc-900">Sort: Oldest</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-brand-500">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
+
+              {/* Divider */}
+              <div className="h-7 w-px bg-white/10 shrink-0" />
+
+              {/* Article count */}
+              <span className="shrink-0 text-[11px] font-mono text-brand-500 whitespace-nowrap pr-1">
+                <span className="text-accent font-bold text-sm">{filtered.length}</span>{" "}
+                {filtered.length === 1 ? "article" : "articles"} found
+              </span>
             </div>
-
-            {/* Divider */}
-            <div className="h-7 w-px bg-white/10 shrink-0" />
-
-            {/* Article count */}
-            <span className="shrink-0 text-[11px] font-mono text-brand-500 whitespace-nowrap pr-1">
-              <span className="text-accent font-bold text-sm">{filtered.length}</span>{" "}
-              {filtered.length === 1 ? "article" : "articles"} found
-            </span>
           </div>
         </div>
 

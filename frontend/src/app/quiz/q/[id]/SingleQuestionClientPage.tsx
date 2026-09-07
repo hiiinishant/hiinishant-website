@@ -279,7 +279,11 @@ export default function SingleQuestionClientPage({ initialQuiz }: { initialQuiz:
           <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-3">
             <p className="text-xs text-amber-300 font-semibold">Sign in to save your answer and earn XP!</p>
             <Link
-              href={`/login?redirect=${encodeURIComponent(`/quiz/q/${quiz.id}`)}`}
+              href={`/login?redirect=${encodeURIComponent(
+                quiz.subjectSlug && quiz.slug
+                  ? `/quiz/${quiz.subjectSlug}/${quiz.slug}`
+                  : `/quiz/q/${quiz.id}`
+              )}`}
               className="inline-block px-5 py-2.5 bg-amber-500 text-black text-xs font-bold rounded-xl hover:bg-amber-400 transition-colors"
             >
               Sign In to Save Answer →

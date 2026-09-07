@@ -838,13 +838,13 @@ export default function MusicClientPage({
 
           {/* Playlist Track List */}
           <div className="border-t border-white/5">
-            <div className="px-6 sm:px-8 py-3 flex items-center justify-between gap-3 bg-white/[0.02]">
+            <div className="px-4 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 bg-white/[0.02]">
               <h3 className="text-xs font-bold uppercase tracking-widest text-brand-300 flex items-center gap-2 shrink-0">
                 <ListMusic className="w-4 h-4 text-accent" />
                 <span>Playlist · {tracks.length > 0 ? `${tracks.length} songs` : "Loading tracks..."}</span>
               </h3>
               {tracks.length > 0 && (
-                <div className="relative">
+                <div className="relative w-full sm:w-auto">
                   <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand-500 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                   </svg>
@@ -853,15 +853,15 @@ export default function MusicClientPage({
                     placeholder="Search songs..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-7 pr-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-brand-500 focus:outline-none focus:border-accent/50 focus:bg-white/8 transition-all w-36 sm:w-44"
+                    className="pl-7 pr-7 py-2 sm:py-1.5 text-xs bg-white/5 border border-white/10 rounded-xl sm:rounded-lg text-white placeholder:text-brand-500 focus:outline-none focus:border-accent/50 focus:bg-white/8 transition-all w-full sm:w-44"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-500 hover:text-white transition-colors"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-500 hover:text-white transition-colors"
                       aria-label="Clear search"
                     >
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
                         <path d="M18 6 6 18M6 6l12 12" />
                       </svg>
                     </button>

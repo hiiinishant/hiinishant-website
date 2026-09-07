@@ -1,11 +1,17 @@
 import { Suspense } from "react";
 import LoginClientPage from "./LoginClientPage";
 
-export const metadata = {
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
   title: "Log In — Nishant Kumar",
   description: "Log in or create an account to access NSGram Community, Daily Live Quiz, and exclusive updates.",
   alternates: {
     canonical: "/login",
+  },
+  robots: {
+    index: false,
+    follow: true,
   },
 };
 

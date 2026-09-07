@@ -15,6 +15,8 @@ export interface QuizItem {
   id: string;
   date: string;
   subject: string;
+  subjectSlug: string;  // e.g. "data-structures"
+  slug: string;         // e.g. "which-data-structure-is-used-in-bfs"
   question: string;
   optionA: string;
   optionB: string;
@@ -90,5 +92,26 @@ export async function getAllQuizQuestions(): Promise<QuizItem[]> {
     return Array.isArray(data.quizzes) ? data.quizzes : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Fetch a single published quiz by its SEO slug.
+ * Used by /quiz/[subject]/[slug]/page.tsx for the canonical question page.
+ */
+export async function getQuizBySlug(
+  subjectSlug: string,
+  questionSlug: string
+): Promise<QuizItem | null> {
+  try {
+    const res = await fetch(
+      `${getApiBase()}/api/quiz/slug/${encodeURIComponent(subjectSlug)}/${encodeURIComponent(questionSlug)}`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.quiz || null;
+  } catch {
+    return null;
   }
 }

@@ -1,127 +1,84 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/data/site";
 import { getAllBlogPosts } from "@/data/blog";
-import { getAllStatuses } from "@/data/statusServer";
-import { getAllQuizDates, getAllQuizQuestions } from "@/data/quizServer";
-import { getAllGalleryPhotos } from "@/data/galleryServer";
-import { getAllVlogVideos } from "@/data/vlogsServer";
+import { getAllQuizQuestions } from "@/data/quizServer";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url;
 
-  // 1. Define all static paths
-  const staticRoutes = [
-    "",
-    "/about",
-    "/vlogs",
-    "/journey",
-    "/links",
-    "/universe",
-    "/resume",
-    "/updates",
-    "/blog",
-    "/projects",
-    "/contact",
-    "/privacy",
-    "/terms",
-    "/faq",
-    "/support",
-    "/status",
-    "/gallery",
-    "/music",
-    "/quiz",
-    "/amazon-feed",
-  ].map((route) => {
-    // Determine priority and change frequency based on the page
-    let changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never" = "monthly";
-    let priority = 0.5;
-
-    if (route === "") {
-      changeFrequency = "daily";
-      priority = 1.0;
-    } else if (route === "/about") {
-      changeFrequency = "weekly";
-      priority = 0.9;
-    } else if (route === "/updates" || route === "/status" || route === "/quiz" || route === "/vlogs") {
-      changeFrequency = "daily";
-      priority = 0.8;
-    } else if (route === "/blog" || route === "/projects" || route === "/journey" || route === "/gallery" || route === "/amazon-feed") {
-      changeFrequency = "weekly";
-      priority = 0.8;
-    } else if (route === "/contact" || route === "/resume" || route === "/universe" || route === "/links" || route === "/music" || route === "/faq" || route === "/terms" || route === "/support" || route === "/privacy") {
-      changeFrequency = "monthly";
-      priority = 0.7;
-    }
-
-    return {
-      url: `${baseUrl}${route}`,
-      lastModified: new Date(),
-      changeFrequency,
-      priority,
-    };
-  });
-
-  // 2. Fetch dynamic blog posts and append them
-  const blogPosts = await getAllBlogPosts();
-  const dynamicBlogRoutes = blogPosts.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: new Date(post.date),
-    changeFrequency: "weekly" as const,
-    priority: 0.6,
-  }));
-
-  // 3. Fetch dynamic daily status logs and append them
-  const statuses = await getAllStatuses();
-  const dynamicStatusRoutes = statuses.map((status) => ({
-    url: `${baseUrl}/status/${encodeURIComponent(status.date || status.id)}`,
-    lastModified: status.updatedAt ? new Date(status.updatedAt) : new Date(),
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
-  }));
-
-  // 4. Fetch all published quiz dates and append them
-  const quizDates = await getAllQuizDates();
-  const dynamicQuizRoutes = quizDates.map((date) => ({
-    url: `${baseUrl}/quiz/${date}`,
-    lastModified: new Date(date),
-    changeFrequency: "weekly" as const,
-    priority: 0.7,
-  }));
-
-  // 5. Fetch all published individual quiz questions and append them (/quiz/q/[id])
-  const quizQuestions = await getAllQuizQuestions();
-  const dynamicQuestionRoutes = quizQuestions.map((q) => ({
-    url: `${baseUrl}/quiz/q/${q.id}`,
-    lastModified: new Date(q.date),
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
-
-  // 6. Fetch all gallery photos and append them (/gallery/[id])
-  const galleryPhotos = await getAllGalleryPhotos();
-  const dynamicGalleryRoutes = galleryPhotos.map((photo) => ({
-    url: `${baseUrl}/gallery/${photo.id}`,
-    lastModified: photo.date ? new Date(photo.date) : new Date(),
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
-  }));
-
-  // 7. Fetch dynamic vlog videos and append them
-  const vlogVideos = await getAllVlogVideos();
-  const dynamicVlogRoutes = vlogVideos.map((video) => ({
-    url: `${baseUrl}/vlogs/${video.videoId}`,
-    lastModified: video.uploadDate ? new Date(video.uploadDate) : new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.7,
-  }));
-
-  return [
-    ...staticRoutes,
-    ...dynamicBlogRoutes,
-    ...dynamicStatusRoutes,
-    ...dynamicQuizRoutes,
-    ...dynamicQuestionRoutes,
-    ...dynamicGalleryRoutes,
-    ...dynamicVlogRoutes,
+  // 1. Core indexable public pages with stable update timestamps
+  // Note: We use stable dates reflecting real content updates instead of dynamic new Date()
+  // to avoid misleading search engines with fake freshness signals on every request.
+  const staticRoutes: {
+    route: string;
+    changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+    priority: number;
+    lastModified: string;
+  }[] = [
+    { route: "", changeFrequency: "daily", priority: 1.0, lastModified: "2026-09-01" },
+    { route: "/about", changeFrequency: "weekly", priority: 0.9, lastModified: "2026-09-01" },
+    { route: "/blog", changeFrequency: "weekly", priority: 0.8, lastModified: "2026-09-01" },
+    { route: "/projects", changeFrequency: "weekly", priority: 0.8, lastModified: "2026-08-20" },
+    { route: "/journey", changeFrequency: "weekly", priority: 0.8, lastModified: "2026-08-20" },
+    { route: "/updates", changeFrequency: "daily", priority: 0.8, lastModified: "2026-09-01" },
+    { route: "/status", changeFrequency: "daily", priority: 0.8, lastModified: "2026-09-03" },
+    { route: "/vlogs", changeFrequency: "weekly", priority: 0.8, lastModified: "2026-09-01" },
+    { route: "/gallery", changeFrequency: "weekly", priority: 0.8, lastModified: "2026-08-15" },
+    { route: "/quiz", changeFrequency: "daily", priority: 0.8, lastModified: "2026-09-01" },
+    { route: "/music", changeFrequency: "monthly", priority: 0.7, lastModified: "2026-08-01" },
+    { route: "/contact", changeFrequency: "monthly", priority: 0.7, lastModified: "2026-08-01" },
+    { route: "/resume", changeFrequency: "monthly", priority: 0.7, lastModified: "2026-08-01" },
+    { route: "/links", changeFrequency: "monthly", priority: 0.7, lastModified: "2026-08-01" },
+    { route: "/universe", changeFrequency: "monthly", priority: 0.7, lastModified: "2026-08-01" },
+    { route: "/nsgram", changeFrequency: "weekly", priority: 0.8, lastModified: "2026-09-01" },
+    { route: "/faq", changeFrequency: "monthly", priority: 0.7, lastModified: "2026-08-01" },
+    { route: "/support", changeFrequency: "monthly", priority: 0.7, lastModified: "2026-08-01" },
+    { route: "/amazon-feed", changeFrequency: "weekly", priority: 0.7, lastModified: "2026-08-15" },
+    { route: "/privacy", changeFrequency: "monthly", priority: 0.5, lastModified: "2026-08-01" },
+    { route: "/terms", changeFrequency: "monthly", priority: 0.5, lastModified: "2026-08-01" },
   ];
+
+  const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((item) => ({
+    url: `${baseUrl}${item.route}`,
+    lastModified: new Date(item.lastModified),
+    changeFrequency: item.changeFrequency,
+    priority: item.priority,
+  }));
+
+  // 2. Dynamic blog posts (valuable articles with actual publish dates)
+  let dynamicBlogRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const blogPosts = await getAllBlogPosts();
+    dynamicBlogRoutes = blogPosts.map((post) => ({
+      url: `${baseUrl}/blog/${post.slug}`,
+      lastModified: post.date ? new Date(post.date) : new Date("2026-08-01"),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+  } catch (error) {
+    console.warn("Failed to fetch blog posts for sitemap:", error);
+  }
+
+  // 3. Dynamic quiz questions (SEO keyword pages with slugs for Google Search)
+  let dynamicQuizRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const quizQuestions = await getAllQuizQuestions();
+    dynamicQuizRoutes = quizQuestions
+      .filter((q) => q.slug && q.subjectSlug)
+      .map((q) => ({
+        url: `${baseUrl}/quiz/${encodeURIComponent(q.subjectSlug)}/${encodeURIComponent(q.slug)}`,
+        lastModified: q.date ? new Date(q.date) : new Date("2026-09-01"),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      }));
+  } catch (error) {
+    console.warn("Failed to fetch quiz questions for sitemap:", error);
+  }
+
+  // NOTE: We intentionally exclude individual daily status micro-logs (/status/YYYY-MM-DD),
+  // individual YouTube embed wrappers (/vlogs/[id]), and legacy ID URLs (/quiz/q/[id])
+  // from the sitemap to prevent crawl budget dilution on thin content.
+  // Their canonical keyword URLs (/quiz/[subject]/[slug]) and hub pages are included above.
+
+  return [...staticEntries, ...dynamicBlogRoutes, ...dynamicQuizRoutes];
 }

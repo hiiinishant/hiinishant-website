@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import SocialSection from "@/components/sections/SocialSection";
 
 export const metadata: Metadata = {
@@ -19,6 +20,15 @@ export default function UniversePage() {
     <>
       {/* ─── SOCIAL GRID ─── */}
       <SocialSection />
+      <div className="text-center pb-16">
+        <Link
+          href="/links"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 bg-white/5 text-xs sm:text-sm text-brand-300 hover:text-white hover:border-accent/40 transition-colors"
+        >
+          <span>Looking for the mobile link-in-bio page?</span>
+          <span className="text-accent font-semibold">Open Bio Links Hub &rarr;</span>
+        </Link>
+      </div>
     </>
   );
 }

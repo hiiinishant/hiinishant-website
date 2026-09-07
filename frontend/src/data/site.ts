@@ -2,9 +2,9 @@ import type { SocialLink } from "@/types";
 
 export const siteConfig = {
   name: "Nishant Kumar",
-  title: "Nishant Kumar — Founder of 2 AM Study",
+  title: "Nishant Kumar — Web Developer, Entrepreneur & Vlogger | Founder of 2 AM Study",
   description:
-    "Entrepreneur, educator, and builder. Empowering 100,000+ students through 2 AM Study.",
+    "Full-stack web developer, entrepreneur, and tech vlogger. Empowering 100,000+ students through 2 AM Study.",
   url: "https://hiiinishant.com",
   email: "hiiinishant@gmail.com",
   location: "India",

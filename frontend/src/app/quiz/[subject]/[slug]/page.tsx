@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
-import { getQuizById } from "@/data/quizServer";
-import SingleQuestionClientPage from "./SingleQuestionClientPage";
+import { notFound } from "next/navigation";
+import { getQuizBySlug } from "@/data/quizServer";
+import SingleQuestionClientPage from "../../q/[id]/SingleQuestionClientPage";
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params: Promise<{ subject: string; slug: string }>;
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -21,8 +21,10 @@ function formatDateLabel(dateStr: string): string {
 }
 
 function optionLabel(quiz: {
-  optionA: string; optionB: string;
-  optionC: string; optionD: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
   correctOption?: string;
 }): string {
   const map: Record<string, string> = {
@@ -36,8 +38,8 @@ function optionLabel(quiz: {
 
 // ── Dynamic Metadata for Google Search ─────────────────────────────────────────
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const quiz = await getQuizById(id);
+  const { subject, slug } = await params;
+  const quiz = await getQuizBySlug(subject, slug);
 
   if (!quiz) {
     return {
@@ -46,13 +48,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const canonicalPath = (quiz.subjectSlug && quiz.slug)
-    ? `/quiz/${encodeURIComponent(quiz.subjectSlug)}/${encodeURIComponent(quiz.slug)}`
-    : `/quiz/q/${id}`;
-
   const dateLabel = formatDateLabel(quiz.date);
-  const titleText = `${quiz.question} | Daily Quiz — Nishant Kumar`;
-  const descText = `Question: "${quiz.question}". Subject: ${quiz.subject}. Options: A) ${quiz.optionA} B) ${quiz.optionB} C) ${quiz.optionC} D) ${quiz.optionD}. Test your knowledge and earn XP on hiiinishant.com (${dateLabel}).`;
+  const titleText = `${quiz.question} | ${quiz.subject} Quiz — Nishant Kumar`;
+  const descText = `Practice question: "${quiz.question}". Subject: ${quiz.subject}. Options: A) ${quiz.optionA} B) ${quiz.optionB} C) ${quiz.optionC} D) ${quiz.optionD}. Solve on hiiinishant.com (${dateLabel}) and earn XP.`;
+  const canonicalUrl = `/quiz/${encodeURIComponent(subject)}/${encodeURIComponent(slug)}`;
 
   return {
     title: titleText,
@@ -60,19 +59,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     keywords: [
       quiz.question,
       `${quiz.subject} quiz`,
+      `${quiz.subject} mcq questions`,
+      `${quiz.subject} practice question`,
       "Nishant Kumar quiz",
       "hiiinishant daily quiz",
       "2 AM Study quiz",
-      "coding question",
-      "interview quiz",
+      "interview coding questions",
     ],
     alternates: {
-      canonical: canonicalPath,
+      canonical: canonicalUrl,
     },
     openGraph: {
       title: titleText,
       description: descText,
-      url: `https://hiiinishant.com/quiz/q/${id}`,
+      url: `https://hiiinishant.com${canonicalUrl}`,
       type: "article",
     },
     twitter: {
@@ -87,16 +87,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// ── QAPage JSON-LD Schema (Google Featured Snippet / Answer Box) ──────────────
-function buildQAPageSchema(quiz: NonNullable<Awaited<ReturnType<typeof getQuizById>>>) {
+// ── QAPage JSON-LD Schema (Google Search Snippet / Answer Box) ─────────────────
+function buildQAPageSchema(
+  quiz: NonNullable<Awaited<ReturnType<typeof getQuizBySlug>>>,
+  subject: string,
+  slug: string
+) {
   const answerText = quiz.correctOption ? optionLabel(quiz) : "";
+  const pageUrl = `https://hiiinishant.com/quiz/${encodeURIComponent(subject)}/${encodeURIComponent(slug)}`;
 
   return {
     "@context": "https://schema.org",
     "@type": "QAPage",
     name: quiz.question,
-    description: `Question on ${quiz.subject} by Nishant Kumar.`,
-    url: `https://hiiinishant.com/quiz/q/${quiz.id}`,
+    description: `Multiple choice question on ${quiz.subject} by Nishant Kumar.`,
+    url: pageUrl,
     mainEntity: {
       "@type": "Question",
       name: quiz.question,
@@ -105,8 +110,8 @@ function buildQAPageSchema(quiz: NonNullable<Awaited<ReturnType<typeof getQuizBy
       acceptedAnswer: quiz.correctOption
         ? {
             "@type": "Answer",
-            text: `Correct Answer: ${quiz.correctOption}) ${answerText}. Options: A) ${quiz.optionA} | B) ${quiz.optionB} | C) ${quiz.optionC} | D) ${quiz.optionD}`,
-            url: `https://hiiinishant.com/quiz/q/${quiz.id}`,
+            text: `Correct Answer: Option ${quiz.correctOption}) ${answerText}. Options: A) ${quiz.optionA} | B) ${quiz.optionB} | C) ${quiz.optionC} | D) ${quiz.optionD}`,
+            url: pageUrl,
             author: {
               "@type": "Person",
               name: "Nishant Kumar",
@@ -135,7 +140,11 @@ function buildQAPageSchema(quiz: NonNullable<Awaited<ReturnType<typeof getQuizBy
 }
 
 // ── Quiz JSON-LD Schema ────────────────────────────────────────────────────────
-function buildQuizSchema(quiz: NonNullable<Awaited<ReturnType<typeof getQuizById>>>) {
+function buildQuizSchema(
+  quiz: NonNullable<Awaited<ReturnType<typeof getQuizBySlug>>>,
+  subject: string,
+  slug: string
+) {
   return {
     "@context": "https://schema.org",
     "@type": "Quiz",
@@ -150,27 +159,22 @@ function buildQuizSchema(quiz: NonNullable<Awaited<ReturnType<typeof getQuizById
       url: "https://hiiinishant.com",
     },
     datePublished: quiz.date,
-    url: `https://hiiinishant.com/quiz/q/${quiz.id}`,
+    url: `https://hiiinishant.com/quiz/${encodeURIComponent(subject)}/${encodeURIComponent(slug)}`,
     numberOfQuestions: 1,
   };
 }
 
-// ── Page Component ────────────────────────────────────────────────────────────
-export default async function SingleQuestionPage({ params }: Props) {
-  const { id } = await params;
-  const quiz = await getQuizById(id);
+// ── Canonical Slug Page Component ──────────────────────────────────────────────
+export default async function SlugQuestionPage({ params }: Props) {
+  const { subject, slug } = await params;
+  const quiz = await getQuizBySlug(subject, slug);
 
   if (!quiz) {
     notFound();
   }
 
-  // If question has SEO slugs, 301 permanently redirect to canonical URL
-  if (quiz.subjectSlug && quiz.slug) {
-    permanentRedirect(`/quiz/${encodeURIComponent(quiz.subjectSlug)}/${encodeURIComponent(quiz.slug)}`);
-  }
-
-  const qaSchema = buildQAPageSchema(quiz);
-  const quizSchema = buildQuizSchema(quiz);
+  const qaSchema = buildQAPageSchema(quiz, subject, slug);
+  const quizSchema = buildQuizSchema(quiz, subject, slug);
 
   return (
     <>

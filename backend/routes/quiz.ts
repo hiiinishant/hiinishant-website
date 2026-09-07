@@ -17,6 +17,37 @@ function yesterdayKeyIST(): string {
   return new Date(Date.now() + IST_OFFSET_MS - 86400000).toISOString().slice(0, 10);
 }
 
+// ─── Slug Utilities ───────────────────────────────────────────────────────────
+/**
+ * Converts a question string into a URL-safe slug.
+ * e.g. "Which data structure is used in BFS?" → "which-data-structure-is-used-in-bfs"
+ */
+export function generateSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')   // remove non-alphanumeric except spaces and hyphens
+    .trim()
+    .replace(/\s+/g, '-')           // spaces → hyphens
+    .replace(/-+/g, '-')            // collapse multiple hyphens
+    .slice(0, 80);                  // max 80 chars for URL safety
+}
+
+/**
+ * Converts a subject name into a URL-safe slug.
+ * e.g. "Data Structures" → "data-structures", "OS" → "os", "C++" → "cpp"
+ */
+export function toSubjectSlug(subject: string): string {
+  return subject
+    .toLowerCase()
+    .replace(/c\+\+/g, 'cpp')
+    .replace(/\.net/g, 'dotnet')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 40);
+}
+
 // ─── Firebase ID Token Verifier ───────────────────────────────────────────────
 // Extracts the Firebase UID from the Authorization header sent by the frontend.
 // Used for quiz answer submission & stats — distinct from the admin JWT.
@@ -320,6 +351,8 @@ router.get('/all', async (_req: Request, res: Response) => {
         id:            doc.id,
         date:          d.publishDate || doc.id,
         subject:       d.subject,
+        subjectSlug:   d.subjectSlug || toSubjectSlug(d.subject || 'general'),
+        slug:          d.slug || generateSlug(d.question || doc.id),
         question:      d.question,
         optionA:       d.optionA,
         optionB:       d.optionB,
@@ -361,6 +394,8 @@ router.get('/q/:id', async (req: Request, res: Response) => {
       id:            docSnap.id,
       date:          d.publishDate || docSnap.id,
       subject:       d.subject,
+      subjectSlug:   d.subjectSlug || toSubjectSlug(d.subject || 'general'),
+      slug:          d.slug || generateSlug(d.question || docSnap.id),
       question:      d.question,
       optionA:       d.optionA,
       optionB:       d.optionB,
@@ -378,6 +413,55 @@ router.get('/q/:id', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/quiz/slug/:subjectSlug/:questionSlug
+// Returns a single published quiz by its SEO slug for the canonical question page.
+// Response: { quiz: QuizPublic | null }
+router.get('/slug/:subjectSlug/:questionSlug', async (req: Request, res: Response) => {
+  try {
+    if (!firestore) { res.json({ quiz: null }); return; }
+
+    const { subjectSlug, questionSlug } = req.params;
+
+    // Query Firestore by slug fields
+    const snap = await firestore.collection(QUIZZES)
+      .where('slug', '==', questionSlug)
+      .where('subjectSlug', '==', subjectSlug)
+      .where('status', '==', 'published')
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      res.status(404).json({ error: 'Quiz question not found', quiz: null });
+      return;
+    }
+
+    const docSnap = snap.docs[0];
+    const d = docSnap.data()!;
+    const today = todayKeyIST();
+    const isPast = (d.publishDate || docSnap.id) < today;
+
+    const quiz = {
+      id:            docSnap.id,
+      date:          d.publishDate || docSnap.id,
+      subject:       d.subject,
+      subjectSlug:   d.subjectSlug || subjectSlug,
+      slug:          d.slug || questionSlug,
+      question:      d.question,
+      optionA:       d.optionA,
+      optionB:       d.optionB,
+      optionC:       d.optionC,
+      optionD:       d.optionD,
+      ...(isPast ? { correctOption: d.correctOption } : {}),
+      attemptsCount: d.attemptsCount || 0,
+      updatedAt:     d.updatedAt || d.createdAt,
+    };
+
+    res.json({ quiz });
+  } catch (err) {
+    console.error('[quiz/slug] Error:', err);
+    res.status(500).json({ error: 'Failed to load quiz question', quiz: null });
+  }
+});
 
 // Returns a user's XP and streak stats. Public (userId is the Firebase UID).
 // Response: { stats: QuizStats | null }
@@ -655,9 +739,15 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     }
 
     const now = new Date().toISOString();
+    const questionSlug = generateSlug(question.trim());
+    const subjectSlug  = toSubjectSlug(subject?.trim() || 'general');
+
+    // Ensure slug uniqueness: if same slug already exists, append doc ID suffix later
     const quizData = {
       subject:       subject?.trim() || '',
+      subjectSlug,
       question:      question.trim(),
+      slug:          questionSlug,
       optionA:       optionA.trim(),
       optionB:       optionB.trim(),
       optionC:       optionC.trim(),
@@ -692,6 +782,13 @@ router.put('/', requireAuth, async (req: Request, res: Response) => {
     // Trim string fields
     const strFields = ['subject', 'question', 'optionA', 'optionB', 'optionC', 'optionD'];
     strFields.forEach(f => { if (updateData[f]) updateData[f] = updateData[f].trim(); });
+    // Regenerate slug if question or subject changed
+    if (updateData.question) {
+      updateData.slug = generateSlug(updateData.question);
+    }
+    if (updateData.subject) {
+      updateData.subjectSlug = toSubjectSlug(updateData.subject);
+    }
 
     await firestore.collection(QUIZZES).doc(id).update(updateData);
     const updated = await firestore.collection(QUIZZES).doc(id).get();

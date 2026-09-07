@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "nodemon --watch .env.local --watch routes --watch lib --watch middleware --watch server.ts -e ts,json server.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "migrate:quiz-slugs": "ts-node scripts/migrateQuizSlugs.ts"
   },
   "keywords": [],
   "author": "",

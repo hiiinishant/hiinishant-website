@@ -17,6 +17,15 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: false,
   },
+  async redirects() {
+    return [
+      {
+        source: "/blog/who-is-nishant",
+        destination: "/about",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

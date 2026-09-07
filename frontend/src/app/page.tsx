@@ -6,14 +6,23 @@ import DailyQuizCard from "@/components/sections/DailyQuizCard";
 import PortalCard from "@/components/sections/PortalCard";
 
 export const metadata: Metadata = {
-  title: "Nishant Kumar — Founder of 2 AM Study | Entrepreneur & Educator",
+  title: "Nishant Kumar — Web Developer, Entrepreneur & Vlogger | Founder of 2 AM Study",
   description:
-    "Official website of Nishant Kumar (hiiinishant) — founder of 2 AM Study, student entrepreneur from Chandigarh University, and digital educator empowering 100,000+ students across India.",
+    "Official website of Nishant Kumar (hiiinishant) — founder of 2 AM Study, full-stack web developer, tech vlogger, and student entrepreneur from Chandigarh University empowering 100,000+ learners across India.",
   keywords: [
     "Nishant Kumar",
     "nishant",
     "nishant kumar",
     "hiiinishant",
+    "Nishant Kumar web developer",
+    "web developer",
+    "full stack web developer",
+    "student web developer",
+    "Nishant Kumar vlogger",
+    "vlogger",
+    "tech vlogger",
+    "student vlogger India",
+    "Chandigarh University vlogger",
     "2 AM Study founder",
     "2 am study founder",
     "founder of 2 AM Study",
@@ -21,7 +30,6 @@ export const metadata: Metadata = {
     "Chandigarh University entrepreneur",
     "nishant kumar entrepreneur",
     "nishant kumar edtech",
-    "nishant kumar educator",
     "2amstudy",
     "nishant kumar portfolio",
     "hi Nishant",
@@ -35,9 +43,9 @@ export const metadata: Metadata = {
     canonical: "https://hiiinishant.com",
   },
   openGraph: {
-    title: "Nishant Kumar — Founder of 2 AM Study | hiiinishant",
+    title: "Nishant Kumar — Web Developer, Entrepreneur & Vlogger",
     description:
-      "Official website of Nishant Kumar (hiiinishant) — founder of 2 AM Study. Student entrepreneur from Chandigarh University empowering 100,000+ learners.",
+      "Official website of Nishant Kumar (hiiinishant) — founder of 2 AM Study, full-stack web developer, tech vlogger, and student entrepreneur from Chandigarh University.",
     url: "https://hiiinishant.com",
   },
 };

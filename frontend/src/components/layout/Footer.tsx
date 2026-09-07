@@ -117,7 +117,9 @@ const navSections = [
   { href: "/journey", label: "Journey Timeline" },
   { href: "/projects", label: "Startups & Initiatives" },
   { href: "/universe", label: "Social Media" },
+  { href: "/links", label: "Bio Links Hub" },
   { href: "/updates", label: "Latest Updates" },
+  { href: "/nsgram", label: "NSGram Community" },
 ];
 
 export default function Footer() {

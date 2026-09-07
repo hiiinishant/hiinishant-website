@@ -34,18 +34,46 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://hiiinishant.com"),
   title: {
-    default: "Nishant Kumar — Founder of 2 AM Study | Entrepreneur & Educator",
+    default: "Nishant Kumar — Web Developer, Entrepreneur & Vlogger | Founder of 2 AM Study",
     template: "%s | Nishant Kumar",
   },
   description:
-    "Nishant Kumar is the founder of 2 AM Study — a leading edtech platform empowering 100,000+ students with quality education. Entrepreneur, educator, and digital creator from Chandigarh University. Known as hiiinishant.",
+    "Nishant Kumar is a full-stack web developer, entrepreneur, and tech vlogger. Founder of 2 AM Study — empowering 100,000+ students from Chandigarh University. Known as hiiinishant.",
   keywords: [
-    // Primary identity
+    // Primary identity & common search variations
     "Nishant Kumar",
     "nishant",
     "nishant kumar",
     "hiiinishant",
     "Hiii Nishant",
+    "hi nishant",
+    "hii nishant",
+    "hiiii nishant",
+    "nishant hi",
+    "nishant hii",
+    "nishant vloger",
+    "nishant vlogger",
+    "nishant chandigarh university",
+    "nishant chandigarh univerity",
+    "nishant youtube channel",
+    "hiii nishant youtube channel",
+    "hiii nishant vlogs",
+    // Developer & Tech
+    "Nishant Kumar web developer",
+    "web developer",
+    "full stack web developer",
+    "Next.js web developer",
+    "React developer India",
+    "student web developer",
+    "software developer Chandigarh",
+    // Vlogger & Creator
+    "Nishant Kumar vlogger",
+    "vlogger",
+    "tech vlogger",
+    "student vlogger India",
+    "Chandigarh University vlogger",
+    "Nishant Kumar YouTuber",
+    "Nishant Kumar digital creator",
     // Education & brand
     "2 AM Study",
     "2amstudy",
@@ -60,8 +88,6 @@ export const metadata: Metadata = {
     "Nishant Kumar entrepreneur",
     "Nishant Kumar educator",
     "Nishant Kumar edtech",
-    "Nishant Kumar digital creator",
-    "Nishant Kumar YouTuber",
     "Nishant Kumar blogger",
     // Platform
     "hiiinishant.com",
@@ -78,21 +104,21 @@ export const metadata: Metadata = {
   authors: [{ name: "Nishant Kumar", url: "https://hiiinishant.com" }],
   creator: "Nishant Kumar",
   publisher: "Nishant Kumar",
-  category: "Education, Entrepreneurship",
+  category: "Education, Entrepreneurship, Web Development, Vlogging",
   openGraph: {
     type: "website",
     locale: "en_IN",
     url: "https://hiiinishant.com",
     siteName: "Nishant Kumar — hiiinishant",
-    title: "Nishant Kumar — Founder of 2 AM Study | Entrepreneur & Educator",
+    title: "Nishant Kumar — Web Developer, Entrepreneur & Vlogger | Founder of 2 AM Study",
     description:
-      "Nishant Kumar (hiiinishant) is the founder of 2 AM Study — empowering 100,000+ students with quality education. Student entrepreneur from Chandigarh University.",
+      "Nishant Kumar (hiiinishant) is a full-stack web developer, entrepreneur, and tech vlogger. Founder of 2 AM Study — empowering 100,000+ students from Chandigarh University.",
     images: [
       {
         url: "/profile.jpg",
         width: 1200,
         height: 630,
-        alt: "Nishant Kumar — Founder of 2 AM Study",
+        alt: "Nishant Kumar — Web Developer, Entrepreneur & Vlogger",
         type: "image/jpeg",
       },
     ],
@@ -100,9 +126,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     site: "@hiiinishant",
-    title: "Nishant Kumar — Founder of 2 AM Study",
+    title: "Nishant Kumar — Web Developer, Entrepreneur & Vlogger",
     description:
-      "Founder of 2 AM Study · Student entrepreneur from Chandigarh University · Empowering 100,000+ students.",
+      "Founder of 2 AM Study · Full-Stack Web Developer, Entrepreneur & Tech Vlogger from Chandigarh University.",
     creator: "@hiiinishant",
     images: ["/profile.jpg"],
   },
@@ -116,9 +142,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
       "max-video-preview": -1,
     },
-  },
-  alternates: {
-    canonical: "https://hiiinishant.com",
   },
   verification: {
     // Add your Google Search Console verification token below.
@@ -150,9 +173,14 @@ export default function RootLayout({
         "height": 800,
         "caption": "Nishant Kumar — Founder of 2 AM Study",
       },
-      "description": "Nishant Kumar (hiiinishant) is the founder of 2 AM Study — a leading edtech platform empowering 100,000+ students across India. Student entrepreneur from Chandigarh University, digital creator, vlogger, and educator.",
-      "jobTitle": "Founder & CEO",
+      "description": "Nishant Kumar (hiiinishant) is a full-stack web developer, entrepreneur, and tech vlogger. Founder of 2 AM Study — empowering 100,000+ students across India. Student from Chandigarh University, digital creator, and educator.",
+      "jobTitle": "Founder, Full Stack Developer & Vlogger",
       "hasOccupation": [
+        {
+          "@type": "Occupation",
+          "name": "Full Stack Web Developer",
+          "occupationLocation": { "@type": "Country", "name": "India" },
+        },
         {
           "@type": "Occupation",
           "name": "Entrepreneur",
@@ -160,7 +188,12 @@ export default function RootLayout({
         },
         {
           "@type": "Occupation",
-          "name": "Educator & Content Creator",
+          "name": "Tech Vlogger & Content Creator",
+          "occupationLocation": { "@type": "Country", "name": "India" },
+        },
+        {
+          "@type": "Occupation",
+          "name": "Educator",
           "occupationLocation": { "@type": "Country", "name": "India" },
         },
       ],
@@ -180,6 +213,12 @@ export default function RootLayout({
         "name": "India",
       },
       "knowsAbout": [
+        "Web Development",
+        "Full Stack Development",
+        "Next.js",
+        "React.js",
+        "TypeScript",
+        "Node.js",
         "Education Technology",
         "Entrepreneurship",
         "Digital Content Creation",
