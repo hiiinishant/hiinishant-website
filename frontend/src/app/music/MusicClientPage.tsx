@@ -3,7 +3,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import PageHeader from "@/components/layout/PageHeader";
-import { loadYouTubeApi, fetchVideoTitle, videoThumbnailUrl, type MusicSettings } from "@/lib/youtube";
+import {
+  loadYouTubeApi,
+  fetchVideoTitle,
+  fetchAllVideoTitles,
+  cacheVideoTitle,
+  getKnownOrCachedTitle,
+  videoThumbnailUrl,
+  type MusicSettings,
+} from "@/lib/youtube";
 import {
   Play,
   Pause,
@@ -45,7 +53,9 @@ export default function MusicClientPage({
   const playerInitializingRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [currentTitle, setCurrentTitle] = useState("");
+  const [currentTitle, setCurrentTitle] = useState(
+    initialSettings.initialTracks?.[0]?.title || ""
+  );
   const [tracks, setTracks] = useState<PlaylistTrack[]>(
     initialSettings.initialTracks || []
   );
@@ -79,29 +89,62 @@ export default function MusicClientPage({
       const dur = player.getDuration();
       const cur = player.getCurrentTime();
 
-      setCurrentIndex(index >= 0 ? index : 0);
-      setCurrentTitle(data.title || `Track ${(index >= 0 ? index : 0) + 1}`);
+      const idx = index >= 0 ? index : 0;
+      const liveTitle = data.title;
+      const isPlaceholder = !liveTitle || liveTitle.startsWith("Song ") || liveTitle.startsWith("Track ") || liveTitle.startsWith("Video ");
+      const fallbackTitle = (data.video_id && getKnownOrCachedTitle(data.video_id)) || (tracks[idx]?.title) || `Track ${idx + 1}`;
+      const effectiveTitle = !isPlaceholder ? liveTitle : fallbackTitle;
+
+      setCurrentIndex(idx);
+      setCurrentTitle(effectiveTitle);
       setPlaying(player.getPlayerState() === YT.PlayerState.PLAYING);
       if (dur > 0) setDuration(dur);
       if (cur >= 0) setCurrentTime(cur);
+
+      // LIVE AUTO-REPLACE: When YouTube player provides the actual song title,
+      // update the playlist row and cache it so it never shows "Song X" or "Track X" again!
+      if (!isPlaceholder && data.video_id) {
+        cacheVideoTitle(data.video_id, liveTitle);
+        setTracks((prev) => {
+          if (prev[idx] && prev[idx].title !== liveTitle) {
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], title: liveTitle };
+            return updated;
+          }
+          return prev;
+        });
+      }
     } catch (e) {
       console.warn("Error syncing track state:", e);
     }
-  }, []);
+  }, [tracks]);
 
   const loadTrackTitles = useCallback(async (videoIds: string[]) => {
-    // Initial fast populate with fallback names so tracklist is instantly visible
+    // Populate immediately with known/cached titles so tracklist has genuine song names from frame 1
     setTracks(
-      videoIds.map((videoId, i) => ({
-        videoId,
-        title: `Track ${i + 1}`,
-      }))
+      videoIds.map((videoId, i) => {
+        const known =
+          getKnownOrCachedTitle(videoId) ||
+          initialSettings.initialTracks?.find((t) => t.videoId === videoId)?.title;
+        return {
+          videoId,
+          title: known || `Track ${i + 1}`,
+        };
+      })
     );
 
-    // Fetch actual titles in background
-    const titles = await Promise.all(videoIds.map((id, index) => fetchVideoTitle(id, index)));
-    setTracks(videoIds.map((videoId, i) => ({ videoId, title: titles[i] })));
-  }, []);
+    // Fetch actual titles in controlled background batches for any uncached tracks
+    await fetchAllVideoTitles(videoIds, (index, title) => {
+      setTracks((prev) => {
+        if (prev[index] && prev[index].title !== title) {
+          const updated = [...prev];
+          updated[index] = { ...updated[index], title };
+          return updated;
+        }
+        return prev;
+      });
+    });
+  }, [initialSettings.initialTracks]);
 
   // Poll getPlaylist() until available
   const tryLoadPlaylist = useCallback(
