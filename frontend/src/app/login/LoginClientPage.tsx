@@ -708,7 +708,7 @@ export default function LoginClientPage() {
                             <input
                               type="text"
                               required
-                              placeholder="e.g. Alex Sharma"
+                              placeholder="e.g. Nishant Kumar"
                               value={authForm.displayName}
                               onChange={(e) => setAuthForm({ ...authForm, displayName: e.target.value })}
                               className="w-full bg-zinc-900 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-brand-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
@@ -720,7 +720,7 @@ export default function LoginClientPage() {
                             <input
                               type="text"
                               required
-                              placeholder="e.g. alex2am"
+                              placeholder="e.g. hiiinishant"
                               value={authForm.username}
                               onChange={(e) => setAuthForm({ ...authForm, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
                               className="w-full bg-zinc-900 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-brand-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 font-mono"
