@@ -10,6 +10,10 @@ import {
   Lightbulb,
   Calendar,
   IndianRupee,
+  CalendarX,
+  Quote,
+  Sparkles,
+  ArrowLeft,
 } from "lucide-react";
 import { getAllStatuses, getStatusByDate } from "@/data/statusServer";
 
@@ -132,7 +136,57 @@ export default async function StatusDatePage({ params }: Props) {
   const decodedDate = decodeURIComponent(rawDate);
   const status = await getStatusByDate(decodedDate);
 
-  if (!status) notFound();
+  if (!status) {
+    return (
+      <div className="min-h-screen bg-background relative overflow-hidden pt-20 pb-20 flex items-center justify-center">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[450px] bg-accent/3 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse-slow" />
+        <div className="max-w-xl w-full mx-auto px-5 relative z-10 text-center space-y-6">
+          <div className="rounded-3xl border border-amber-500/25 bg-gradient-to-b from-amber-500/10 via-[#09090b]/95 to-[#09090b] backdrop-blur-2xl p-6 sm:p-8 text-center space-y-5 shadow-2xl shadow-amber-950/20">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-semibold font-mono tracking-wide">
+              <CalendarX className="w-3.5 h-3.5 text-amber-400" />
+              <span>Workspace Log Notice</span>
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Nishant&apos;s work is not stored for this date
+              </h1>
+              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                No activity log exists for <span className="text-amber-300 font-semibold">&ldquo;{decodedDate}&rdquo;</span> in our database. Some days are dedicated to deep offline study, intense coding sprints away from logging, or well-deserved rest.
+              </p>
+            </div>
+
+            {/* Motivational Quote Block */}
+            <div className="relative max-w-md mx-auto p-4 sm:p-5 rounded-2xl border border-amber-500/20 bg-black/50 backdrop-blur-md text-left shadow-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <Quote className="w-5 h-5 text-amber-400/80 rotate-180" />
+                <span className="text-[10px] uppercase font-mono tracking-widest text-amber-400/90 font-semibold flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-400" /> Thought For The Day
+                </span>
+              </div>
+              <blockquote className="text-xs sm:text-sm text-zinc-100 italic leading-relaxed font-sans">
+                &ldquo;Not every day of hard work is recorded in a database. Some of the most transformative breakthroughs happen in complete silence away from the screen.&rdquo;
+              </blockquote>
+              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                <span className="text-amber-300 font-medium">— 2 AM Study Philosophy</span>
+                <span className="text-zinc-500">Mindset &amp; Focus</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/status"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-accent text-zinc-950 hover:bg-accent/90 text-xs font-bold transition-all shadow-md shadow-accent/20 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Return to Live Status Dashboard</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const net = (status.finance?.income || 0) - (status.finance?.expense || 0);
 

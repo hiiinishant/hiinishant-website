@@ -13,6 +13,8 @@ import {
   Star,
   Lightbulb,
   Calendar,
+  CalendarX,
+  Quote,
   Search,
   Sparkles,
   RefreshCw,
@@ -21,6 +23,7 @@ import {
   Utensils,
   IndianRupee,
   ChevronDown,
+  X,
 } from "lucide-react";
 
 interface DailyStatus {
@@ -69,6 +72,275 @@ interface FuturePlan {
 interface Props {
   initialStatuses: DailyStatus[];
   futurePlans: FuturePlan[];
+}
+
+const MONTHS_FULL = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+const MONTHS_SHORT = [
+  "jan", "feb", "mar", "apr", "may", "jun",
+  "jul", "aug", "sep", "oct", "nov", "dec",
+];
+
+function getOrdinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function normalizeDateQuery(q: string): string {
+  let normalized = q.toLowerCase();
+
+  // Replace compound number words (e.g. "twenty two", "twenty-second")
+  const compoundWords: [RegExp, string][] = [
+    [/\b(twenty[- ]first|twenty[- ]one)\b/g, "21"],
+    [/\b(twenty[- ]second|twenty[- ]two)\b/g, "22"],
+    [/\b(twenty[- ]third|twenty[- ]three)\b/g, "23"],
+    [/\b(twenty[- ]fourth|twenty[- ]four)\b/g, "24"],
+    [/\b(twenty[- ]fifth|twenty[- ]five)\b/g, "25"],
+    [/\b(twenty[- ]sixth|twenty[- ]six)\b/g, "26"],
+    [/\b(twenty[- ]seventh|twenty[- ]seven)\b/g, "27"],
+    [/\b(twenty[- ]eighth|twenty[- ]eight)\b/g, "28"],
+    [/\b(twenty[- ]ninth|twenty[- ]nine)\b/g, "29"],
+    [/\b(thirty[- ]first|thirty[- ]one)\b/g, "31"],
+  ];
+  for (const [pattern, repl] of compoundWords) {
+    normalized = normalized.replace(pattern, repl);
+  }
+
+  // Replace single number words (e.g. "twelve", "twelfth", "one", "second")
+  const singleWords: [RegExp, string][] = [
+    [/\b(first|one)\b/g, "1"],
+    [/\b(second|two)\b/g, "2"],
+    [/\b(third|three)\b/g, "3"],
+    [/\b(fourth|four)\b/g, "4"],
+    [/\b(fifth|five)\b/g, "5"],
+    [/\b(sixth|six)\b/g, "6"],
+    [/\b(seventh|seven)\b/g, "7"],
+    [/\b(eighth|eight)\b/g, "8"],
+    [/\b(ninth|nine)\b/g, "9"],
+    [/\b(tenth|ten)\b/g, "10"],
+    [/\b(eleventh|eleven)\b/g, "11"],
+    [/\b(twelfth|twelve)\b/g, "12"],
+    [/\b(thirteenth|thirteen)\b/g, "13"],
+    [/\b(fourteenth|fourteen)\b/g, "14"],
+    [/\b(fifteenth|fifteen)\b/g, "15"],
+    [/\b(sixteenth|sixteen)\b/g, "16"],
+    [/\b(seventeenth|seventeen)\b/g, "17"],
+    [/\b(eighteenth|eighteen)\b/g, "18"],
+    [/\b(nineteenth|nineteen)\b/g, "19"],
+    [/\b(twentieth|twenty)\b/g, "20"],
+    [/\b(thirtieth|thirty)\b/g, "30"],
+  ];
+  for (const [pattern, repl] of singleWords) {
+    normalized = normalized.replace(pattern, repl);
+  }
+
+  // Normalize numbers with excessive leading zeros: e.g. "012" -> "12", "005" -> "5"
+  normalized = normalized.replace(/\b0+(\d+)\b/g, (match, digits) => {
+    if (digits.length <= 2) {
+      return String(parseInt(digits, 10));
+    }
+    return match;
+  });
+
+  // Common month abbreviations and spelling variants (e.g. "spt" / "sept" -> "sep")
+  const monthAliases: [RegExp, string][] = [
+    [/\b(spt|sept)\b/g, "sep"],
+    [/\b(agust|augst)\b/g, "aug"],
+    [/\b(feburary|febr)\b/g, "feb"],
+    [/\b(janurary)\b/g, "jan"],
+  ];
+  for (const [pattern, repl] of monthAliases) {
+    normalized = normalized.replace(pattern, repl);
+  }
+
+  return normalized;
+}
+
+function checkDateMatchSingle(dateStr: string, q: string): boolean {
+  // 1. Raw match (e.g. "2026-08-12", "08-12", "2026")
+  if (dateStr.toLowerCase().includes(q)) return true;
+
+  // 2. Parse YYYY-MM-DD or standard ISO date
+  const cleanDate = dateStr.split("T")[0].trim();
+  const parts = cleanDate.split("-");
+  let year = 0;
+  let month = 0;
+  let day = 0;
+
+  if (parts.length === 3) {
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+    day = parseInt(parts[2], 10);
+  } else {
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) {
+      year = parsed.getFullYear();
+      month = parsed.getMonth() + 1;
+      day = parsed.getDate();
+    }
+  }
+
+  if (!year || !month || !day || month < 1 || month > 12) {
+    return false;
+  }
+
+  const fullMonth = MONTHS_FULL[month - 1];
+  const shortMonth = MONTHS_SHORT[month - 1];
+  const dayStr = String(day);
+  const dayPadded = day < 10 ? `0${day}` : dayStr;
+  const ordinalDay = getOrdinal(day).toLowerCase();
+  const monthPadded = month < 10 ? `0${month}` : String(month);
+  const yearStr = String(year);
+
+  // Weekday
+  const dateObj = new Date(year, month - 1, day);
+  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+  const shortWeekday = dateObj.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+
+  // Single word checks: "august", "july", "aug", "jul", "wednesday", "12th", "22nd"
+  if (
+    fullMonth === q ||
+    fullMonth.includes(q) ||
+    shortMonth === q ||
+    weekday === q ||
+    weekday.includes(q) ||
+    shortWeekday === q ||
+    ordinalDay === q
+  ) {
+    return true;
+  }
+
+  // Pre-assembled date format variations
+  const variations = [
+    `${dayStr} ${fullMonth}`,
+    `${ordinalDay} ${fullMonth}`,
+    `${fullMonth} ${dayStr}`,
+    `${fullMonth} ${ordinalDay}`,
+    `${dayStr} ${shortMonth}`,
+    `${ordinalDay} ${shortMonth}`,
+    `${shortMonth} ${dayStr}`,
+    `${shortMonth} ${ordinalDay}`,
+    `${dayStr} ${fullMonth} ${yearStr}`,
+    `${ordinalDay} ${fullMonth} ${yearStr}`,
+    `${fullMonth} ${dayStr} ${yearStr}`,
+    `${fullMonth} ${ordinalDay} ${yearStr}`,
+    `${dayStr} ${shortMonth} ${yearStr}`,
+    `${shortMonth} ${dayStr} ${yearStr}`,
+    `${dayPadded}-${monthPadded}-${yearStr}`,
+    `${dayPadded}/${monthPadded}/${yearStr}`,
+    `${dayStr}/${month}/${yearStr}`,
+    `${dayStr}-${month}-${yearStr}`,
+  ];
+
+  if (variations.some((v) => v.includes(q) || q.includes(v))) {
+    return true;
+  }
+
+  // Multi-word checks: ensure every query term corresponds to a date token
+  const terms = q.replace(/[,/.-]/g, " ").split(/\s+/).filter(Boolean);
+  if (terms.length > 1) {
+    const tokens = [
+      yearStr,
+      dayStr,
+      dayPadded,
+      ordinalDay,
+      monthPadded,
+      String(month),
+      fullMonth,
+      shortMonth,
+      weekday,
+      shortWeekday,
+    ];
+    const allMatch = terms.every((t) =>
+      tokens.some((token) => token === t || token.startsWith(t))
+    );
+    if (allMatch) return true;
+  }
+
+  return false;
+}
+
+function matchesDateSearch(dateStr: string | undefined, query: string): boolean {
+  if (!dateStr || !query) return false;
+  const rawQ = query.trim().toLowerCase();
+  if (!rawQ) return false;
+
+  const normalizedQ = normalizeDateQuery(rawQ);
+  return checkDateMatchSingle(dateStr, rawQ) || checkDateMatchSingle(dateStr, normalizedQ);
+}
+
+const UNLOGGED_DATE_QUOTES = [
+  {
+    quote: "Not every day of hard work is recorded in a database. Some of the most transformative breakthroughs happen in complete silence away from the screen.",
+    author: "2 AM Study Philosophy",
+  },
+  {
+    quote: "Quiet focus is still progress. Consistency isn’t just about broadcasting every hour, but showing up with unshakeable intent every single day.",
+    author: "Building in Silence",
+  },
+  {
+    quote: "The work you put in when no one is watching, and when no dashboard is tracking, is the work that compounds into real mastery.",
+    author: "Deep Work Mindset",
+  },
+  {
+    quote: "Some days are for relentless execution, some for deep contemplation, and both are necessary for the climb.",
+    author: "Founder's Journey",
+  },
+  {
+    quote: "Work with patience and discipline. When you are genuinely building, the results will eventually speak louder than daily logs.",
+    author: "Nishant Kumar",
+  },
+];
+
+function isDateQuery(query: string): boolean {
+  if (!query) return false;
+  const rawQ = query.trim().toLowerCase();
+  if (!rawQ) return false;
+
+  const check = (q: string) => {
+    // Check month names (full or short)
+    const hasMonth =
+      MONTHS_FULL.some((m) => q.includes(m)) ||
+      MONTHS_SHORT.some((m) => new RegExp(`\\b${m}\\b`).test(q));
+    if (hasMonth) return true;
+
+    // Check weekdays
+    const weekdays = [
+      "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+      "mon", "tue", "wed", "thu", "fri", "sat", "sun",
+    ];
+    if (weekdays.some((w) => new RegExp(`\\b${w}\\b`).test(q))) return true;
+
+    // Check date-like patterns (e.g. 2026-08-12, 12-08-2026, 12/08)
+    if (/\b\d{4}[-/.]\d{1,2}([-/.]\d{1,2})?\b/.test(q)) return true;
+    if (/\b\d{1,2}[-/.]\d{1,2}([-/.]\d{2,4})?\b/.test(q)) return true;
+    if (/\b\d{1,2}(st|nd|rd|th)\b/.test(q)) return true;
+    if (/\b(today|yesterday|tomorrow)\b/.test(q)) return true;
+
+    // Multi-word with a day number
+    const words = q.split(/\s+/).filter(Boolean);
+    if (words.length >= 2 && words.some((w) => /^\d{1,2}$/.test(w))) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const normalized = normalizeDateQuery(rawQ);
+  return check(rawQ) || check(normalized);
+}
+
+function getQuoteForQuery(q: string) {
+  let hash = 0;
+  for (let i = 0; i < q.length; i++) {
+    hash = (hash << 5) - hash + q.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % UNLOGGED_DATE_QUOTES.length;
+  return UNLOGGED_DATE_QUOTES[index];
 }
 
 // ─── Stat mini-card ────────────────────────────────────────────────────────────
@@ -184,11 +456,11 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
   }, [statuses]);
 
   const filteredStatuses = statuses.filter((s) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.trim().toLowerCase();
     return (
+      matchesDateSearch(s.date, q) ||
       (s.statusText || "").toLowerCase().includes(q) ||
-      (s.date || "").toLowerCase().includes(q) ||
       (s.study?.subject || "").toLowerCase().includes(q) ||
       (s.bestMoment || "").toLowerCase().includes(q) ||
       (s.lessonLearned || "").toLowerCase().includes(q) ||
@@ -322,21 +594,112 @@ export default function StatusDashboardClient({ initialStatuses, futurePlans }: 
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search subjects, tasks, moments, lessons…"
+            placeholder="Search by date (e.g. 12 August, July 22), subject, task, moment…"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-zinc-950/30 border border-white/5 focus:border-accent/40 rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-brand-500 focus:outline-none focus:ring-1 focus:ring-accent/20 transition-all"
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setVisibleCount(5);
+            }}
+            className="w-full bg-zinc-950/30 border border-white/5 focus:border-accent/40 rounded-2xl pl-11 pr-11 py-3 text-sm text-white placeholder-brand-500 focus:outline-none focus:ring-1 focus:ring-accent/20 transition-all"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setVisibleCount(5);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-brand-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* ── Log Feed ── */}
         <div className="space-y-5">
           {filteredStatuses.length === 0 ? (
-            <div className="text-center py-16 border border-dashed border-white/5 rounded-3xl glass-strong">
-              <Search className="w-6 h-6 text-brand-600 mx-auto mb-3" />
-              <p className="text-brand-400 text-sm">No matching logs found.</p>
-              <p className="text-brand-600 text-xs mt-1">Try a different keyword.</p>
-            </div>
+            (() => {
+              const isDate = isDateQuery(searchQuery);
+              const activeQuote = getQuoteForQuery(searchQuery);
+              return isDate ? (
+                <div className="rounded-3xl border border-amber-500/25 bg-gradient-to-b from-amber-500/10 via-[#09090b]/95 to-[#09090b] backdrop-blur-2xl p-6 sm:p-8 text-center space-y-5 shadow-2xl shadow-amber-950/20 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-semibold font-mono tracking-wide">
+                    <CalendarX className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Workspace Log Notice</span>
+                  </div>
+
+                  <div className="space-y-2 max-w-lg mx-auto">
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                      Nishant&apos;s work is not stored for this date
+                    </h3>
+                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                      No activity log exists for <span className="text-amber-300 font-semibold">&ldquo;{searchQuery}&rdquo;</span> in our database. Some days are dedicated to deep offline focus, solving tough problems away from the keyboard, exam preparation, or well-deserved rest.
+                    </p>
+                  </div>
+
+                  {/* Motivational Quote Block */}
+                  <div className="relative max-w-md mx-auto p-4 sm:p-5 rounded-2xl border border-amber-500/20 bg-black/50 backdrop-blur-md text-left shadow-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Quote className="w-5 h-5 text-amber-400/80 rotate-180" />
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-amber-400/90 font-semibold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-400" /> Thought For The Day
+                      </span>
+                    </div>
+                    <blockquote className="text-xs sm:text-sm text-zinc-100 italic leading-relaxed font-sans">
+                      &ldquo;{activeQuote.quote}&rdquo;
+                    </blockquote>
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                      <span className="text-amber-300 font-medium">— {activeQuote.author}</span>
+                      <span className="text-zinc-500">2 AM Study</span>
+                    </div>
+                  </div>
+
+                  {/* Navigation Actions */}
+                  <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setVisibleCount(5);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-zinc-950 hover:bg-accent/90 text-xs font-bold transition-all shadow-md shadow-accent/20 cursor-pointer"
+                    >
+                      <span>View Available Logs</span>
+                      <span aria-hidden="true">→</span>
+                    </button>
+                    {availableMonths.length > 0 && (
+                      <Link
+                        href={`/status/monthly/${availableMonths[0].key}`}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-all"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-yellow-400" />
+                        <span>Browse Monthly Summaries</span>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-16 border border-dashed border-white/5 rounded-3xl glass-strong space-y-3">
+                  <Search className="w-6 h-6 text-brand-600 mx-auto" />
+                  <div className="space-y-1">
+                    <p className="text-brand-300 text-sm font-medium">No matching logs found for &ldquo;{searchQuery}&rdquo;</p>
+                    <p className="text-brand-500 text-xs max-w-sm mx-auto">Try searching by date (e.g. 12 August, July 22), subject name, or task keywords.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setVisibleCount(5);
+                    }}
+                    className="text-xs text-accent hover:underline font-mono inline-block pt-1 cursor-pointer"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              );
+            })()
           ) : (
             filteredStatuses.slice(0, visibleCount).map((status) => {
               const structured = isStructured(status);
