@@ -10,7 +10,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendEmailVerification,
-  sendPasswordResetEmail,
   reload,
   getIdToken,
   GoogleAuthProvider,
@@ -240,7 +239,7 @@ export default function LoginClientPage() {
 
   const handleForgotPassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isConfigured || !auth) {
+    if (!isConfigured) {
       setNotice({ text: "Firebase authentication is not configured.", type: "error" });
       return;
     }
@@ -252,17 +251,22 @@ export default function LoginClientPage() {
     setAuthLoading(true);
     setNotice(null);
     try {
-      await sendPasswordResetEmail(auth, email);
-      setNotice({ text: "Password reset link sent! Check your inbox.", type: "success" });
+      // Call backend which uses Gmail SMTP — reliably lands in inbox (not spam)
+      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json() as { success?: boolean; message?: string; error?: string };
+      if (!res.ok) {
+        setNotice({ text: data.error || "Failed to send reset email. Please try again.", type: "error" });
+        return;
+      }
+      setNotice({ text: data.message || "Password reset link sent! Check your inbox.", type: "success" });
       setForgotPassword(false);
       setResetEmail("");
-    } catch (error: unknown) {
-      const err = error as { code?: string; message?: string };
-      if (err?.code === "auth/user-not-found") {
-        setNotice({ text: "No account found with this email address.", type: "error" });
-      } else {
-        setNotice({ text: err?.message || "Failed to send reset email.", type: "error" });
-      }
+    } catch {
+      setNotice({ text: "Network error. Please check your connection and try again.", type: "error" });
     } finally {
       setAuthLoading(false);
     }

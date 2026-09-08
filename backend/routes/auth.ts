@@ -2,6 +2,8 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { generateToken } from '../lib/auth';
 import { requireAuth } from '../middleware/auth';
+import admin from '../lib/firebaseAdmin';
+import { sendEmail } from '../lib/mail';
 
 const router = Router();
 
@@ -43,6 +45,90 @@ router.post('/login', async (req, res) => {
 
 router.get('/verify', requireAuth, (req, res) => {
   res.status(200).json({ success: true });
+});
+
+// ─── Forgot Password ───────────────────────────────────────────────────────
+// Uses Firebase Admin to generate a reset link, then sends via Gmail SMTP
+// so the email comes from hiiinishant@gmail.com (trusted, not spam).
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    res.status(400).json({ error: 'Please provide a valid email address.' });
+    return;
+  }
+
+  const trimmedEmail = email.trim().toLowerCase();
+
+  try {
+    // Generate the Firebase password reset link via Admin SDK
+    const resetLink = await admin.auth().generatePasswordResetLink(trimmedEmail);
+
+    const fromName = process.env.EMAIL_FROM_NAME || 'HiiiNishant';
+
+    const htmlBody = `
+      <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;background:#0f172a;border-radius:16px;overflow:hidden;border:1px solid #1e293b">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);padding:32px 24px;text-align:center">
+          <h1 style="margin:0;font-size:22px;font-weight:700;color:#000;letter-spacing:-0.3px">🔐 Reset Your Password</h1>
+          <p style="margin:8px 0 0;font-size:12px;color:rgba(0,0,0,0.7);text-transform:uppercase;letter-spacing:1.5px">${fromName}</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:32px 24px">
+          <p style="margin:0 0 16px;font-size:15px;color:#cbd5e1;line-height:1.7">
+            Hi there 👋,<br/>
+            We received a request to reset the password for your account associated with <strong style="color:#f59e0b">${trimmedEmail}</strong>.
+          </p>
+          <p style="margin:0 0 28px;font-size:14px;color:#94a3b8;line-height:1.7">
+            Click the button below to set a new password. This link will expire in <strong style="color:#e2e8f0">1 hour</strong>.
+          </p>
+
+          <!-- CTA Button -->
+          <div style="text-align:center;margin-bottom:28px">
+            <a href="${resetLink}" style="display:inline-block;background:#f59e0b;color:#000;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px">
+              Reset My Password →
+            </a>
+          </div>
+
+          <!-- Security note -->
+          <div style="background:#1e293b;border-radius:10px;padding:14px 18px;border-left:4px solid #f59e0b">
+            <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6">
+              🛡️ <strong style="color:#e2e8f0">Didn't request this?</strong> You can safely ignore this email. Your password won't be changed unless you click the link above.
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background:#0b1120;padding:16px 24px;text-align:center;border-top:1px solid #1e293b">
+          <p style="margin:0;font-size:11px;color:#475569">© ${new Date().getFullYear()} ${fromName} · This email was sent to ${trimmedEmail}</p>
+        </div>
+      </div>`;
+
+    const plainText = `Reset Your Password\n\nHi,\n\nWe received a request to reset the password for your account (${trimmedEmail}).\n\nClick the link below to reset your password (expires in 1 hour):\n${resetLink}\n\nIf you didn't request this, you can safely ignore this email.\n\n© ${new Date().getFullYear()} ${fromName}`;
+
+    await sendEmail({
+      to: trimmedEmail,
+      subject: `🔐 Reset Your Password — ${fromName}`,
+      html: htmlBody,
+      text: plainText,
+    });
+
+    console.log(`[Auth] Password reset email sent to: ${trimmedEmail}`);
+    res.status(200).json({ success: true, message: 'Password reset link sent! Check your inbox.' });
+
+  } catch (error: any) {
+    console.error('[Auth] Forgot password error:', error);
+
+    // Firebase throws auth/user-not-found if email doesn't exist
+    if (error?.errorInfo?.code === 'auth/user-not-found' || error?.code === 'auth/user-not-found') {
+      // Security: don't reveal if email exists or not — still return success
+      res.status(200).json({ success: true, message: 'If this email is registered, a reset link has been sent.' });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
+  }
 });
 
 export default router;
