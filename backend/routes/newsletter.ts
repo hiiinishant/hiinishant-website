@@ -149,6 +149,38 @@ router.get('/diagnostic', async (req, res) => {
       diagnostic.resendKeyStatus = 'CONNECTION_ERROR';
       diagnostic.resendError = e?.message;
     }
+
+    if (req.query.testEmail) {
+      const testTo = String(req.query.testEmail).trim();
+      try {
+        const testResp = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: `"${emailFromName}" <${emailFrom}>`,
+            to: [testTo],
+            subject: "Test Diagnostic Email",
+            text: "This is a diagnostic email from HiiiNishant.",
+            html: "<p>This is a diagnostic email from HiiiNishant.</p>",
+          }),
+        });
+        const testData = await testResp.json();
+        diagnostic.testSendResult = {
+          httpStatus: testResp.status,
+          ok: testResp.ok,
+          data: testData,
+          fromUsed: `"${emailFromName}" <${emailFrom}>`,
+          toUsed: testTo,
+        };
+      } catch (testErr: any) {
+        diagnostic.testSendResult = {
+          error: testErr.message,
+        };
+      }
+    }
   }
 
   res.json(diagnostic);
