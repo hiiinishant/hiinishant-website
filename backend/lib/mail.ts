@@ -14,6 +14,14 @@ export class EmailDeliveryError extends Error {
   }
 }
 
+function getSafeProviderError(error: any) {
+  return {
+    code: typeof error?.code === "string" ? error.code : "UNKNOWN",
+    responseCode: typeof error?.responseCode === "number" ? error.responseCode : undefined,
+    command: typeof error?.command === "string" ? error.command : undefined,
+  };
+}
+
 export interface SendEmailParams {
   to: string;
   subject: string;
@@ -28,7 +36,7 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
 
   // 1. Try Resend API if API Key is configured
   if (resendApiKey) {
-    console.log("🚀 Sending email using Resend API...");
+    console.log("[Mail] Resend provider selected");
     // If using Resend sandbox/onboarding, default from is onboarding@resend.dev unless EMAIL_FROM is custom-set
     const defaultFrom = "onboarding@resend.dev";
     const from = process.env.EMAIL_FROM || defaultFrom;
@@ -56,11 +64,12 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
         throw new Error(data?.message || `Resend API returned status ${response.status}`);
       }
 
-      console.log(`📨 Email sent successfully via Resend! MessageId: ${data.id}`);
+      console.log("[Mail] Resend request succeeded");
       return { success: true, messageId: data.id };
     } catch (error: any) {
-      console.error("❌ Error sending email via Resend:", error);
-      throw error;
+      const providerError = getSafeProviderError(error);
+      console.error("[Mail] Resend request failed:", providerError);
+      throw new EmailDeliveryError("sending", "Resend email delivery failed", providerError.code);
     }
   }
 
@@ -79,7 +88,7 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
     );
   }
 
-  console.log("🔌 Sending email using Nodemailer SMTP...");
+  console.log("[Mail] SMTP provider selected");
   const transporter = nodemailer.createTransport({
     host,
     port,
@@ -88,6 +97,8 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
   });
 
   try {
+    await transporter.verify();
+    console.log("[Mail] SMTP transporter verification succeeded");
     const info = await transporter.sendMail({
       from: `"${fromName}" <${from}>`,
       to,
@@ -96,15 +107,17 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
       html,
       replyTo,
     });
-    console.log(`📨 Email sent successfully via SMTP! MessageId: ${info.messageId}`);
+    console.log("[Mail] SMTP sendMail succeeded");
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    const code = typeof error?.code === "string" ? error.code : undefined;
+    const providerError = getSafeProviderError(error);
+    const code = providerError.code === "UNKNOWN" ? undefined : providerError.code;
     const kind: EmailErrorKind = code === "EAUTH"
       ? "authentication"
       : ["ECONNECTION", "ETIMEDOUT", "ENOTFOUND", "EHOSTUNREACH", "ECONNREFUSED"].includes(code || "")
         ? "connection"
         : "sending";
+    console.error("[Mail] SMTP transporter/sendMail failed:", { kind, ...providerError });
     throw new EmailDeliveryError(kind, "SMTP email delivery failed", code);
   }
 }

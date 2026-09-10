@@ -51,6 +51,7 @@ router.get('/verify', requireAuth, (req, res) => {
 // Uses Firebase Admin to generate a reset link, then sends via Gmail SMTP
 // so the email comes from hiiinishant@gmail.com (trusted, not spam).
 router.post('/forgot-password', async (req, res) => {
+  console.log('[Auth] Forgot password request received');
   const { email } = req.body;
 
   if (!email || typeof email !== 'string' || !email.includes('@')) {
