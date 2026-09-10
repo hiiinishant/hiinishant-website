@@ -25,6 +25,27 @@ import quizRoutes from './routes/quiz';
 import amazonPicksRoutes from './routes/amazonPicks';
 import studyPicksRoutes from './routes/studyPicks';
 
+process.on('uncaughtException', (error) => {
+  console.error('[Process] Uncaught exception:', {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  });
+});
+
+process.on('unhandledRejection', (reason) => {
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  console.error('[Process] Unhandled promise rejection:', {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  });
+});
+
+process.on('exit', (code) => {
+  console.error(`[Process] Exiting with code ${code}`);
+});
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -588,12 +609,24 @@ const OFFLINE_EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 });
 
 // Start server
-const start = async () => {
-  await connectDB();
-  await seedDatabase();
-  httpServer.listen(port, () => {
-    console.log("Backend server running on port " + port);
+httpServer.on('error', (error) => {
+  console.error('[Server] HTTP server error:', {
+    code: (error as NodeJS.ErrnoException).code || 'UNKNOWN',
+    message: error.message,
   });
-};
+});
 
-start();
+httpServer.listen(port, () => {
+  console.log("Backend server running on port " + port);
+
+  void connectDB()
+    .then(() => seedDatabase())
+    .catch((error) => {
+      const startupError = error instanceof Error ? error : new Error(String(error));
+      console.error('[Server] Background initialization failed:', {
+        name: startupError.name,
+        message: startupError.message,
+        stack: startupError.stack,
+      });
+    });
+});

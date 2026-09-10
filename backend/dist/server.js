@@ -61,6 +61,24 @@ const visitors_1 = __importStar(require("./routes/visitors"));
 const quiz_1 = __importDefault(require("./routes/quiz"));
 const amazonPicks_1 = __importDefault(require("./routes/amazonPicks"));
 const studyPicks_1 = __importDefault(require("./routes/studyPicks"));
+process.on('uncaughtException', (error) => {
+    console.error('[Process] Uncaught exception:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+    });
+});
+process.on('unhandledRejection', (reason) => {
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    console.error('[Process] Unhandled promise rejection:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+    });
+});
+process.on('exit', (code) => {
+    console.error(`[Process] Exiting with code ${code}`);
+});
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
 const ALLOWED_ORIGINS = new Set([
@@ -554,11 +572,22 @@ io.on('connection', (socket) => {
     });
 });
 // Start server
-const start = async () => {
-    await (0, db_1.connectDB)();
-    await (0, seed_1.seedDatabase)();
-    httpServer.listen(port, () => {
-        console.log("Backend server running on port " + port);
+httpServer.on('error', (error) => {
+    console.error('[Server] HTTP server error:', {
+        code: error.code || 'UNKNOWN',
+        message: error.message,
     });
-};
-start();
+});
+httpServer.listen(port, () => {
+    console.log("Backend server running on port " + port);
+    void (0, db_1.connectDB)()
+        .then(() => (0, seed_1.seedDatabase)())
+        .catch((error) => {
+        const startupError = error instanceof Error ? error : new Error(String(error));
+        console.error('[Server] Background initialization failed:', {
+            name: startupError.name,
+            message: startupError.message,
+            stack: startupError.stack,
+        });
+    });
+});

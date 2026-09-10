@@ -36,6 +36,14 @@ type UserProfile = {
   isActivated?: boolean;
 };
 
+type PendingSignupProfile = {
+  uid: string;
+  displayName: string;
+  username: string;
+  bio: string;
+  avatar: AvatarType;
+};
+
 const emptyAuthForm = {
   email: "",
   password: "",
@@ -62,6 +70,8 @@ export default function LoginClientPage() {
   const [forgotPassword, setForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const pendingSignupStorageKey = "hiiinishant_pending_signup";
+  const [activationNoticeVisible, setActivationNoticeVisible] = useState(false);
 
   // Sync auth mode from query param if changed
   useEffect(() => {
@@ -112,10 +122,50 @@ export default function LoginClientPage() {
 
   // Redirect if already logged in and verified
   useEffect(() => {
-    if (!loading && authUser && authUser.emailVerified && profile?.isActivated) {
+    if (!loading && !activationNoticeVisible && authUser && authUser.emailVerified && profile?.isActivated) {
       router.replace(redirectTarget);
     }
-  }, [authUser, profile, loading, router, redirectTarget]);
+  }, [activationNoticeVisible, authUser, profile, loading, router, redirectTarget]);
+
+  const completeVerifiedSignup = useCallback(async (currentUser: FirebaseUser) => {
+    if (!auth || !db || !currentUser.email) return false;
+
+    const storedSignup = window.localStorage.getItem(pendingSignupStorageKey);
+    const pendingSignup = storedSignup ? JSON.parse(storedSignup) as PendingSignupProfile : null;
+    const profileRes = await fetch(`${API_BASE}/api/users/profile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${await getIdToken(currentUser)}`,
+      },
+      body: JSON.stringify({
+        uid: currentUser.uid,
+        displayName: pendingSignup?.uid === currentUser.uid ? pendingSignup.displayName : undefined,
+        username: pendingSignup?.uid === currentUser.uid ? pendingSignup.username : undefined,
+        bio: pendingSignup?.uid === currentUser.uid ? pendingSignup.bio : undefined,
+        avatar: pendingSignup?.uid === currentUser.uid ? pendingSignup.avatar : undefined,
+        email: currentUser.email,
+        isActivated: true,
+      }),
+    });
+
+    if (!profileRes.ok) throw new Error("Account activation failed. Please try again.");
+    window.localStorage.removeItem(pendingSignupStorageKey);
+
+    const snapshot = await getDoc(doc(db, "users", currentUser.uid));
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
+    }
+    setAuthUser(currentUser);
+    setNotice({
+      text: "Account created! A verification link has been sent to your email. Please check your inbox and click the verification link to activate full NSGram, Quiz & Gallery access.",
+      type: "success",
+    });
+    setActivationNoticeVisible(true);
+    window.setTimeout(() => router.replace(redirectTarget), 1800);
+    return true;
+  }, [pendingSignupStorageKey, redirectTarget, router]);
 
   // Auto check email verification on window focus
   const checkVerificationStatus = useCallback(async () => {
@@ -124,32 +174,12 @@ export default function LoginClientPage() {
       await reload(authUser);
       const currentUser = auth.currentUser;
       if (currentUser?.emailVerified) {
-        const idToken = await getIdToken(currentUser);
-        await fetch(`${API_BASE}/api/users/profile`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            uid: currentUser.uid,
-            email: currentUser.email,
-            isActivated: true,
-          }),
-        });
-        setAuthUser(currentUser);
-        const docRef = doc(db, "users", currentUser.uid);
-        const snapshot = await getDoc(docRef);
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
-        }
-        router.replace(redirectTarget);
+        await completeVerifiedSignup(currentUser);
       }
     } catch {
       // Silent error in background check
     }
-  }, [authUser, router, redirectTarget]);
+  }, [authUser, completeVerifiedSignup]);
 
   useEffect(() => {
     const handleFocus = () => {
@@ -187,28 +217,7 @@ export default function LoginClientPage() {
       await reload(authUser);
       const currentUser = auth.currentUser;
       if (currentUser?.emailVerified) {
-        const idToken = await getIdToken(currentUser);
-        await fetch(`${API_BASE}/api/users/profile`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            uid: currentUser.uid,
-            email: currentUser.email,
-            isActivated: true,
-          }),
-        });
-        setAuthUser(currentUser);
-        const docRef = doc(db, "users", currentUser.uid);
-        const snapshot = await getDoc(docRef);
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setProfile({ id: snapshot.id, uid: data.uid ?? snapshot.id, ...data } as UserProfile);
-        }
-        setNotice({ text: "Email verified! Redirecting...", type: "success" });
-        router.replace(redirectTarget);
+        await completeVerifiedSignup(currentUser);
       } else {
         setNotice({
           text: "Email not verified yet. Please click the link sent to your inbox.",
@@ -436,36 +445,18 @@ export default function LoginClientPage() {
         const credential = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(credential.user);
 
-        const idToken = await getIdToken(credential.user);
-
-        // FIX #2: Check API response and throw if profile creation fails
-        const profileRes = await fetch(`${API_BASE}/api/users/profile`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            uid: credential.user.uid,
-            displayName: authForm.displayName.trim(),
-            username,
-            email,
-            bio: authForm.bio.trim() || "Member of Nishant Kumar community.",
-            avatar: authForm.avatar,
-            isActivated: false,
-          }),
-        });
-
-        if (!profileRes.ok) {
-          // Firebase account created but profile save failed — clean up & inform user
-          await credential.user.delete().catch(() => {});
-          const errBody = await profileRes.json().catch(() => ({})) as { error?: string };
-          throw new Error(errBody?.error || `Profile save failed (${profileRes.status})`);
-        }
+        window.localStorage.setItem(pendingSignupStorageKey, JSON.stringify({
+          uid: credential.user.uid,
+          displayName: authForm.displayName.trim(),
+          username,
+          bio: authForm.bio.trim() || "Member of Nishant Kumar community.",
+          avatar: authForm.avatar,
+        } satisfies PendingSignupProfile));
+        setAuthUser(credential.user);
 
         setNotice({
-          text: "Account created! A verification link has been sent to your email. Please check your inbox and click the verification link to activate full NSGram, Quiz & Gallery access.",
-          type: "success",
+          text: "Verification link sent. Please check your inbox and verify your email to finish creating your account.",
+          type: "info",
         });
         setAuthForm(emptyAuthForm);
       } catch (error: unknown) {
