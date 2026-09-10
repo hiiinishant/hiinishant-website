@@ -110,11 +110,37 @@ router.get('/diagnostic', async (req, res) => {
       const data = await resp.json() as any;
       if (resp.ok) {
         diagnostic.resendKeyStatus = 'VALID';
-        diagnostic.verifiedDomains = (data?.data || []).map((d: any) => ({
-          name: d.name,
-          status: d.status,
-          region: d.region,
-        }));
+        const domainList = data?.data || [];
+        diagnostic.verifiedDomains = [];
+
+        for (const d of domainList) {
+          try {
+            const detailResp = await fetch(`https://api.resend.com/domains/${d.id}`, {
+              headers: { Authorization: `Bearer ${resendApiKey}` },
+            });
+            const detail = await detailResp.json() as any;
+            diagnostic.verifiedDomains.push({
+              id: d.id,
+              name: d.name,
+              status: detail.status || d.status,
+              region: d.region,
+              records: (detail.records || []).map((r: any) => ({
+                record: r.record,
+                type: r.type,
+                name: r.name,
+                value: r.value,
+                status: r.status,
+              })),
+            });
+          } catch {
+            diagnostic.verifiedDomains.push({
+              id: d.id,
+              name: d.name,
+              status: d.status,
+              region: d.region,
+            });
+          }
+        }
       } else {
         diagnostic.resendKeyStatus = 'INVALID_OR_RESTRICTED';
         diagnostic.resendError = data?.message || `HTTP ${resp.status}`;
