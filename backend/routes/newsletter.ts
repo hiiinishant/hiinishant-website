@@ -25,14 +25,12 @@ router.post('/', async (req, res) => {
       date: new Date().toISOString()
     });
 
-    res.status(201).json({
-      success: true,
-      message: "✅ Thanks for subscribing! Please check your email for a welcome message."
-    });
-
-    // Send notifications in the background so the subscription response is immediate.
+    // Send welcome email immediately upon subscription
+    let emailSent = false;
     const adminEmail = process.env.EMAIL_TO || 'hiiinishant@gmail.com';
-    void Promise.allSettled([
+
+    try {
+      const [adminRes, welcomeRes] = await Promise.allSettled([
         sendEmail({
           to: adminEmail,
           subject: 'New Newsletter Subscription',
@@ -51,21 +49,37 @@ router.post('/', async (req, res) => {
   <p style="margin-top: 24px; margin-bottom: 0;">Warm regards,</p>
   <p style="margin-top: 16px; margin-bottom: 0;"><strong>Nishant Kumar</strong><br/>Founder, 2 AM Study</p>
   <p style="margin-top: 16px; margin-bottom: 0; color: #475569;"><strong>Team HiiiNishant</strong><br/><em>Building the future of youth.</em></p>
-          </div>`
+</div>`
         })
-      ]).then((results) => {
-        results.forEach((result, index) => {
-          const label = index === 0 ? 'admin' : 'welcome';
-          if (result.status === 'fulfilled') {
-            console.log(`[Newsletter] ${label} email sent successfully`);
-            return;
-          }
-          const error = result.reason as any;
-          const kind = error instanceof EmailDeliveryError ? error.kind : 'unexpected';
-          const code = error instanceof EmailDeliveryError ? error.code : error?.code;
-          console.error(`[Newsletter] ${label} email failed:`, { kind, code: code || 'UNKNOWN' });
-        });
-      });
+      ]);
+
+      if (welcomeRes.status === 'fulfilled') {
+        console.log('[Newsletter] Welcome email sent successfully');
+        emailSent = true;
+      } else {
+        const error = welcomeRes.reason as any;
+        const kind = error instanceof EmailDeliveryError ? error.kind : 'unexpected';
+        const code = error instanceof EmailDeliveryError ? error.code : error?.code;
+        console.error('[Newsletter] Welcome email failed:', { kind, code: code || 'UNKNOWN' });
+      }
+
+      if (adminRes.status === 'fulfilled') {
+        console.log('[Newsletter] Admin notification email sent successfully');
+      } else {
+        const error = adminRes.reason as any;
+        const kind = error instanceof EmailDeliveryError ? error.kind : 'unexpected';
+        const code = error instanceof EmailDeliveryError ? error.code : error?.code;
+        console.error('[Newsletter] Admin notification email failed:', { kind, code: code || 'UNKNOWN' });
+      }
+    } catch (emailErr) {
+      console.error('[Newsletter] Email send error:', emailErr);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "✅ Thanks for subscribing! Please check your email for a welcome message.",
+      emailSent
+    });
 
   } catch (error: any) {
     res.status(500).json({ error: "Failed to subscribe" });

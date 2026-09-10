@@ -94,6 +94,9 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
     port,
     secure,
     auth: { user, pass },
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   });
 
   try {

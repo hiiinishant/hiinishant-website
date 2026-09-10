@@ -51,10 +51,12 @@ router.get('/verify', requireAuth, (req, res) => {
 // Uses Firebase Admin to generate a reset link, then sends via Gmail SMTP
 // so the email comes from hiiinishant@gmail.com (trusted, not spam).
 router.post('/forgot-password', async (req, res) => {
-  console.log('[Auth] Forgot password request received');
-  const { email } = req.body;
+  console.log('[Auth] Forgot-password request received');
+  const { email } = req.body || {};
 
   if (!email || typeof email !== 'string' || !email.includes('@')) {
+    console.warn('[Auth] Forgot-password validation failed: invalid or missing email');
+    console.log('[Auth] Final API response: 400');
     res.status(400).json({ error: 'Please provide a valid email address.' });
     return;
   }
@@ -69,19 +71,30 @@ router.post('/forgot-password', async (req, res) => {
 
     if (!firebaseConfigured) {
       console.error('[Auth] Forgot password configuration failure: Firebase Admin is not initialized');
+      console.log('[Auth] Final API response: 500');
       res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
       return;
     }
 
     // Generate the Firebase password reset link via Admin SDK
+    console.log('[Auth] Firebase reset-link generation started');
     let resetLink: string;
     try {
       resetLink = await admin.auth().generatePasswordResetLink(trimmedEmail);
-      console.log('[Auth] Firebase password reset link generated successfully');
+      console.log('[Auth] Firebase reset-link generation succeeded');
     } catch (error: any) {
-      console.error('[Auth] Firebase password reset link generation failed:', {
-        code: error?.errorInfo?.code || error?.code || 'UNKNOWN',
+      const errCode = error?.errorInfo?.code || error?.code || 'UNKNOWN';
+      console.error('[Auth] Firebase reset-link generation failed:', {
+        code: errCode,
       });
+      // SECURITY: If user is not registered in Firebase Auth, return generic 200 to prevent email enumeration
+      if (errCode === 'auth/user-not-found') {
+        console.log('[Auth] User not found in Firebase Auth — returning generic success response');
+        console.log('[Auth] Final API response: 200 (Generic message)');
+        res.status(200).json({ success: true, message: 'If an account exists with this email, a password reset link has been sent.' });
+        return;
+      }
+      console.log('[Auth] Final API response: 502 (Firebase reset-link generation failed)');
       res.status(502).json({ error: 'Failed to send reset email. Please try again later.' });
       return;
     }
@@ -129,6 +142,7 @@ router.post('/forgot-password', async (req, res) => {
 
     const plainText = `Reset Your Password\n\nHi,\n\nWe received a request to reset the password for your account (${trimmedEmail}).\n\nClick the link below to reset your password (expires in 1 hour):\n${resetLink}\n\nIf you didn't request this, you can safely ignore this email.\n\n© ${new Date().getFullYear()} ${fromName}`;
 
+    console.log('[Auth] SMTP send started');
     try {
       const delivery = await sendEmail({
         to: trimmedEmail,
@@ -140,21 +154,25 @@ router.post('/forgot-password', async (req, res) => {
       if (!delivery?.success) {
         throw new EmailDeliveryError('unexpected', 'Email provider did not confirm delivery');
       }
-      console.log('[Auth] SMTP sendMail completed successfully');
+      console.log('[Auth] SMTP send succeeded');
     } catch (error: any) {
       const kind = error instanceof EmailDeliveryError ? error.kind : 'unexpected';
       const code = error instanceof EmailDeliveryError ? error.code : error?.code;
-      console.error('[Auth] SMTP sendMail failed:', { kind, code: code || 'UNKNOWN' });
-      res.status(kind === 'configuration' ? 500 : 502).json({ error: 'Failed to send reset email. Please try again later.' });
+      console.error('[Auth] SMTP send failed:', { kind, code: code || 'UNKNOWN' });
+      const status = kind === 'configuration' ? 500 : 502;
+      console.log(`[Auth] Final API response: ${status} (SMTP send failed)`);
+      res.status(status).json({ error: 'Failed to send reset email. Please try again later.' });
       return;
     }
 
-    res.status(200).json({ success: true, message: 'Password reset link sent! Check your inbox.' });
+    console.log('[Auth] Final API response: 200 (Reset link delivered)');
+    res.status(200).json({ success: true, message: 'If an account exists with this email, a password reset link has been sent.' });
 
   } catch (error: any) {
     console.error('[Auth] Unexpected forgot password failure:', {
       code: error?.errorInfo?.code || error?.code || 'UNKNOWN',
     });
+    console.log('[Auth] Final API response: 500 (Unexpected exception)');
     res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
   }
 });

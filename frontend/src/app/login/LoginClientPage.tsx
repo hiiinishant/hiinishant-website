@@ -10,6 +10,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendEmailVerification,
+  sendPasswordResetEmail,
   reload,
   getIdToken,
   GoogleAuthProvider,
@@ -248,34 +249,76 @@ export default function LoginClientPage() {
 
   const handleForgotPassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isConfigured) {
-      setNotice({ text: "Firebase authentication is not configured.", type: "error" });
+    if (!isConfigured || !auth) {
+      setNotice({ text: "Authentication is not configured.", type: "error" });
       return;
     }
     const email = resetEmail.trim();
-    if (!email) {
-      setNotice({ text: "Please enter your email address.", type: "error" });
+    if (!email || !email.includes("@")) {
+      setNotice({ text: "Please enter a valid email address.", type: "error" });
       return;
     }
     setAuthLoading(true);
     setNotice(null);
+
+    const genericSuccessMessage = "If an account exists with this email, a password reset link has been sent.";
+
     try {
-      // Call backend which uses Gmail SMTP — reliably lands in inbox (not spam)
-      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json() as { success?: boolean; message?: string; error?: string };
-      if (!res.ok) {
-        setNotice({ text: data.error || "Failed to send reset email. Please try again.", type: "error" });
-        return;
+      let shouldUseFallback = false;
+      try {
+        // 1. Attempt backend email delivery (custom branded email)
+        const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+
+        const data = await res.json().catch(() => null) as { success?: boolean; message?: string; error?: string } | null;
+
+        if (res.ok && data?.success) {
+          setNotice({ text: data.message || genericSuccessMessage, type: "success" });
+          setForgotPassword(false);
+          setResetEmail("");
+          return;
+        }
+
+        // Explicit 400 Bad Request: client input validation error, do not fallback
+        if (res.status === 400) {
+          setNotice({ text: data?.error || "Please enter a valid email address.", type: "error" });
+          return;
+        }
+
+        // For backend/upstream/email-service failures (e.g. 500, 502, 503, 504), use fallback
+        shouldUseFallback = true;
+      } catch {
+        // Backend unreachable or network failure -> use fallback
+        shouldUseFallback = true;
       }
-      setNotice({ text: data.message || "Password reset link sent! Check your inbox.", type: "success" });
-      setForgotPassword(false);
-      setResetEmail("");
-    } catch {
-      setNotice({ text: "Network error. Please check your connection and try again.", type: "error" });
+
+      // 2. Firebase native fallback when backend/email service is unavailable
+      if (shouldUseFallback) {
+        try {
+          await sendPasswordResetEmail(auth, email);
+          setNotice({ text: genericSuccessMessage, type: "success" });
+          setForgotPassword(false);
+          setResetEmail("");
+          return;
+        } catch (fbError: any) {
+          // If user is not found, keep response generic to prevent email enumeration
+          if (fbError?.code === "auth/user-not-found") {
+            setNotice({ text: genericSuccessMessage, type: "success" });
+            setForgotPassword(false);
+            setResetEmail("");
+            return;
+          }
+          if (fbError?.code === "auth/invalid-email") {
+            setNotice({ text: "Please enter a valid email address.", type: "error" });
+            return;
+          }
+          setNotice({ text: fbError?.message || "Failed to send reset email. Please try again later.", type: "error" });
+          return;
+        }
+      }
     } finally {
       setAuthLoading(false);
     }
