@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { generateToken } from '../lib/auth';
 import { requireAuth } from '../middleware/auth';
 import admin from '../lib/firebaseAdmin';
-import { sendEmail } from '../lib/mail';
+import { EmailDeliveryError, sendEmail } from '../lib/mail';
 
 const router = Router();
 
@@ -61,8 +61,29 @@ router.post('/forgot-password', async (req, res) => {
   const trimmedEmail = email.trim().toLowerCase();
 
   try {
+    const firebaseConfigured = admin.apps.length > 0 && (
+      Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS) ||
+      Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY)
+    );
+
+    if (!firebaseConfigured) {
+      console.error('[Auth] Forgot password configuration failure: Firebase Admin is not initialized');
+      res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
+      return;
+    }
+
     // Generate the Firebase password reset link via Admin SDK
-    const resetLink = await admin.auth().generatePasswordResetLink(trimmedEmail);
+    let resetLink: string;
+    try {
+      resetLink = await admin.auth().generatePasswordResetLink(trimmedEmail);
+      console.log('[Auth] Firebase password reset link generated successfully');
+    } catch (error: any) {
+      console.error('[Auth] Firebase password reset link generation failed:', {
+        code: error?.errorInfo?.code || error?.code || 'UNKNOWN',
+      });
+      res.status(502).json({ error: 'Failed to send reset email. Please try again later.' });
+      return;
+    }
 
     const fromName = process.env.EMAIL_FROM_NAME || 'HiiiNishant';
 
@@ -107,26 +128,32 @@ router.post('/forgot-password', async (req, res) => {
 
     const plainText = `Reset Your Password\n\nHi,\n\nWe received a request to reset the password for your account (${trimmedEmail}).\n\nClick the link below to reset your password (expires in 1 hour):\n${resetLink}\n\nIf you didn't request this, you can safely ignore this email.\n\n© ${new Date().getFullYear()} ${fromName}`;
 
-    await sendEmail({
-      to: trimmedEmail,
-      subject: `🔐 Reset Your Password — ${fromName}`,
-      html: htmlBody,
-      text: plainText,
-    });
+    try {
+      const delivery = await sendEmail({
+        to: trimmedEmail,
+        subject: `🔐 Reset Your Password — ${fromName}`,
+        html: htmlBody,
+        text: plainText,
+      });
 
-    console.log(`[Auth] Password reset email sent to: ${trimmedEmail}`);
-    res.status(200).json({ success: true, message: 'Password reset link sent! Check your inbox.' });
-
-  } catch (error: any) {
-    console.error('[Auth] Forgot password error:', error);
-
-    // Firebase throws auth/user-not-found if email doesn't exist
-    if (error?.errorInfo?.code === 'auth/user-not-found' || error?.code === 'auth/user-not-found') {
-      // Security: don't reveal if email exists or not — still return success
-      res.status(200).json({ success: true, message: 'If this email is registered, a reset link has been sent.' });
+      if (!delivery?.success) {
+        throw new EmailDeliveryError('unexpected', 'Email provider did not confirm delivery');
+      }
+      console.log('[Auth] SMTP sendMail completed successfully');
+    } catch (error: any) {
+      const kind = error instanceof EmailDeliveryError ? error.kind : 'unexpected';
+      const code = error instanceof EmailDeliveryError ? error.code : error?.code;
+      console.error('[Auth] SMTP sendMail failed:', { kind, code: code || 'UNKNOWN' });
+      res.status(kind === 'configuration' ? 500 : 502).json({ error: 'Failed to send reset email. Please try again later.' });
       return;
     }
 
+    res.status(200).json({ success: true, message: 'Password reset link sent! Check your inbox.' });
+
+  } catch (error: any) {
+    console.error('[Auth] Unexpected forgot password failure:', {
+      code: error?.errorInfo?.code || error?.code || 'UNKNOWN',
+    });
     res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
   }
 });

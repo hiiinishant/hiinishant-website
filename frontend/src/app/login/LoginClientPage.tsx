@@ -665,7 +665,12 @@ export default function LoginClientPage() {
                 {forgotPassword ? (
                   <form onSubmit={handleForgotPassword} className="space-y-5">
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium text-brand-200">Email Address</label>
+                      <div className="flex items-center justify-between gap-3">
+                        <label className="block text-sm font-medium text-brand-200">Email Address</label>
+                        {authUser?.email && (
+                          <span className="text-[11px] text-brand-400">Account email</span>
+                        )}
+                      </div>
                       <input
                         type="email"
                         required
@@ -674,6 +679,9 @@ export default function LoginClientPage() {
                         onChange={(e) => setResetEmail(e.target.value)}
                         className="w-full bg-zinc-900 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-brand-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-all"
                       />
+                      <p className="text-[11px] text-brand-400">
+                        Enter the email address registered to your account.
+                      </p>
                     </div>
 
                     <div className="pt-2 flex items-center gap-3">
@@ -818,6 +826,7 @@ export default function LoginClientPage() {
                           type="button"
                           onClick={() => {
                             setForgotPassword(true);
+                            setResetEmail(authUser?.email ?? "");
                             setNotice(null);
                           }}
                           className="text-brand-300 hover:text-amber-400 transition-colors underline underline-offset-2"

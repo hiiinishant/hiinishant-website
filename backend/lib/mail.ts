@@ -1,5 +1,19 @@
 import nodemailer from "nodemailer";
 
+export type EmailErrorKind = "configuration" | "authentication" | "connection" | "sending" | "unexpected";
+
+export class EmailDeliveryError extends Error {
+  readonly kind: EmailErrorKind;
+  readonly code?: string;
+
+  constructor(kind: EmailErrorKind, message: string, code?: string) {
+    super(message);
+    this.name = "EmailDeliveryError";
+    this.kind = kind;
+    this.code = code;
+  }
+}
+
 export interface SendEmailParams {
   to: string;
   subject: string;
@@ -59,10 +73,10 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
   const from = process.env.EMAIL_FROM || user;
 
   if (!user || !pass) {
-    console.warn(
-      "⚠️ Neither Resend API Key nor SMTP credentials (SMTP_USER/SMTP_PASS) are configured. Email notification skipped."
+    throw new EmailDeliveryError(
+      "configuration",
+      "SMTP_USER and SMTP_PASS must be configured for SMTP email delivery"
     );
-    return { success: false, reason: "No email service credentials configured" };
   }
 
   console.log("🔌 Sending email using Nodemailer SMTP...");
@@ -85,8 +99,13 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
     console.log(`📨 Email sent successfully via SMTP! MessageId: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error("❌ Error sending email via SMTP:", error);
-    throw error;
+    const code = typeof error?.code === "string" ? error.code : undefined;
+    const kind: EmailErrorKind = code === "EAUTH"
+      ? "authentication"
+      : ["ECONNECTION", "ETIMEDOUT", "ENOTFOUND", "EHOSTUNREACH", "ECONNREFUSED"].includes(code || "")
+        ? "connection"
+        : "sending";
+    throw new EmailDeliveryError(kind, "SMTP email delivery failed", code);
   }
 }
 
