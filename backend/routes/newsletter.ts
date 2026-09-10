@@ -58,21 +58,19 @@ router.post('/', async (req, res) => {
         emailSent = true;
       } else {
         const error = welcomeRes.reason as any;
-        const kind = error instanceof EmailDeliveryError ? error.kind : 'unexpected';
-        const code = error instanceof EmailDeliveryError ? error.code : error?.code;
-        console.error('[Newsletter] Welcome email failed:', { kind, code: code || 'UNKNOWN' });
+        const msg = error?.message || (error instanceof EmailDeliveryError ? error.message : 'Unknown error');
+        console.error('[Newsletter] Welcome email failed:', msg);
       }
 
       if (adminRes.status === 'fulfilled') {
         console.log('[Newsletter] Admin notification email sent successfully');
       } else {
         const error = adminRes.reason as any;
-        const kind = error instanceof EmailDeliveryError ? error.kind : 'unexpected';
-        const code = error instanceof EmailDeliveryError ? error.code : error?.code;
-        console.error('[Newsletter] Admin notification email failed:', { kind, code: code || 'UNKNOWN' });
+        const msg = error?.message || (error instanceof EmailDeliveryError ? error.message : 'Unknown error');
+        console.error('[Newsletter] Admin notification email failed:', msg);
       }
-    } catch (emailErr) {
-      console.error('[Newsletter] Email send error:', emailErr);
+    } catch (emailErr: any) {
+      console.error('[Newsletter] Email send error:', emailErr?.message || emailErr);
     }
 
     res.status(201).json({
@@ -84,6 +82,50 @@ router.post('/', async (req, res) => {
   } catch (error: any) {
     res.status(500).json({ error: "Failed to subscribe" });
   }
+});
+
+// GET — diagnostic: inspect email provider status safely without exposing secrets
+router.get('/diagnostic', async (req, res) => {
+  const resendApiKey = process.env.RESEND_API_KEY?.trim();
+  const emailFrom = process.env.EMAIL_FROM?.trim() || 'onboarding@resend.dev';
+  const emailFromName = process.env.EMAIL_FROM_NAME?.trim() || 'Portfolio Website';
+  const adminEmail = process.env.EMAIL_TO || 'hiiinishant@gmail.com';
+
+  const diagnostic: any = {
+    hasResendApiKey: Boolean(resendApiKey),
+    resendKeyPrefix: resendApiKey ? `${resendApiKey.slice(0, 4)}...${resendApiKey.slice(-4)}` : null,
+    resendKeyLength: resendApiKey ? resendApiKey.length : 0,
+    emailFrom,
+    emailFromName,
+    adminEmail,
+    smtpConfigured: Boolean(process.env.SMTP_USER && process.env.SMTP_PASS),
+    activeProvider: resendApiKey ? 'resend' : (process.env.SMTP_USER && process.env.SMTP_PASS ? 'smtp' : 'none'),
+  };
+
+  if (resendApiKey) {
+    try {
+      const resp = await fetch('https://api.resend.com/domains', {
+        headers: { Authorization: `Bearer ${resendApiKey}` },
+      });
+      const data = await resp.json() as any;
+      if (resp.ok) {
+        diagnostic.resendKeyStatus = 'VALID';
+        diagnostic.verifiedDomains = (data?.data || []).map((d: any) => ({
+          name: d.name,
+          status: d.status,
+          region: d.region,
+        }));
+      } else {
+        diagnostic.resendKeyStatus = 'INVALID_OR_RESTRICTED';
+        diagnostic.resendError = data?.message || `HTTP ${resp.status}`;
+      }
+    } catch (e: any) {
+      diagnostic.resendKeyStatus = 'CONNECTION_ERROR';
+      diagnostic.resendError = e?.message;
+    }
+  }
+
+  res.json(diagnostic);
 });
 
 // GET — admin-only: view all subscribers

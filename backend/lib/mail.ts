@@ -31,15 +31,15 @@ export interface SendEmailParams {
 }
 
 export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailParams) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const fromName = process.env.EMAIL_FROM_NAME || "Portfolio Website";
+  const resendApiKey = process.env.RESEND_API_KEY?.trim();
+  const fromName = process.env.EMAIL_FROM_NAME?.trim() || "Portfolio Website";
 
   // 1. Try Resend API if API Key is configured
   if (resendApiKey) {
     console.log("[Mail] Resend provider selected");
     // If using Resend sandbox/onboarding, default from is onboarding@resend.dev unless EMAIL_FROM is custom-set
     const defaultFrom = "onboarding@resend.dev";
-    const from = process.env.EMAIL_FROM || defaultFrom;
+    const from = process.env.EMAIL_FROM?.trim() || defaultFrom;
 
     try {
       const response = await fetch("https://api.resend.com/emails", {
@@ -61,15 +61,22 @@ export async function sendEmail({ to, subject, text, html, replyTo }: SendEmailP
       const data = await response.json() as any;
 
       if (!response.ok) {
-        throw new Error(data?.message || `Resend API returned status ${response.status}`);
+        const errorMsg = data?.message || `Resend API returned status ${response.status}`;
+        console.error(`[Mail] Resend API error (${response.status}):`, {
+          status: response.status,
+          message: errorMsg,
+          name: data?.name,
+          from,
+          to,
+        });
+        throw new Error(errorMsg);
       }
 
-      console.log("[Mail] Resend request succeeded");
+      console.log(`[Mail] Resend request succeeded, messageId: ${data.id}`);
       return { success: true, messageId: data.id };
     } catch (error: any) {
-      const providerError = getSafeProviderError(error);
-      console.error("[Mail] Resend request failed:", providerError);
-      throw new EmailDeliveryError("sending", "Resend email delivery failed", providerError.code);
+      console.error("[Mail] Resend request failed:", error?.message || error);
+      throw new EmailDeliveryError("sending", error?.message || "Resend email delivery failed", error?.code);
     }
   }
 
