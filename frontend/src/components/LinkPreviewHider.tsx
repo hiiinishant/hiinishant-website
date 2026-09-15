@@ -35,10 +35,18 @@ export default function LinkPreviewHider() {
       }
     };
 
-    // 1. On mouseover: remove href to prevent the browser status bar tooltip
+    // 1. On mouseover: prefetch internal route & remove href to prevent the browser status bar tooltip
     const handleMouseOver = (e: MouseEvent) => {
       const link = (e.target as HTMLElement)?.closest?.("a") as HTMLAnchorElement | null;
       if (link && link.hasAttribute("href")) {
+        const href = link.getAttribute("href");
+        if (href && href.startsWith("/") && !href.startsWith("//")) {
+          try {
+            router.prefetch(href);
+          } catch {
+            // ignore prefetch errors
+          }
+        }
         hideHref(link);
       }
     };
@@ -110,9 +118,6 @@ export default function LinkPreviewHider() {
       // Internal routing with Next.js router
       if (rawHref.startsWith("/")) {
         e.preventDefault();
-        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
         router.push(rawHref, { scroll: true });
       }
     };
@@ -121,6 +126,14 @@ export default function LinkPreviewHider() {
     const handleFocusIn = (e: FocusEvent) => {
       const link = (e.target as HTMLElement)?.closest?.("a") as HTMLAnchorElement | null;
       if (link && link.hasAttribute("href")) {
+        const href = link.getAttribute("href");
+        if (href && href.startsWith("/") && !href.startsWith("//")) {
+          try {
+            router.prefetch(href);
+          } catch {
+            // ignore prefetch errors
+          }
+        }
         hideHref(link);
       }
     };
@@ -143,9 +156,6 @@ export default function LinkPreviewHider() {
             if (rawHref.startsWith("http") || link.getAttribute("target") === "_blank") {
               window.open(rawHref, "_blank", "noopener,noreferrer");
             } else {
-              window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-              document.documentElement.scrollTop = 0;
-              document.body.scrollTop = 0;
               router.push(rawHref, { scroll: true });
             }
           }

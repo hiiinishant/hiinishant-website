@@ -577,22 +577,20 @@ router.post('/answer', async (req: Request, res: Response) => {
       .collection(RESPONSES).doc(uid)
       .collection('responses').doc(targetKey);
     const statsRef = firestore.collection(STATS).doc(uid);
-
-    // Check if targetKey exists as doc ID, if not fallback to quizDate doc
-    let quizSnap = await quizRef.get();
-    if (!quizSnap.exists && quizDate) {
-      quizRef = firestore.collection(QUIZZES).doc(quizDate);
-      responseRef = firestore
-        .collection(RESPONSES).doc(uid)
-        .collection('responses').doc(quizDate);
-    }
-
     const userRef = firestore.collection('users').doc(uid);
 
     // ── Transaction: validate, record, update stats ───────────────────────────
     const result = await firestore.runTransaction(async (tx) => {
-      const [qSnap, rSnap, sSnap, uSnap] = await Promise.all([
-        tx.get(quizRef),
+      let qSnap = await tx.get(quizRef);
+      if (!qSnap.exists && quizDate && targetKey !== quizDate) {
+        quizRef = firestore.collection(QUIZZES).doc(quizDate);
+        responseRef = firestore
+          .collection(RESPONSES).doc(uid)
+          .collection('responses').doc(quizDate);
+        qSnap = await tx.get(quizRef);
+      }
+
+      const [rSnap, sSnap, uSnap] = await Promise.all([
         tx.get(responseRef),
         tx.get(statsRef),
         tx.get(userRef),

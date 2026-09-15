@@ -1,32 +1,23 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
 
 export default function PageWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isNsgram = pathname?.startsWith("/nsgram");
 
-  // Reset scroll position to top whenever navigating between pages/routes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // If there's an anchor hash (e.g. #contact, #faq), let the browser or hash handler handle it
-      if (!window.location.hash) {
-        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-
-        // Perform a follow-up check on next animation frame in case dynamic content/layout renders asynchronously
-        const rafId = requestAnimationFrame(() => {
-          window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-          document.documentElement.scrollTop = 0;
-          document.body.scrollTop = 0;
-        });
-
-        return () => cancelAnimationFrame(rafId);
-      }
-    }
-  }, [pathname]);
+  // ─── Scroll behaviour notes ───────────────────────────────────────────────
+  // Next.js App Router + <Link prefetch> + router.push({ scroll: true })
+  // already scroll the page to the top on every forward navigation.
+  // The browser's native scroll-restoration handles the back/forward cache,
+  // so pressing Back correctly returns the user to their previous scroll position.
+  //
+  // We deliberately do NOT call window.scrollTo here because:
+  //  1. It caused a "homepage banner flash" — the homepage scrolled to the top
+  //     while the new page was still loading, briefly showing the hero/banner.
+  //  2. It broke the back button — every time the user pressed Back, the page
+  //     was forced to the very top instead of restoring their previous position.
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <main className={`flex-grow ${isNsgram ? "" : "pt-16 lg:pt-20"}`}>

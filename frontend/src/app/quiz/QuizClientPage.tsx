@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -91,6 +91,7 @@ export default function QuizClientPage() {
   const [loading, setLoading] = useState(true);
   const [quizLoading, setQuizLoading] = useState(false);
   const [submittingMap, setSubmittingMap] = useState<Record<string, boolean>>({});
+  const [pendingSelectionMap, setPendingSelectionMap] = useState<Record<string, "A" | "B" | "C" | "D">>({});
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [subjectsList, setSubjectsList] = useState<string[]>([]);
   // Tracks quiz IDs rejected by the backend with HTTP 410 QUIZ_EXPIRED
@@ -219,6 +220,7 @@ export default function QuizClientPage() {
     if (!user) { setShowLoginPrompt(true); return; }
     if (responses[quizId] || submittingMap[quizId] || expiredQuizIds.has(quizId)) return;
 
+    setPendingSelectionMap((prev) => ({ ...prev, [quizId]: option }));
     setSubmittingMap((prev) => ({ ...prev, [quizId]: true }));
     try {
       const apiBase = getApiBase();
@@ -243,16 +245,31 @@ export default function QuizClientPage() {
           xpEarned: result.xpEarned,
           correctOption: result.correctOption,
         };
-        setResponses((prev) => ({ ...prev, [quizId]: serverRespItem, [targetDate || ""]: serverRespItem }));
+        setResponses((prev) => {
+          const next = { ...prev, [quizId]: serverRespItem };
+          // Only map by date if this quiz's ID is literally the date itself (legacy single-doc format)
+          if (!quizId || quizId === targetDate) {
+            if (targetDate) next[targetDate] = serverRespItem;
+          }
+          return next;
+        });
         if (result.stats) setStats(result.stats);
         setQuizzes((prev) =>
-          prev.map((q) => (q.id === quizId || q.date === targetDate ? { ...q, attemptsCount: (q.attemptsCount || 0) + 1 } : q))
+          prev.map((q) => {
+            const isMatch = q.id ? q.id === quizId : q.date === targetDate;
+            return isMatch ? { ...q, attemptsCount: (q.attemptsCount || 0) + 1 } : q;
+          })
         );
       }
     } catch {
       /* silent — network errors leave no state change */
     } finally {
       setSubmittingMap((prev) => ({ ...prev, [quizId]: false }));
+      setPendingSelectionMap((prev) => {
+        const next = { ...prev };
+        delete next[quizId];
+        return next;
+      });
     }
   };
 
@@ -555,7 +572,7 @@ export default function QuizClientPage() {
               ) : (
                 quizzes.map((quiz, qIdx) => {
                   const quizId = quiz.id || quiz.date;
-                  const response = responses[quizId] || responses[quiz.date];
+                  const response = responses[quizId] || (!quiz.id ? responses[quiz.date] : undefined);
                   const hasAnswered = !!response;
                   const submitting = !!submittingMap[quizId];
                   const isExpired = expiredQuizIds.has(quizId);
@@ -594,6 +611,10 @@ export default function QuizClientPage() {
                           const optKey = `option${opt}` as keyof Quiz;
                           const optVal = quiz[optKey] as string;
                           const isSelected = response?.selectedOption === opt;
+                          // Optimistic pending tracking
+                          const pendingOpt = pendingSelectionMap[quizId];
+                          const isPending = !hasAnswered && pendingOpt === opt;
+                          const isAnyPending = !hasAnswered && !!pendingOpt;
                           // For past quizzes use quiz.correctOption (returned by backend); for live use user's response
                           const isCorrectOpt = isPastQuiz ? quiz.correctOption === opt : response?.correctOption === opt;
 
@@ -614,6 +635,16 @@ export default function QuizClientPage() {
                               labelState = "bg-white/10 text-brand-300 font-bold";
                               textState = "text-brand-200 font-normal";
                             }
+                          } else if (!hasAnswered && isPending) {
+                            // OPTIMISTIC - instant amber highlight while saving in background
+                            cardState = "border-amber-500/60 bg-amber-500/15 shadow-[0_0_24px_rgba(245,158,11,0.2)] cursor-default";
+                            labelState = "bg-amber-500/30 text-amber-200 font-extrabold";
+                            textState = "text-amber-100 font-semibold";
+                          } else if (!hasAnswered && isAnyPending) {
+                            // Other options dimmed while one is pending
+                            cardState = "border-white/6 bg-white/2 cursor-default opacity-50";
+                            labelState = "bg-white/8 text-brand-400 font-bold";
+                            textState = "text-brand-400 font-medium";
                           } else if (!hasAnswered) {
                             // Unanswered live quiz option — clear contrast and glowing hover state
                             cardState = "border-white/12 bg-white/4 hover:bg-amber-500/10 hover:border-amber-500/40 hover:shadow-[0_0_24px_rgba(245,158,11,0.12)] cursor-pointer";
@@ -639,7 +670,7 @@ export default function QuizClientPage() {
                           return (
                             <button
                               key={opt}
-                              disabled={hasAnswered || submitting || isPastQuiz || isExpired}
+                              disabled={hasAnswered || !!pendingOpt || submitting || isPastQuiz || isExpired}
                               onClick={() => handleOptionClick(quizId, opt, quiz.date)}
                               className={`${cardBase} ${cardState}`}
                             >
@@ -650,12 +681,12 @@ export default function QuizClientPage() {
                                     ? "✓"
                                     : isSelected && !isCorrectOpt && hasAnswered
                                       ? "✗"
-                                      : opt}
+                                      : isPending ? "" : opt}
                               </span>
                               <span className={`flex-1 leading-snug ${textState} transition-colors duration-300`}>
                                 {optVal}
                               </span>
-                              {!hasAnswered && !isPastQuiz && (
+                              {!hasAnswered && !isAnyPending && !isPastQuiz && (
                                 <svg className="w-4 h-4 text-amber-400/0 group-hover/opt:text-amber-400/70 transition-all duration-300 shrink-0 -translate-x-1 group-hover/opt:translate-x-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
@@ -666,7 +697,7 @@ export default function QuizClientPage() {
                       </div>
 
                       {/* ─── SUBMITTING SPINNER ─── */}
-                      {submitting && (
+                      {submitting && !pendingSelectionMap[quizId] && (
                         <div className="flex items-center justify-center gap-2 text-brand-500 text-xs font-mono">
                           <div className="w-3.5 h-3.5 border-2 border-amber-400/40 border-t-amber-400 rounded-full animate-spin" />
                           Saving your answer...
@@ -768,3 +799,5 @@ export default function QuizClientPage() {
     </div>
   );
 }
+
+
