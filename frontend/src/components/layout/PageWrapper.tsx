@@ -13,18 +13,29 @@ export default function PageWrapper({ children }: { children: React.ReactNode })
   useLayoutEffect(() => {
     const handlePopState = () => {
       isPopState.current = true;
+
+      // globals.css sets `scroll-behavior: smooth` on <html>, which makes the
+      // browser's own scroll restoration animate visibly (slides from top down
+      // to the card position). We temporarily override it to "auto" the instant
+      // Back/Forward is pressed so the position restores in zero milliseconds,
+      // then restore smooth scrolling after two animation frames (by which time
+      // the browser has already snapped to the saved position).
+      document.documentElement.style.scrollBehavior = "auto";
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.documentElement.style.scrollBehavior = "";
+        });
+      });
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   useLayoutEffect(() => {
-    // Skip scroll-to-top on Back/Forward browser navigation so the browser
-    // can restore the previous scroll position naturally.
-    // On forward navigation (card click), scroll to top instantly AFTER the
-    // new page has rendered but BEFORE the browser paints the first frame —
-    // this prevents both the banner flash AND the visible smooth-scroll animation
-    // caused by `scroll-behavior: smooth` in globals.css.
+    // Forward navigation (card click): scroll new page to top instantly,
+    // before the browser paints, bypassing smooth scroll CSS.
+    // Back/Forward navigation: skip — browser restores position instantly
+    // (smooth was already disabled by the popstate handler above).
     if (!isPopState.current && !window.location.hash) {
       window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }
