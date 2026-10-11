@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import { firestore } from '../lib/firebaseAdmin';
 import admin from '../lib/firebaseAdmin';
+import { uploadBuffer } from '../lib/cloudinary';
 import {
   BioPage,
   BioLink,
@@ -13,6 +15,10 @@ import {
 } from '../lib/bioTypes';
 
 const router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+});
 
 /**
  * Reusable Middleware: Verify Firebase ID token from Authorization header.
@@ -262,7 +268,9 @@ router.put('/me', requireFirebaseAuth, async (req: Request, res: Response) => {
       if (typeof body.avatarUrl === 'string' && body.avatarUrl.trim().length > 0) {
         const cleanUrl = body.avatarUrl.trim();
         if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-          avatarUrl = cleanUrl.slice(0, 500);
+          avatarUrl = cleanUrl.slice(0, 1000);
+        } else if (cleanUrl.startsWith('data:image/')) {
+          avatarUrl = cleanUrl.slice(0, 500000);
         }
       } else {
         avatarUrl = '';
@@ -358,6 +366,46 @@ router.put('/me', requireFirebaseAuth, async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[Bio API] Update /me error:', error);
     res.status(500).json({ error: error.message || 'Failed to update profile.' });
+  }
+});
+
+// ─── 3b. Authenticated Endpoint: Upload Custom Avatar Image ──────────────────
+// POST /api/bio/upload-avatar
+router.post('/upload-avatar', requireFirebaseAuth, upload.single('image'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'Image file is required.' });
+      return;
+    }
+
+    const uid = (req as any).firebaseUid as string;
+    const uploadResult = await uploadBuffer(req.file.buffer, {
+      folder: 'hiiinishant/bio_avatars',
+      transformation: 'w_400,h_400,c_fill,g_face',
+      quality: 'auto',
+      fetch_format: 'auto',
+    });
+
+    if (firestore) {
+      const bioDocRef = firestore.collection('bio_pages').doc(uid);
+      await bioDocRef.set(
+        {
+          avatarType: 'custom',
+          avatarUrl: uploadResult.secureUrl,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      url: uploadResult.secureUrl,
+      publicId: uploadResult.publicId,
+    });
+  } catch (error: any) {
+    console.error('[Bio API] Upload avatar error:', error);
+    res.status(500).json({ error: error.message || 'Failed to upload avatar image.' });
   }
 });
 

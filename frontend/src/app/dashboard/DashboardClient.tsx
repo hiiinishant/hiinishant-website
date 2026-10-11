@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -52,6 +52,8 @@ import {
   Heart,
   Smartphone,
   X,
+  Upload,
+  Camera,
 } from "lucide-react";
 import {
   renderBioIcon,
@@ -93,10 +95,122 @@ export default function DashboardClient() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Avatar file upload state & ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
   const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
+
+  // Avatar image file upload handler (dual backend Cloudinary + compressed canvas fallback)
+  const handleAvatarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Please choose an image file (PNG, JPG, WebP, GIF)", "error");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Image must be smaller than 5MB", "error");
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+
+      // Attempt 1: Upload via Backend API to Cloudinary
+      let uploadedUrl: string | null = null;
+      if (currentUser) {
+        try {
+          const token = await getIdToken(currentUser);
+          const formData = new FormData();
+          formData.append("image", file);
+
+          const res = await fetch(`${API_BASE}/api/bio/upload-avatar`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.url) {
+              uploadedUrl = data.url;
+            }
+          }
+        } catch (apiErr) {
+          console.warn("Backend avatar upload failed, falling back to local compressed data URL:", apiErr);
+        }
+      }
+
+      // Attempt 2: If API upload is not available, compress client-side to square WebP data URL
+      if (!uploadedUrl) {
+        uploadedUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (readerEvent) => {
+            const img = new (window as any).Image();
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              const MAX_SIZE = 360;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > MAX_SIZE) {
+                  height = Math.round((height * MAX_SIZE) / width);
+                  width = MAX_SIZE;
+                }
+              } else {
+                if (height > MAX_SIZE) {
+                  width = Math.round((width * MAX_SIZE) / height);
+                  height = MAX_SIZE;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext("2d");
+              if (!ctx) {
+                resolve(readerEvent.target?.result as string);
+                return;
+              }
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL("image/webp", 0.85));
+            };
+            img.onerror = reject;
+            img.src = readerEvent.target?.result as string;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (uploadedUrl && profile) {
+        const updated = {
+          ...profile,
+          avatarType: "custom" as const,
+          avatarUrl: uploadedUrl,
+        };
+        setProfile(updated);
+        await handleSaveProfile({ avatarType: "custom", avatarUrl: uploadedUrl });
+        showToast("Profile image updated!", "success");
+      }
+    } catch (err: any) {
+      console.error("Avatar upload error:", err);
+      showToast(err.message || "Failed to upload image", "error");
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   // 1. Observe Authentication
   useEffect(() => {
@@ -1008,16 +1122,108 @@ export default function DashboardClient() {
                     </div>
 
                     {profile.avatarType === "custom" && (
-                      <div className="mt-3">
-                        <label className="block text-xs text-brand-400 mb-1">Custom Image URL</label>
+                      <div className="mt-4 p-4 rounded-2xl bg-black/40 border border-white/10 space-y-4">
+                        {/* Hidden file input */}
                         <input
-                          type="url"
-                          value={profile.avatarUrl || ""}
-                          onChange={(e) => setProfile({ ...profile, avatarUrl: e.target.value })}
-                          onBlur={() => handleSaveProfile({ avatarUrl: profile.avatarUrl })}
-                          placeholder="https://images.unsplash.com/... or your image link"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent font-mono"
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          onChange={handleAvatarFileUpload}
+                          className="hidden"
                         />
+
+                        {/* Upload Card / Dropzone */}
+                        <div>
+                          <label className="block text-xs font-semibold text-brand-300 uppercase tracking-wider mb-2">
+                            Upload Avatar Photo
+                          </label>
+
+                          <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 rounded-2xl bg-zinc-900/80 border border-dashed border-white/20 hover:border-accent/40 transition-all">
+                            {/* Avatar Preview thumbnail */}
+                            <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-accent/40 bg-zinc-800 shrink-0 flex items-center justify-center shadow-lg">
+                              {profile.avatarUrl ? (
+                                <Image
+                                  src={profile.avatarUrl}
+                                  alt="Custom Avatar Preview"
+                                  fill
+                                  sizes="64px"
+                                  className="object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <Camera className="w-6 h-6 text-brand-400" />
+                              )}
+                              {uploadingAvatar && (
+                                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                                  <Loader2 className="w-5 h-5 animate-spin text-accent" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex-1 text-center sm:text-left">
+                              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  disabled={uploadingAvatar}
+                                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-xs transition-all shadow-md cursor-pointer disabled:opacity-50"
+                                >
+                                  {uploadingAvatar ? (
+                                    <>
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      <span>Uploading...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Upload className="w-3.5 h-3.5" />
+                                      <span>{profile.avatarUrl ? "Change Photo" : "Upload Image"}</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {profile.avatarUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setProfile({ ...profile, avatarUrl: "" });
+                                      handleSaveProfile({ avatarUrl: "" });
+                                    }}
+                                    className="px-3 py-2 rounded-xl border border-white/10 hover:border-red-500/40 hover:bg-red-500/10 text-brand-400 hover:text-red-400 text-xs font-semibold transition-all cursor-pointer"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-brand-400 mt-1.5">
+                                PNG, JPG, WebP, or GIF up to 5MB (auto-cropped to square)
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="relative flex items-center justify-center">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-white/10" />
+                          </div>
+                          <span className="relative px-3 bg-zinc-900 text-[10px] font-semibold text-brand-400 uppercase tracking-wider">
+                            Or Paste Direct Image Link
+                          </span>
+                        </div>
+
+                        {/* Custom Image URL input */}
+                        <div>
+                          <label className="block text-xs text-brand-400 mb-1">Custom Image URL</label>
+                          <input
+                            type="url"
+                            value={profile.avatarUrl || ""}
+                            onChange={(e) => setProfile({ ...profile, avatarUrl: e.target.value })}
+                            onBlur={() => handleSaveProfile({ avatarUrl: profile.avatarUrl })}
+                            placeholder="https://images.unsplash.com/... or your image link"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent font-mono"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
