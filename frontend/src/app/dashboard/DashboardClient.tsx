@@ -1,0 +1,1316 @@
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged, getIdToken, type User as FirebaseUser } from "firebase/auth";
+import { auth, isConfigured } from "@/lib/firebase";
+import { API_BASE } from "@/lib/api";
+import {
+  BioPage,
+  BioLink,
+  BioThemeId,
+  ButtonStyle,
+  BIO_THEMES,
+  BUTTON_STYLES,
+  SUPPORTED_LINK_ICONS,
+  isValidBioUrl,
+  isValidUsernameFormat,
+  isReservedUsername,
+  normalizeUsername,
+} from "@/types/bio";
+import {
+  Plus,
+  Trash2,
+  ExternalLink,
+  Copy,
+  Check,
+  Eye,
+  MousePointerClick,
+  Sparkles,
+  Palette,
+  Share2,
+  ArrowUp,
+  ArrowDown,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Settings,
+  Link as LinkIcon,
+  Globe,
+  Send,
+  MessageCircle,
+  Mail,
+  ShoppingBag,
+  BookOpen,
+  Video,
+  Code,
+  Briefcase,
+  Star,
+  Heart,
+  Smartphone,
+  X,
+} from "lucide-react";
+import {
+  renderBioIcon,
+  InstagramIcon,
+  YouTubeIcon,
+  TwitterIcon,
+  LinkedInIcon,
+  GitHubIcon,
+  TelegramIcon,
+  SpotifyIcon,
+  DiscordIcon,
+} from "@/components/bio/BioIcons";
+
+export default function DashboardClient() {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<BioPage | null>(null);
+  const [activeTab, setActiveTab] = useState<"links" | "appearance" | "socials" | "settings">("links");
+
+  // Onboarding username claim state
+  const [claimInput, setClaimInput] = useState("");
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimError, setClaimError] = useState("");
+  const [claimAvailable, setClaimAvailable] = useState<boolean | null>(null);
+
+  // Link addition modal/card state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+  const [newIcon, setNewIcon] = useState("website");
+
+  // Mobile preview drawer
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
+
+  // Toast / feedback alert
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  // 1. Observe Authentication
+  useEffect(() => {
+    if (!isConfigured || !auth) {
+      setAuthChecking(false);
+      return;
+    }
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      setAuthChecking(false);
+      if (user) {
+        fetchUserProfile(user);
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  // 2. Fetch or initialize Bio Profile
+  const fetchUserProfile = async (user: FirebaseUser) => {
+    try {
+      setLoadingProfile(true);
+      const token = await getIdToken(user);
+      const res = await fetch(`${API_BASE}/api/bio/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to load bio profile.");
+      }
+
+      const data = await res.json();
+      if (data.profile) {
+        setProfile(data.profile);
+        if (!data.profile.username) {
+          setClaimInput("");
+        }
+      }
+    } catch (err: any) {
+      console.error("Error fetching bio page:", err);
+      showToast(err.message || "Could not load profile", "error");
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  // 3. Save profile changes to backend
+  const handleSaveProfile = async (updatedData?: Partial<BioPage>) => {
+    if (!currentUser || !profile) return;
+    try {
+      setSaving(true);
+      const token = await getIdToken(currentUser);
+      const dataToSave = {
+        ...profile,
+        ...(updatedData || {}),
+      };
+
+      const res = await fetch(`${API_BASE}/api/bio/me`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(dataToSave),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || "Failed to save changes.");
+      }
+
+      setProfile(resData.profile);
+      showToast("Changes saved successfully!", "success");
+    } catch (err: any) {
+      showToast(err.message || "Error saving profile", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 4. Live Check Username Availability during onboarding or change
+  useEffect(() => {
+    if (!claimInput.trim()) {
+      setClaimAvailable(null);
+      setClaimError("");
+      return;
+    }
+
+    const normalized = normalizeUsername(claimInput);
+    if (!isValidUsernameFormat(normalized)) {
+      setClaimAvailable(false);
+      setClaimError("3-30 lowercase characters, letters, numbers, and underscores only.");
+      return;
+    }
+
+    if (isReservedUsername(normalized)) {
+      setClaimAvailable(false);
+      setClaimError("This handle is reserved. Please pick another.");
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/bio/check-username?username=${encodeURIComponent(normalized)}`);
+        const json = await res.json();
+        if (json.available) {
+          setClaimAvailable(true);
+          setClaimError("");
+        } else {
+          setClaimAvailable(false);
+          setClaimError(json.error || "Handle is already taken.");
+        }
+      } catch {
+        // silent fallback
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [claimInput]);
+
+  // 5. Claim Username
+  const handleClaimUsername = async () => {
+    if (!currentUser || !claimInput.trim() || !claimAvailable) return;
+    try {
+      setClaimLoading(true);
+      const token = await getIdToken(currentUser);
+      const normalized = normalizeUsername(claimInput);
+
+      const res = await fetch(`${API_BASE}/api/bio/claim-username`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username: normalized }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to claim username.");
+      }
+
+      setProfile((prev) => (prev ? { ...prev, username: normalized, isPublished: true } : null));
+      showToast(`Congratulations! Your handle @${normalized} is active.`, "success");
+    } catch (err: any) {
+      setClaimError(err.message || "Failed to claim handle.");
+      showToast(err.message || "Failed to claim handle", "error");
+    } finally {
+      setClaimLoading(false);
+    }
+  };
+
+  // 6. Add new Link
+  const handleAddLink = () => {
+    if (!newTitle.trim() || !newUrl.trim() || !profile) return;
+    let url = newUrl.trim();
+    if (!url.includes("://") && !url.startsWith("mailto:") && !url.startsWith("tel:")) {
+      url = `https://${url}`;
+    }
+
+    if (!isValidBioUrl(url)) {
+      showToast("Please enter a valid URL (https://, http://, mailto:, or tel:)", "error");
+      return;
+    }
+
+    const newLinkItem: BioLink = {
+      id: `link-${Date.now()}`,
+      title: newTitle.trim(),
+      url,
+      icon: newIcon,
+      isActive: true,
+      order: profile.links.length,
+      clicks: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedLinks = [...profile.links, newLinkItem];
+    setProfile({ ...profile, links: updatedLinks });
+    handleSaveProfile({ links: updatedLinks });
+
+    setNewTitle("");
+    setNewUrl("");
+    setNewIcon("website");
+    setShowAddModal(false);
+  };
+
+  // 7. Delete Link
+  const handleDeleteLink = (linkId: string) => {
+    if (!profile) return;
+    const updatedLinks = profile.links.filter((l) => l.id !== linkId);
+    setProfile({ ...profile, links: updatedLinks });
+    handleSaveProfile({ links: updatedLinks });
+    showToast("Link deleted", "info");
+  };
+
+  // 8. Toggle Link Active Status
+  const handleToggleLinkActive = (linkId: string) => {
+    if (!profile) return;
+    const updatedLinks = profile.links.map((l) => (l.id === linkId ? { ...l, isActive: !l.isActive } : l));
+    setProfile({ ...profile, links: updatedLinks });
+    handleSaveProfile({ links: updatedLinks });
+  };
+
+  // 9. Move Link Up / Down
+  const handleMoveLink = (index: number, direction: "up" | "down") => {
+    if (!profile) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= profile.links.length) return;
+
+    const newLinks = [...profile.links];
+    const temp = newLinks[index];
+    newLinks[index] = newLinks[targetIndex];
+    newLinks[targetIndex] = temp;
+
+    // re-assign sequential orders
+    const reordered = newLinks.map((l, idx) => ({ ...l, order: idx }));
+    setProfile({ ...profile, links: reordered });
+    handleSaveProfile({ links: reordered });
+  };
+
+  // 10. Copy profile link
+  const publicUrl = useMemo(() => {
+    if (!profile?.username) return "";
+    return typeof window !== "undefined"
+      ? `${window.location.origin}/${profile.username}`
+      : `https://hiiinishant.com/${profile.username}`;
+  }, [profile?.username]);
+
+  const handleCopyLink = () => {
+    if (!publicUrl) return;
+    navigator.clipboard.writeText(publicUrl);
+    setCopiedLink(true);
+    showToast("Profile link copied to clipboard!", "success");
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  // Current theme config for live preview
+  const activeTheme = useMemo(() => {
+    return BIO_THEMES[profile?.theme || "dark-modern"];
+  }, [profile?.theme]);
+
+  const activeButtonStyle = useMemo(() => {
+    return BUTTON_STYLES[profile?.buttonStyle || "rounded"];
+  }, [profile?.buttonStyle]);
+
+  // Loading state
+  if (authChecking || loadingProfile) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-10 h-10 animate-spin text-accent mb-4" />
+        <h2 className="text-xl font-bold text-white tracking-tight">Loading Bio Studio...</h2>
+        <p className="text-sm text-brand-400 mt-1">Connecting to your personalized profile</p>
+      </div>
+    );
+  }
+
+  // Not logged in state
+  if (!currentUser) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-3xl bg-zinc-950/80 border border-white/10 p-8 shadow-2xl backdrop-blur-xl text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent to-accent-light flex items-center justify-center text-black mx-auto mb-6 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+            <Sparkles className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">
+            Create Your Bio Link
+          </h1>
+          <p className="text-sm text-brand-300 leading-relaxed mb-8">
+            Build your personalized link-in-bio page on <span className="text-white font-semibold">Hiii Nishant</span>. Share all your links, music, social profiles, and content in one place.
+          </p>
+          <div className="space-y-3">
+            <Link
+              href="/login?mode=signup&redirect=/dashboard"
+              className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-accent hover:bg-accent-hover text-black font-bold text-sm transition-all duration-300 shadow-[0_0_25px_rgba(245,158,11,0.35)] hover:-translate-y-0.5"
+            >
+              <span>Get Started — Claim Your Link</span>
+            </Link>
+            <Link
+              href="/login?redirect=/dashboard"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-brand-300 hover:text-white font-medium text-sm transition-all"
+            >
+              <span>Already have an account? Log In</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Onboarding: Username Claim Step (if user hasn't set one yet)
+  if (!profile?.username) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-3xl bg-zinc-950/80 border border-white/10 p-8 shadow-2xl backdrop-blur-xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-semibold uppercase tracking-wider mb-4">
+            Step 1: Choose Your Handle
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">
+            Claim Your Unique URL
+          </h1>
+          <p className="text-sm text-brand-300 leading-relaxed mb-6">
+            Pick your username to activate your link-in-bio page. Your public address will be:
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-brand-400 uppercase tracking-wider mb-2">
+                Your Public Link
+              </label>
+              <div className="relative flex items-center rounded-xl bg-brand-900/60 border border-white/10 focus-within:border-accent transition-all overflow-hidden">
+                <span className="pl-4 pr-1 text-sm text-brand-400 font-mono select-none">
+                  hiiinishant.com/
+                </span>
+                <input
+                  type="text"
+                  value={claimInput}
+                  onChange={(e) => setClaimInput(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                  placeholder="yourname"
+                  maxLength={30}
+                  className="w-full py-3.5 pr-10 bg-transparent text-white placeholder-brand-500 font-mono text-sm focus:outline-none"
+                />
+                <div className="absolute right-3">
+                  {claimLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                  ) : claimAvailable === true ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : claimAvailable === false ? (
+                    <AlertCircle className="w-4 h-4 text-red-400" />
+                  ) : null}
+                </div>
+              </div>
+              {claimError ? (
+                <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{claimError}</span>
+                </p>
+              ) : claimAvailable ? (
+                <p className="text-xs text-emerald-400 mt-1.5 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Username is available!</span>
+                </p>
+              ) : (
+                <p className="text-[11px] text-brand-500 mt-1.5">
+                  Letters, numbers, and underscores only. 3-30 characters.
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={handleClaimUsername}
+              disabled={!claimAvailable || claimLoading}
+              className="w-full py-3.5 px-6 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:hover:bg-accent text-black font-bold text-sm transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.35)] cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {claimLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>Claim Handle &amp; Create Page &rarr;</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen pb-20">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-20 right-6 z-50 animate-fadeIn">
+          <div
+            className={`px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-xl border flex items-center gap-2.5 text-sm font-medium ${
+              toast.type === "success"
+                ? "bg-emerald-950/90 border-emerald-500/40 text-emerald-200"
+                : toast.type === "error"
+                ? "bg-red-950/90 border-red-500/40 text-red-200"
+                : "bg-zinc-900/90 border-white/20 text-white"
+            }`}
+          >
+            {toast.type === "success" && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+            {toast.type === "error" && <AlertCircle className="w-4 h-4 text-red-400" />}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Top Header Bar */}
+      <div className="border-b border-white/8 bg-zinc-950/70 backdrop-blur-xl sticky top-16 lg:top-20 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Handle & Live link */}
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center text-accent font-extrabold text-sm shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+              {profile.avatarType === "girl"
+                ? "👧"
+                : profile.avatarType === "boy"
+                ? "👦"
+                : profile.displayName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-base">
+                  hiiinishant.com/<span className="text-accent">{profile.username}</span>
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                    profile.isPublished
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                  }`}
+                >
+                  {profile.isPublished ? "Live" : "Draft"}
+                </span>
+              </div>
+              <p className="text-xs text-brand-400">
+                {profile.links.filter((l) => l.isActive).length} active links · {profile.views || 0} views
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={handleCopyLink}
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink ? "Copied" : "Copy Link"}</span>
+            </button>
+
+            <Link
+              href={`/${profile.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition-all flex items-center gap-1.5"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Preview Live</span>
+            </Link>
+
+            {/* Mobile preview toggle */}
+            <button
+              onClick={() => setShowMobilePreview(true)}
+              className="lg:hidden px-3.5 py-1.5 rounded-xl bg-accent text-black text-xs font-bold transition-all flex items-center gap-1.5"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Phone</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Workspace Layout: Two Columns on desktop */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Management Tabs & Editor */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+            {/* Tab Navigation Pill Bar */}
+            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-900/60 border border-white/10 backdrop-blur-md overflow-x-auto">
+              <button
+                onClick={() => setActiveTab("links")}
+                className={`flex-1 min-w-[100px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === "links"
+                    ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                    : "text-brand-300 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <LinkIcon className="w-4 h-4" />
+                <span>Links ({profile.links.length})</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("appearance")}
+                className={`flex-1 min-w-[100px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === "appearance"
+                    ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                    : "text-brand-300 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Palette className="w-4 h-4" />
+                <span>Appearance</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("socials")}
+                className={`flex-1 min-w-[100px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === "socials"
+                    ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                    : "text-brand-300 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Socials</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("settings")}
+                className={`flex-1 min-w-[100px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === "settings"
+                    ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                    : "text-brand-300 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>Stats &amp; Settings</span>
+              </button>
+            </div>
+
+            {/* TAB 1: LINKS MANAGEMENT */}
+            {activeTab === "links" && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Add Link Trigger */}
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-accent to-accent-light hover:brightness-110 text-black font-extrabold text-sm transition-all duration-300 shadow-[0_0_30px_rgba(245,158,11,0.35)] flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.01]"
+                >
+                  <Plus className="w-5 h-5 stroke-[2.5]" />
+                  <span>Add New Link</span>
+                </button>
+
+                {/* Inline Add Link Form Modal / Drawer */}
+                {showAddModal && (
+                  <div className="rounded-2xl bg-zinc-900 border border-white/15 p-5 shadow-2xl animate-fadeIn space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Plus className="w-4 h-4 text-accent" />
+                        <span>Add Link</span>
+                      </h3>
+                      <button
+                        onClick={() => setShowAddModal(false)}
+                        className="p-1 rounded-lg hover:bg-white/10 text-brand-400 hover:text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-brand-300 mb-1">
+                          Link Title
+                        </label>
+                        <input
+                          type="text"
+                          value={newTitle}
+                          onChange={(e) => setNewTitle(e.target.value)}
+                          placeholder="e.g. My YouTube Channel, Portfolio, Book notes..."
+                          maxLength={100}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-sm focus:outline-none focus:border-accent"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-brand-300 mb-1">
+                          Destination URL
+                        </label>
+                        <input
+                          type="url"
+                          value={newUrl}
+                          onChange={(e) => setNewUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-sm focus:outline-none focus:border-accent font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-brand-300 mb-1">
+                          Link Icon
+                        </label>
+                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-36 overflow-y-auto p-1">
+                          {SUPPORTED_LINK_ICONS.map((icon) => (
+                            <button
+                              key={icon.id}
+                              type="button"
+                              onClick={() => setNewIcon(icon.id)}
+                              className={`p-2 rounded-xl border flex flex-col items-center gap-1 text-[11px] transition-all cursor-pointer ${
+                                newIcon === icon.id
+                                  ? "bg-accent/20 border-accent text-accent"
+                                  : "bg-white/5 border-white/10 text-brand-400 hover:text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {renderBioIcon(icon.id, "w-4 h-4")}
+                              <span className="truncate max-w-[50px]">{icon.id}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddModal(false)}
+                          className="px-4 py-2 rounded-xl text-xs font-semibold text-brand-300 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAddLink}
+                          disabled={!newTitle.trim() || !newUrl.trim()}
+                          className="px-5 py-2 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-50 text-black font-bold text-xs shadow-md"
+                        >
+                          Save Link
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* List of existing links */}
+                {profile.links.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/15 p-12 text-center">
+                    <LinkIcon className="w-8 h-8 text-brand-500 mx-auto mb-3" />
+                    <h4 className="text-base font-semibold text-white">No links added yet</h4>
+                    <p className="text-xs text-brand-400 mt-1 max-w-sm mx-auto">
+                      Click the &ldquo;Add New Link&rdquo; button above to start building your personalized bio page.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {profile.links.map((link, idx) => (
+                      <div
+                        key={link.id}
+                        className={`rounded-2xl border transition-all p-4 bg-zinc-900/70 border-white/10 hover:border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          !link.isActive ? "opacity-60 bg-zinc-950/40" : ""
+                        }`}
+                      >
+                        {/* Left: Reorder & Info */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Reorder Up/Down arrows */}
+                          <div className="flex flex-col gap-0.5">
+                            <button
+                              onClick={() => handleMoveLink(idx, "up")}
+                              disabled={idx === 0}
+                              className="p-1 rounded text-brand-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                              title="Move up"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleMoveLink(idx, "down")}
+                              disabled={idx === profile.links.length - 1}
+                              className="p-1 rounded text-brand-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                              title="Move down"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Link Icon */}
+                          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-accent shrink-0">
+                            {renderBioIcon(link.icon, "w-5 h-5")}
+                          </div>
+
+                          {/* Titles */}
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-semibold text-white truncate">{link.title}</h4>
+                            <p className="text-xs text-brand-400 font-mono truncate max-w-xs">{link.url}</p>
+                          </div>
+                        </div>
+
+                        {/* Right: Clicks, Toggle & Delete */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                          {/* Click counter pill */}
+                          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-[11px] font-mono text-brand-300">
+                            <MousePointerClick className="w-3 h-3 text-accent" />
+                            <span>{link.clicks || 0}</span>
+                          </div>
+
+                          {/* Enable / Disable Switch */}
+                          <button
+                            onClick={() => handleToggleLinkActive(link.id)}
+                            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+                              link.isActive ? "bg-emerald-500" : "bg-zinc-700"
+                            }`}
+                            title={link.isActive ? "Active (click to disable)" : "Disabled (click to activate)"}
+                          >
+                            <span
+                              className={`block w-5 h-5 rounded-full bg-white transition-transform ${
+                                link.isActive ? "translate-x-5" : "translate-x-0"
+                              }`}
+                            />
+                          </button>
+
+                          {/* Delete Link Button */}
+                          <button
+                            onClick={() => handleDeleteLink(link.id)}
+                            className="p-1.5 rounded-lg text-brand-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            title="Delete link"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: APPEARANCE & THEMES */}
+            {activeTab === "appearance" && (
+              <div className="space-y-6 animate-fadeIn">
+                {/* 1. Profile Picture & Names */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-5">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-accent" />
+                    <span>Profile Details</span>
+                  </h3>
+
+                  {/* Avatar Picker */}
+                  <div>
+                    <label className="block text-xs font-semibold text-brand-300 uppercase tracking-wider mb-2">
+                      Avatar Style
+                    </label>
+                    <div className="grid grid-cols-4 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfile({ ...profile, avatarType: "boy" });
+                          handleSaveProfile({ avatarType: "boy" });
+                        }}
+                        className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                          profile.avatarType === "boy"
+                            ? "bg-accent/15 border-accent text-accent"
+                            : "bg-white/5 border-white/10 text-brand-300 hover:bg-white/10"
+                        }`}
+                      >
+                        <span className="text-2xl">👦</span>
+                        <span className="text-xs font-medium">Boy</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfile({ ...profile, avatarType: "girl" });
+                          handleSaveProfile({ avatarType: "girl" });
+                        }}
+                        className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                          profile.avatarType === "girl"
+                            ? "bg-accent/15 border-accent text-accent"
+                            : "bg-white/5 border-white/10 text-brand-300 hover:bg-white/10"
+                        }`}
+                      >
+                        <span className="text-2xl">👧</span>
+                        <span className="text-xs font-medium">Girl</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfile({ ...profile, avatarType: "initials" });
+                          handleSaveProfile({ avatarType: "initials" });
+                        }}
+                        className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                          profile.avatarType === "initials"
+                            ? "bg-accent/15 border-accent text-accent"
+                            : "bg-white/5 border-white/10 text-brand-300 hover:bg-white/10"
+                        }`}
+                      >
+                        <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center font-bold text-xs text-accent">
+                          {profile.displayName.charAt(0) || "U"}
+                        </div>
+                        <span className="text-xs font-medium">Initials</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfile({ ...profile, avatarType: "custom" });
+                        }}
+                        className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                          profile.avatarType === "custom"
+                            ? "bg-accent/15 border-accent text-accent"
+                            : "bg-white/5 border-white/10 text-brand-300 hover:bg-white/10"
+                        }`}
+                      >
+                        <span className="text-2xl">🖼️</span>
+                        <span className="text-xs font-medium">Custom</span>
+                      </button>
+                    </div>
+
+                    {profile.avatarType === "custom" && (
+                      <div className="mt-3">
+                        <label className="block text-xs text-brand-400 mb-1">Custom Image URL</label>
+                        <input
+                          type="url"
+                          value={profile.avatarUrl || ""}
+                          onChange={(e) => setProfile({ ...profile, avatarUrl: e.target.value })}
+                          onBlur={() => handleSaveProfile({ avatarUrl: profile.avatarUrl })}
+                          placeholder="https://images.unsplash.com/... or your image link"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent font-mono"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Display Name Input */}
+                  <div>
+                    <label className="block text-xs font-semibold text-brand-300 uppercase tracking-wider mb-1.5">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={profile.displayName}
+                      onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
+                      onBlur={() => handleSaveProfile({ displayName: profile.displayName })}
+                      maxLength={60}
+                      className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-sm focus:outline-none focus:border-accent"
+                    />
+                  </div>
+
+                  {/* Bio Textarea */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-xs font-semibold text-brand-300 uppercase tracking-wider">
+                        Bio / Headline
+                      </label>
+                      <span className="text-[11px] text-brand-500 font-mono">
+                        {(profile.bio || "").length} / 300
+                      </span>
+                    </div>
+                    <textarea
+                      value={profile.bio}
+                      onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                      onBlur={() => handleSaveProfile({ bio: profile.bio })}
+                      maxLength={300}
+                      rows={3}
+                      placeholder="Tell visitors about yourself, your mission, or what they will find here..."
+                      className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-sm focus:outline-none focus:border-accent resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Theme Selection Grid */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-4">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-accent" />
+                    <span>Themes &amp; Aesthetics</span>
+                  </h3>
+                  <p className="text-xs text-brand-400">
+                    Choose a curated theme designed to wow your audience across dark, cyberpunk, neon, and minimal styles.
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                    {(Object.keys(BIO_THEMES) as BioThemeId[]).map((themeKey) => {
+                      const t = BIO_THEMES[themeKey];
+                      const isSelected = profile.theme === themeKey;
+                      return (
+                        <button
+                          key={themeKey}
+                          type="button"
+                          onClick={() => {
+                            setProfile({ ...profile, theme: themeKey });
+                            handleSaveProfile({ theme: themeKey });
+                          }}
+                          className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden group cursor-pointer ${
+                            isSelected
+                              ? "border-accent ring-2 ring-accent/30 shadow-[0_0_20px_rgba(245,158,11,0.25)]"
+                              : "border-white/10 hover:border-white/20 bg-zinc-950/60"
+                          }`}
+                        >
+                          {/* Mini Theme Color Visualizer */}
+                          <div
+                            className="h-14 rounded-xl mb-2.5 flex items-center justify-center p-2 relative overflow-hidden border border-white/10"
+                            style={{ backgroundColor: t.previewBg }}
+                          >
+                            <div
+                              className="w-full h-4 rounded-md shadow-sm"
+                              style={{ backgroundColor: t.previewAccent, opacity: 0.85 }}
+                            />
+                            {isSelected && (
+                              <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-accent flex items-center justify-center text-black">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                              </div>
+                            )}
+                          </div>
+                          <h4 className="text-xs font-bold text-white truncate">{t.name}</h4>
+                          <p className="text-[10px] text-brand-400 line-clamp-1">{t.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Button Styles Selector */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-4">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-accent" />
+                    <span>Button Styles</span>
+                  </h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {(Object.keys(BUTTON_STYLES) as ButtonStyle[]).map((btnKey) => {
+                      const b = BUTTON_STYLES[btnKey];
+                      const isSelected = profile.buttonStyle === btnKey;
+                      return (
+                        <button
+                          key={btnKey}
+                          type="button"
+                          onClick={() => {
+                            setProfile({ ...profile, buttonStyle: btnKey });
+                            handleSaveProfile({ buttonStyle: btnKey });
+                          }}
+                          className={`p-3.5 border transition-all cursor-pointer ${b.previewClass} ${
+                            isSelected
+                              ? "border-accent bg-accent/15 text-white ring-2 ring-accent/30"
+                              : "border-white/10 hover:border-white/20 text-brand-300 bg-white/5"
+                          }`}
+                        >
+                          <div className="text-xs font-semibold text-center">{b.name}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: SOCIAL ICONS */}
+            {activeTab === "socials" && (
+              <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-5 animate-fadeIn">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-accent" />
+                    <span>Social Media Channels</span>
+                  </h3>
+                  <p className="text-xs text-brand-400 mt-1">
+                    These appear as a prominent row of interactive icons directly below your bio.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/username or @username", icon: <InstagramIcon className="w-4 h-4 text-[#e1306c]" /> },
+                    { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@channel", icon: <YouTubeIcon className="w-4 h-4 text-[#ff0000]" /> },
+                    { key: "twitter", label: "Twitter / X", placeholder: "https://twitter.com/handle", icon: <TwitterIcon className="w-4 h-4 text-white" /> },
+                    { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/username", icon: <LinkedInIcon className="w-4 h-4 text-[#0077b5]" /> },
+                    { key: "github", label: "GitHub", placeholder: "https://github.com/username", icon: <GitHubIcon className="w-4 h-4 text-white" /> },
+                    { key: "telegram", label: "Telegram", placeholder: "https://t.me/username", icon: <TelegramIcon className="w-4 h-4 text-[#0088cc]" /> },
+                    { key: "whatsapp", label: "WhatsApp", placeholder: "https://wa.me/phonenumber", icon: <MessageCircle className="w-4 h-4 text-[#25d366]" /> },
+                    { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/...", icon: <SpotifyIcon className="w-4 h-4 text-[#1db954]" /> },
+                    { key: "discord", label: "Discord", placeholder: "https://discord.gg/invite", icon: <DiscordIcon className="w-4 h-4 text-[#5865f2]" /> },
+                    { key: "email", label: "Email", placeholder: "yourname@domain.com", icon: <Mail className="w-4 h-4 text-amber-400" /> },
+                  ].map((item) => (
+                    <div key={item.key}>
+                      <label className="text-xs font-semibold text-brand-300 flex items-center gap-1.5 mb-1.5">
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={((profile.socials as any)?.[item.key] as string) || ""}
+                        onChange={(e) => {
+                          const updated = {
+                            ...(profile.socials || {}),
+                            [item.key]: e.target.value,
+                          };
+                          setProfile({ ...profile, socials: updated });
+                        }}
+                        onBlur={() => handleSaveProfile({ socials: profile.socials })}
+                        placeholder={item.placeholder}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: SETTINGS & ANALYTICS */}
+            {activeTab === "settings" && (
+              <div className="space-y-6 animate-fadeIn">
+                {/* Basic Analytics Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="rounded-2xl bg-zinc-900/70 border border-white/10 p-5">
+                    <div className="flex items-center justify-between text-brand-400 mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider">Page Views</span>
+                      <Eye className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="text-3xl font-extrabold text-white font-mono">
+                      {profile.views || 0}
+                    </div>
+                    <p className="text-[11px] text-brand-500 mt-1">Bot-filtered authentic visits</p>
+                  </div>
+
+                  <div className="rounded-2xl bg-zinc-900/70 border border-white/10 p-5">
+                    <div className="flex items-center justify-between text-brand-400 mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider">Link Clicks</span>
+                      <MousePointerClick className="w-4 h-4 text-accent" />
+                    </div>
+                    <div className="text-3xl font-extrabold text-white font-mono">
+                      {profile.totalClicks || 0}
+                    </div>
+                    <p className="text-[11px] text-brand-500 mt-1">Total external link visits</p>
+                  </div>
+
+                  <div className="rounded-2xl bg-zinc-900/70 border border-white/10 p-5">
+                    <div className="flex items-center justify-between text-brand-400 mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider">CTR</span>
+                      <Sparkles className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    <div className="text-3xl font-extrabold text-white font-mono">
+                      {profile.views > 0
+                        ? `${Math.round(((profile.totalClicks || 0) / profile.views) * 100)}%`
+                        : "0%"}
+                    </div>
+                    <p className="text-[11px] text-brand-500 mt-1">Click-through rate</p>
+                  </div>
+                </div>
+
+                {/* Publish / Unpublish Toggle */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-base font-bold text-white">Publication Status</h4>
+                    <p className="text-xs text-brand-400 mt-0.5">
+                      {profile.isPublished
+                        ? "Your page is public and accessible to anyone via your link."
+                        : "Your page is currently unpublished. Visitors will see a placeholder."}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const next = !profile.isPublished;
+                      setProfile({ ...profile, isPublished: next });
+                      handleSaveProfile({ isPublished: next });
+                      showToast(next ? "Page published live!" : "Page unpublished to draft", "info");
+                    }}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                      profile.isPublished
+                        ? "bg-emerald-500/20 border border-emerald-500 text-emerald-300 hover:bg-emerald-500/30"
+                        : "bg-amber-500 text-black hover:bg-amber-400"
+                    }`}
+                  >
+                    {profile.isPublished ? "Published (Live) — Click to Unpublish" : "Unpublished — Click to Publish"}
+                  </button>
+                </div>
+
+                {/* Account info */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-3">
+                  <h4 className="text-base font-bold text-white">Share Your Profile</h4>
+                  <p className="text-xs text-brand-400">
+                    Add this link to your Instagram bio, TikTok, Twitter/X, YouTube description, and WhatsApp status:
+                  </p>
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-black/60 border border-white/10 font-mono text-xs text-accent">
+                    <span className="truncate flex-1">{publicUrl}</span>
+                    <button
+                      onClick={handleCopyLink}
+                      className="px-3 py-1.5 rounded-lg bg-accent text-black font-bold text-[11px] hover:bg-accent-hover transition-colors shrink-0"
+                    >
+                      {copiedLink ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Live Interactive Phone Preview Mockup (Sticky on Desktop) */}
+          <div className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-36">
+            <div className="flex items-center justify-between mb-3 px-2">
+              <span className="text-xs font-semibold text-brand-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5 text-accent" />
+                <span>Live Interactive Preview</span>
+              </span>
+              <span className="text-[11px] text-brand-500 font-mono">Real-time sync</span>
+            </div>
+
+            {/* Phone Case Container */}
+            <div className="relative mx-auto w-[320px] h-[640px] rounded-[44px] p-3 bg-zinc-900 border-[6px] border-zinc-800 shadow-[0_25px_60px_rgba(0,0,0,0.8)] overflow-hidden">
+              {/* Dynamic Island / Speaker Notch */}
+              <div className="absolute top-5 left-1/2 -translate-x-1/2 w-24 h-4 rounded-full bg-black z-30 flex items-center justify-center">
+                <div className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
+              </div>
+
+              {/* Screen Content inside phone frame */}
+              <div
+                className={`w-full h-full rounded-[34px] overflow-y-auto px-4 py-8 relative ${activeTheme.backgroundClass}`}
+                style={{ scrollbarWidth: "none" }}
+              >
+                {/* Header profile */}
+                <div className="text-center mb-6 pt-3">
+                  <div
+                    className={`w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl font-black overflow-hidden ${activeTheme.avatarBorder}`}
+                    style={{ backgroundColor: activeTheme.previewBg }}
+                  >
+                    {profile.avatarType === "girl" ? (
+                      "👧"
+                    ) : profile.avatarType === "boy" ? (
+                      "👦"
+                    ) : profile.avatarType === "custom" && profile.avatarUrl ? (
+                      <Image
+                        src={profile.avatarUrl}
+                        alt={profile.displayName}
+                        width={80}
+                        height={80}
+                        unoptimized
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className={activeTheme.accentClass}>
+                        {profile.displayName.charAt(0) || "U"}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className={`text-base font-extrabold tracking-tight ${activeTheme.textPrimary}`}>
+                    {profile.displayName || "Your Name"}
+                  </h3>
+                  <p className={`text-xs font-mono mt-0.5 opacity-80 ${activeTheme.accentClass}`}>
+                    @{profile.username}
+                  </p>
+                  {profile.bio && (
+                    <p className={`text-xs mt-2 leading-relaxed px-2 ${activeTheme.textSecondary}`}>
+                      {profile.bio}
+                    </p>
+                  )}
+
+                  {/* Social icons row preview */}
+                  {profile.socials && Object.values(profile.socials).some(Boolean) && (
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-3.5">
+                      {profile.socials.instagram && <InstagramIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.youtube && <YouTubeIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.twitter && <TwitterIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.linkedin && <LinkedInIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.github && <GitHubIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.telegram && <TelegramIcon className="w-3.5 h-3.5 opacity-80" />}
+                    </div>
+                  )}
+                </div>
+
+                {/* Links List in Phone */}
+                <div className="space-y-2.5 pb-10">
+                  {profile.links.filter((l) => l.isActive).length === 0 ? (
+                    <div className="p-4 rounded-xl border border-dashed border-white/10 text-center text-xs opacity-50">
+                      No active links
+                    </div>
+                  ) : (
+                    profile.links
+                      .filter((l) => l.isActive)
+                      .map((l) => (
+                        <div
+                          key={l.id}
+                          className={`w-full py-3 px-3.5 text-center transition-all flex items-center justify-between gap-2 ${activeButtonStyle.previewClass} ${activeTheme.cardClass}`}
+                        >
+                          <div className="w-5 h-5 flex items-center justify-center opacity-80">
+                            {renderBioIcon(l.icon, "w-3.5 h-3.5")}
+                          </div>
+                          <span className="text-xs font-bold truncate flex-1 text-center">{l.title}</span>
+                          <div className="w-5 h-5 flex items-center justify-center opacity-40">
+                            <ExternalLink className="w-3 h-3" />
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+
+                {/* Footer branding pill inside phone */}
+                <div className="text-center pt-2 pb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[9px] font-semibold text-white/80">
+                    <span>hiiinishant</span>
+                    <span>•</span>
+                    <span>Create your link</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Drawer Phone Preview Modal */}
+      {showMobilePreview && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 lg:hidden animate-fadeIn">
+          <div className="relative w-full max-w-[340px] max-h-[90vh] flex flex-col items-center">
+            <button
+              onClick={() => setShowMobilePreview(false)}
+              className="absolute -top-12 right-0 p-2 rounded-full bg-white/10 text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-[310px] h-[580px] rounded-[40px] p-2.5 bg-zinc-900 border-4 border-zinc-700 shadow-2xl overflow-hidden">
+              <div
+                className={`w-full h-full rounded-[32px] overflow-y-auto px-4 py-8 relative ${activeTheme.backgroundClass}`}
+              >
+                <div className="text-center mb-6 pt-2">
+                  <div
+                    className={`w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-xl font-bold overflow-hidden ${activeTheme.avatarBorder}`}
+                    style={{ backgroundColor: activeTheme.previewBg }}
+                  >
+                    {profile.avatarType === "girl"
+                      ? "👧"
+                      : profile.avatarType === "boy"
+                      ? "👦"
+                      : profile.displayName.charAt(0) || "U"}
+                  </div>
+                  <h3 className={`text-sm font-bold ${activeTheme.textPrimary}`}>{profile.displayName}</h3>
+                  <p className={`text-[11px] font-mono opacity-80 ${activeTheme.accentClass}`}>@{profile.username}</p>
+                </div>
+                <div className="space-y-2">
+                  {profile.links
+                    .filter((l) => l.isActive)
+                    .map((l) => (
+                      <div
+                        key={l.id}
+                        className={`w-full py-2.5 px-3 text-center flex items-center justify-between text-xs font-semibold ${activeButtonStyle.previewClass} ${activeTheme.cardClass}`}
+                      >
+                        <span className="truncate flex-1">{l.title}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -4,11 +4,12 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, User, LogOut, MessageCircle, LayoutDashboard } from "lucide-react";
+import { ChevronDown, User, LogOut, MessageCircle, LayoutDashboard, Sparkles } from "lucide-react";
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from "firebase/auth";
 import { auth, db, isConfigured } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { getLoginUrlWithRedirect } from "@/lib/auth-redirect";
+import { isReservedUsername } from "@/types/bio";
 
 const navLinks = [
   { href: "/projects", label: "Startups", match: "/projects" },
@@ -207,7 +208,13 @@ export default function Navbar() {
     }
   }, [pathname]);
 
-  if (pathname?.startsWith("/nsgram")) return null;
+  const isBioProfilePage = (() => {
+    if (!pathname) return false;
+    const parts = pathname.split("/").filter(Boolean);
+    return parts.length === 1 && !isReservedUsername(parts[0]);
+  })();
+
+  if (pathname?.startsWith("/nsgram") || isBioProfilePage) return null;
 
   const authTargetUrl = getLoginUrlWithRedirect(currentUrl);
 
@@ -348,6 +355,14 @@ export default function Navbar() {
                       className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] p-1.5 backdrop-blur-xl"
                       style={{ background: "rgb(12,12,20)" }}
                     >
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-amber-300 hover:text-white hover:bg-white/8 transition-all duration-150"
+                      >
+                        <Sparkles className="w-4 h-4 text-accent" />
+                        <span>Bio Studio</span>
+                      </Link>
                       <Link
                         href="/nsgram"
                         onClick={() => setUserMenuOpen(false)}

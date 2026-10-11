@@ -61,6 +61,7 @@ const visitors_1 = __importStar(require("./routes/visitors"));
 const quiz_1 = __importDefault(require("./routes/quiz"));
 const amazonPicks_1 = __importDefault(require("./routes/amazonPicks"));
 const studyPicks_1 = __importDefault(require("./routes/studyPicks"));
+const bio_1 = __importDefault(require("./routes/bio"));
 process.on('uncaughtException', (error) => {
     console.error('[Process] Uncaught exception:', {
         name: error.name,
@@ -120,6 +121,7 @@ app.use('/api/visitors', visitors_1.default);
 app.use('/api/quiz', quiz_1.default);
 app.use('/api/amazon-picks', amazonPicks_1.default);
 app.use('/api/study-picks', studyPicks_1.default);
+app.use('/api/bio', bio_1.default);
 const httpServer = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(httpServer, {
     cors: {

@@ -55,6 +55,17 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+
+    // ── Bio Pages (Link-in-bio profiles) ──────────────────────────────────────
+    match /bio_pages/{userId} {
+      // Public can read if published; owner can always read their own page
+      allow read: if (resource.data.isPublished == true) || (isSignedIn() && isOwner(userId));
+
+      // Only the owner can create, update, or delete their bio page
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
   }
 }
 

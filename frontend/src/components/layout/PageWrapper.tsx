@@ -2,10 +2,16 @@
 
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
+import { isReservedUsername } from "@/types/bio";
 
 export default function PageWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isNsgram = pathname?.startsWith("/nsgram");
+  const isBioProfilePage = (() => {
+    if (!pathname) return false;
+    const parts = pathname.split("/").filter(Boolean);
+    return parts.length === 1 && !isReservedUsername(parts[0]);
+  })();
+  const isFullBleed = pathname?.startsWith("/nsgram") || isBioProfilePage;
 
   // Detect browser Back / Forward button presses
   const isPopState = useRef(false);
@@ -43,7 +49,7 @@ export default function PageWrapper({ children }: { children: React.ReactNode })
   }, [pathname]);
 
   return (
-    <main className={`flex-grow ${isNsgram ? "" : "pt-16 lg:pt-20"}`}>
+    <main className={`flex-grow ${isFullBleed ? "" : "pt-16 lg:pt-20"}`}>
       {children}
     </main>
   );

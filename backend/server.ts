@@ -24,6 +24,7 @@ import visitorsRoutes, { setVisitorsIo } from './routes/visitors';
 import quizRoutes from './routes/quiz';
 import amazonPicksRoutes from './routes/amazonPicks';
 import studyPicksRoutes from './routes/studyPicks';
+import bioRoutes from './routes/bio';
 
 process.on('uncaughtException', (error) => {
   console.error('[Process] Uncaught exception:', {
@@ -88,6 +89,7 @@ app.use('/api/visitors', visitorsRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/amazon-picks', amazonPicksRoutes);
 app.use('/api/study-picks', studyPicksRoutes);
+app.use('/api/bio', bioRoutes);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {

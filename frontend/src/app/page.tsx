@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import AuroraBackground from "@/components/AuroraBackground";
 import DailyQuizCard from "@/components/sections/DailyQuizCard";
+import LinkInBioCard from "@/components/sections/LinkInBioCard";
 import PortalCard from "@/components/sections/PortalCard";
 
 export const metadata: Metadata = {
@@ -300,8 +301,70 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── FEATURES HUB ─── */}
+      <section id="features" className="py-20 lg:py-28 relative overflow-hidden border-t border-white/5 noise">
+        {/* Aurora background */}
+        <AuroraBackground />
+
+        {/* Animated grid */}
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:72px_72px]" />
+
+        {/* Cyan glow left, amber glow right */}
+        <div className="absolute top-1/3 left-0 w-[500px] h-[500px] rounded-full bg-cyan-500/5 blur-[140px] pointer-events-none -z-10" />
+        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] rounded-full bg-accent/5 blur-[140px] pointer-events-none -z-10" />
+
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          {/* Header */}
+          <div className="text-center mb-10">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/8 text-[11px] font-bold text-cyan-400 uppercase tracking-widest mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse-slow" />
+              Interactive Features
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold leading-tight">
+              Tools & features <span className="text-gradient">built for you</span>
+            </h2>
+            <p className="text-brand-400 text-sm mt-4 max-w-xl mx-auto">
+              Create your personal link-in-bio page, compete in daily quizzes, explore the community feed, and more — all in one place.
+            </p>
+          </div>
+
+          {/* Feature Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
+            {/* Link in Bio */}
+            <LinkInBioCard />
+
+            {/* Daily Quiz */}
+            <DailyQuizCard />
+
+            {/* Nsgram Community */}
+            <PortalCard
+              href="/nsgram"
+              className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-emerald-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(16,185,129,0.12)] card-spotlight"
+            >
+              <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
+              <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer pointer-events-none" />
+              <div>
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-2xl group-hover:scale-110 transition-transform duration-500">💬</div>
+                  <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center text-brand-400 group-hover:text-white group-hover:border-white/20 transition-all duration-300 group-hover:translate-x-1">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-emerald-400 transition-colors">Nsgram Community</h3>
+                <p className="text-sm text-brand-400 leading-relaxed max-w-sm">Connect with student builders, share thoughts, follow updates, and chat 1-on-1 in a lightweight social feed.</p>
+              </div>
+              <div className="mt-8 flex items-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                Join Community
+                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+              </div>
+            </PortalCard>
+          </div>
+        </div>
+      </section>
+
       {/* ─── EXPLORE PORTAL ─── */}
       <section id="explore" className="py-20 lg:py-28 relative overflow-hidden border-t border-white/5 bg-brand-950/10 noise">
+
         {/* Aurora background */}
         <AuroraBackground />
 
@@ -508,6 +571,9 @@ export default function Home() {
                 </svg>
               </div>
             </PortalCard>
+
+            {/* Card: Link in Bio */}
+            <LinkInBioCard />
 
             {/* Card 4: Updates */}
             <PortalCard

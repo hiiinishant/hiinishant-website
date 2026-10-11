@@ -6,6 +6,7 @@ import Newsletter from "@/components/Newsletter";
 import TodaysVisitors from "@/components/layout/TodaysVisitors";
 import { socialLinks } from "@/data/site";
 import type { SocialPlatform } from "@/types";
+import { isReservedUsername } from "@/types/bio";
 
 /* ─────────────────────────────────────────────
    Platform-specific colours for social buttons
@@ -126,7 +127,13 @@ export default function Footer() {
   const pathname = usePathname();
   const year = new Date().getFullYear();
 
-  if (pathname?.startsWith("/nsgram")) {
+  const isBioProfilePage = (() => {
+    if (!pathname) return false;
+    const parts = pathname.split("/").filter(Boolean);
+    return parts.length === 1 && !isReservedUsername(parts[0]);
+  })();
+
+  if (pathname?.startsWith("/nsgram") || isBioProfilePage) {
     return null;
   }
 
