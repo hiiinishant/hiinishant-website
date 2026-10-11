@@ -35,13 +35,13 @@ export default function LinkInBioCard() {
   }, []);
 
   const href = user ? "/dashboard" : "/login?redirect=%2Fdashboard";
-  const buttonText = hasProfile ? "Manage in Bio Studio" : "Create Your Page";
+  const buttonText = hasProfile ? "Open Bio Studio" : "Claim Your Handle";
 
   return (
     <Link
       href={href}
       className="group relative overflow-hidden rounded-3xl border border-white/5 bg-brand-900/10 hover:border-cyan-500/30 p-6 sm:p-8 flex flex-col justify-between min-h-[240px] sm:min-h-[260px] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(6,182,212,0.12)] card-spotlight"
-      aria-label="Link in Bio — Create your personal page, organize all your important links, and share one link everywhere."
+      aria-label="Bio Studio — Create your personal page, organize all your important links, and share one link everywhere."
     >
       {/* Accent gradient glow */}
       <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl pointer-events-none" />
@@ -60,10 +60,10 @@ export default function LinkInBioCard() {
         </div>
 
         <h3 className="text-xl font-bold text-white mb-3 group-hover:text-cyan-400 transition-colors">
-          Link in Bio
+          Bio Studio
         </h3>
         <p className="text-sm text-brand-400 leading-relaxed max-w-sm">
-          Create your personal page, organize all your important links, and share one link everywhere.
+          Create your personal link-in-bio page, organize all your important links, and share one custom handle everywhere.
         </p>
       </div>
 
