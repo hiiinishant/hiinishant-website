@@ -157,7 +157,8 @@ export default function DashboardClient() {
             const img = new (window as any).Image();
             img.onload = () => {
               const canvas = document.createElement("canvas");
-              const MAX_SIZE = 360;
+              // Keep small to stay well under Firestore 1MB doc limit
+              const MAX_SIZE = 200;
               let width = img.width;
               let height = img.height;
 
@@ -181,7 +182,7 @@ export default function DashboardClient() {
                 return;
               }
               ctx.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL("image/webp", 0.85));
+              resolve(canvas.toDataURL("image/webp", 0.6));
             };
             img.onerror = reject;
             img.src = readerEvent.target?.result as string;
@@ -192,13 +193,13 @@ export default function DashboardClient() {
       }
 
       if (uploadedUrl && profile) {
-        const updated = {
+        const updated: BioPage = {
           ...profile,
           avatarType: "custom" as const,
           avatarUrl: uploadedUrl,
         };
         setProfile(updated);
-        await handleSaveProfile({ avatarType: "custom", avatarUrl: uploadedUrl });
+        await handleSaveProfile(updated);
         showToast("Profile image updated!", "success");
       }
     } catch (err: any) {
@@ -350,13 +351,14 @@ export default function DashboardClient() {
   };
 
   // 3. Save profile changes with dual API + Firestore fallback
-  const handleSaveProfile = async (updatedData?: Partial<BioPage>) => {
-    if (!currentUser || !profile) return;
+  // Accept a fully-merged BioPage snapshot to avoid stale closure bugs
+  // where rapid consecutive calls could clobber each other's changes.
+  const handleSaveProfile = async (snapshot: BioPage) => {
+    if (!currentUser) return;
     try {
       setSaving(true);
-      const dataToSave = {
-        ...profile,
-        ...(updatedData || {}),
+      const dataToSave: BioPage = {
+        ...snapshot,
         updatedAt: new Date().toISOString(),
       };
 
@@ -485,7 +487,13 @@ export default function DashboardClient() {
       }
 
       if (claimed) {
-        setProfile((prev) => (prev ? { ...prev, username: normalized, isPublished: true } : null));
+        setProfile((prev) => {
+          if (!prev) return null;
+          const updated = { ...prev, username: normalized, isPublished: true };
+          // Persist isPublished: true via a full save (avoids future claim-then-save races)
+          handleSaveProfile(updated);
+          return updated;
+        });
         showToast(`Congratulations! Your handle @${normalized} is active.`, "success");
       }
     } catch (err: any) {
@@ -500,7 +508,8 @@ export default function DashboardClient() {
   const handleAddLink = () => {
     if (!newTitle.trim() || !newUrl.trim() || !profile) return;
     let url = newUrl.trim();
-    if (!url.includes("://") && !url.startsWith("mailto:") && !url.startsWith("tel:")) {
+    const wasAutoFixed = !url.includes("://") && !url.startsWith("mailto:") && !url.startsWith("tel:");
+    if (wasAutoFixed) {
       url = `https://${url}`;
     }
 
@@ -521,9 +530,13 @@ export default function DashboardClient() {
     };
 
     const updatedLinks = [...profile.links, newLinkItem];
-    setProfile({ ...profile, links: updatedLinks });
-    handleSaveProfile({ links: updatedLinks });
+    const updated: BioPage = { ...profile, links: updatedLinks };
+    setProfile(updated);
+    handleSaveProfile(updated);
 
+    if (wasAutoFixed) {
+      showToast(`URL saved as ${url}`, "info");
+    }
     setNewTitle("");
     setNewUrl("");
     setNewIcon("website");
@@ -534,8 +547,9 @@ export default function DashboardClient() {
   const handleDeleteLink = (linkId: string) => {
     if (!profile) return;
     const updatedLinks = profile.links.filter((l) => l.id !== linkId);
-    setProfile({ ...profile, links: updatedLinks });
-    handleSaveProfile({ links: updatedLinks });
+    const updated: BioPage = { ...profile, links: updatedLinks };
+    setProfile(updated);
+    handleSaveProfile(updated);
     showToast("Link deleted", "info");
   };
 
@@ -543,8 +557,9 @@ export default function DashboardClient() {
   const handleToggleLinkActive = (linkId: string) => {
     if (!profile) return;
     const updatedLinks = profile.links.map((l) => (l.id === linkId ? { ...l, isActive: !l.isActive } : l));
-    setProfile({ ...profile, links: updatedLinks });
-    handleSaveProfile({ links: updatedLinks });
+    const updated: BioPage = { ...profile, links: updatedLinks };
+    setProfile(updated);
+    handleSaveProfile(updated);
   };
 
   // 9. Move Link Up / Down
@@ -560,8 +575,9 @@ export default function DashboardClient() {
 
     // re-assign sequential orders
     const reordered = newLinks.map((l, idx) => ({ ...l, order: idx }));
-    setProfile({ ...profile, links: reordered });
-    handleSaveProfile({ links: reordered });
+    const updated: BioPage = { ...profile, links: reordered };
+    setProfile(updated);
+    handleSaveProfile(updated);
   };
 
   // 10. Copy profile link
@@ -1058,8 +1074,9 @@ export default function DashboardClient() {
                       <button
                         type="button"
                         onClick={() => {
-                          setProfile({ ...profile, avatarType: "boy" });
-                          handleSaveProfile({ avatarType: "boy" });
+                          const updated: BioPage = { ...profile, avatarType: "boy" };
+                          setProfile(updated);
+                          handleSaveProfile(updated);
                         }}
                         className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                           profile.avatarType === "boy"
@@ -1074,8 +1091,9 @@ export default function DashboardClient() {
                       <button
                         type="button"
                         onClick={() => {
-                          setProfile({ ...profile, avatarType: "girl" });
-                          handleSaveProfile({ avatarType: "girl" });
+                          const updated: BioPage = { ...profile, avatarType: "girl" };
+                          setProfile(updated);
+                          handleSaveProfile(updated);
                         }}
                         className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                           profile.avatarType === "girl"
@@ -1090,8 +1108,9 @@ export default function DashboardClient() {
                       <button
                         type="button"
                         onClick={() => {
-                          setProfile({ ...profile, avatarType: "initials" });
-                          handleSaveProfile({ avatarType: "initials" });
+                          const updated: BioPage = { ...profile, avatarType: "initials" };
+                          setProfile(updated);
+                          handleSaveProfile(updated);
                         }}
                         className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                           profile.avatarType === "initials"
@@ -1186,8 +1205,9 @@ export default function DashboardClient() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setProfile({ ...profile, avatarUrl: "" });
-                                      handleSaveProfile({ avatarUrl: "" });
+                                      const updated: BioPage = { ...profile, avatarUrl: "" };
+                                      setProfile(updated);
+                                      handleSaveProfile(updated);
                                     }}
                                     className="px-3 py-2 rounded-xl border border-white/10 hover:border-red-500/40 hover:bg-red-500/10 text-brand-400 hover:text-red-400 text-xs font-semibold transition-all cursor-pointer"
                                   >
@@ -1219,7 +1239,7 @@ export default function DashboardClient() {
                             type="url"
                             value={profile.avatarUrl || ""}
                             onChange={(e) => setProfile({ ...profile, avatarUrl: e.target.value })}
-                            onBlur={() => handleSaveProfile({ avatarUrl: profile.avatarUrl })}
+                            onBlur={() => handleSaveProfile({ ...profile, avatarUrl: profile.avatarUrl })}
                             placeholder="https://images.unsplash.com/... or your image link"
                             className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent font-mono"
                           />
@@ -1237,7 +1257,7 @@ export default function DashboardClient() {
                       type="text"
                       value={profile.displayName}
                       onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-                      onBlur={() => handleSaveProfile({ displayName: profile.displayName })}
+                      onBlur={() => handleSaveProfile({ ...profile, displayName: profile.displayName })}
                       maxLength={60}
                       className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-sm focus:outline-none focus:border-accent"
                     />
@@ -1256,7 +1276,7 @@ export default function DashboardClient() {
                     <textarea
                       value={profile.bio}
                       onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                      onBlur={() => handleSaveProfile({ bio: profile.bio })}
+                      onBlur={() => handleSaveProfile({ ...profile, bio: profile.bio })}
                       maxLength={300}
                       rows={3}
                       placeholder="Tell visitors about yourself, your mission, or what they will find here..."
@@ -1284,8 +1304,9 @@ export default function DashboardClient() {
                           key={themeKey}
                           type="button"
                           onClick={() => {
-                            setProfile({ ...profile, theme: themeKey });
-                            handleSaveProfile({ theme: themeKey });
+                            const updated: BioPage = { ...profile, theme: themeKey };
+                            setProfile(updated);
+                            handleSaveProfile(updated);
                           }}
                           className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden group cursor-pointer ${
                             isSelected
@@ -1332,8 +1353,9 @@ export default function DashboardClient() {
                           key={btnKey}
                           type="button"
                           onClick={() => {
-                            setProfile({ ...profile, buttonStyle: btnKey });
-                            handleSaveProfile({ buttonStyle: btnKey });
+                            const updated: BioPage = { ...profile, buttonStyle: btnKey };
+                            setProfile(updated);
+                            handleSaveProfile(updated);
                           }}
                           className={`p-3.5 border transition-all cursor-pointer ${b.previewClass} ${
                             isSelected
@@ -1391,7 +1413,7 @@ export default function DashboardClient() {
                           };
                           setProfile({ ...profile, socials: updated });
                         }}
-                        onBlur={() => handleSaveProfile({ socials: profile.socials })}
+                        onBlur={() => handleSaveProfile({ ...profile, socials: profile.socials })}
                         placeholder={item.placeholder}
                         className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
                       />
@@ -1456,8 +1478,9 @@ export default function DashboardClient() {
                   <button
                     onClick={() => {
                       const next = !profile.isPublished;
-                      setProfile({ ...profile, isPublished: next });
-                      handleSaveProfile({ isPublished: next });
+                      const updated: BioPage = { ...profile, isPublished: next };
+                      setProfile(updated);
+                      handleSaveProfile(updated);
                       showToast(next ? "Page published live!" : "Page unpublished to draft", "info");
                     }}
                     className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
