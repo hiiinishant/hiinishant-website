@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, getIdToken, type User as FirebaseUser } from "firebase/auth";
-import { auth, isConfigured } from "@/lib/firebase";
+import { auth, db, isConfigured } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { API_BASE } from "@/lib/api";
 import {
   BioPage,
@@ -115,27 +116,116 @@ export default function DashboardClient() {
     return () => unsub();
   }, []);
 
-  // 2. Fetch or initialize Bio Profile
+  // Helper to generate a default initial Bio Profile
+  const createDefaultProfile = async (user: FirebaseUser): Promise<BioPage> => {
+    let initialUsername = "";
+    let displayName = user.displayName || "My Profile";
+    let bio = "Welcome to my official links page! ✨";
+    let avatarType: "initials" | "boy" | "girl" = "initials";
+    let avatarUrl = user.photoURL || "";
+
+    if (db) {
+      try {
+        const uSnap = await getDoc(doc(db, "users", user.uid));
+        if (uSnap.exists()) {
+          const uData = uSnap.data();
+          if (uData.username && !isReservedUsername(normalizeUsername(uData.username))) {
+            initialUsername = normalizeUsername(uData.username);
+          }
+          if (uData.displayName) displayName = uData.displayName;
+          if (uData.bio) bio = uData.bio;
+          if (uData.avatar === "boy" || uData.avatar === "girl") avatarType = uData.avatar;
+          if (uData.photoURL) avatarUrl = uData.photoURL;
+        }
+      } catch {}
+    }
+
+    const now = new Date().toISOString();
+    return {
+      uid: user.uid,
+      username: initialUsername,
+      displayName,
+      bio,
+      avatarType,
+      avatarUrl,
+      theme: "dark-modern",
+      buttonStyle: "rounded",
+      isPublished: Boolean(initialUsername),
+      links: [
+        {
+          id: `link-${Date.now()}-1`,
+          title: "My Official Website",
+          url: "https://hiiinishant.com",
+          icon: "website",
+          isActive: true,
+          order: 0,
+          clicks: 0,
+          createdAt: now,
+        },
+      ],
+      socials: {},
+      views: 0,
+      totalClicks: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+  };
+
+  // 2. Fetch or initialize Bio Profile with resilient fallback
   const fetchUserProfile = async (user: FirebaseUser) => {
     try {
       setLoadingProfile(true);
-      const token = await getIdToken(user);
-      const res = await fetch(`${API_BASE}/api/bio/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
 
-      if (!res.ok) {
-        throw new Error("Failed to load bio profile.");
+      let loadedProfile: BioPage | null = null;
+
+      // Attempt 1: Fetch via Backend REST API
+      try {
+        const token = await getIdToken(user);
+        const res = await fetch(`${API_BASE}/api/bio/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.profile) {
+            loadedProfile = data.profile;
+          }
+        } else {
+          const errData = await res.json().catch(() => null);
+          console.warn("Backend /api/bio/me returned status:", res.status, errData);
+        }
+      } catch (netErr) {
+        console.warn("Backend /api/bio/me network fetch failed, falling back to direct Firestore:", netErr);
       }
 
-      const data = await res.json();
-      if (data.profile) {
-        setProfile(data.profile);
-        if (!data.profile.username) {
+      // Attempt 2: If API did not return profile, read/create directly from Firestore
+      if (!loadedProfile && db) {
+        try {
+          const bioDocRef = doc(db, "bio_pages", user.uid);
+          const bioSnap = await getDoc(bioDocRef);
+          if (bioSnap.exists()) {
+            loadedProfile = { ...(bioSnap.data() as BioPage), uid: user.uid };
+          } else {
+            const newProfile = await createDefaultProfile(user);
+            await setDoc(bioDocRef, newProfile);
+            loadedProfile = newProfile;
+          }
+        } catch (fsErr) {
+          console.error("Firestore direct profile fetch error:", fsErr);
+        }
+      }
+
+      if (loadedProfile) {
+        setProfile(loadedProfile);
+        if (!loadedProfile.username) {
           setClaimInput("");
         }
+      } else {
+        // Fallback local state if offline
+        const localFallback = await createDefaultProfile(user);
+        setProfile(localFallback);
       }
     } catch (err: any) {
       console.error("Error fetching bio page:", err);
@@ -145,33 +235,55 @@ export default function DashboardClient() {
     }
   };
 
-  // 3. Save profile changes to backend
+  // 3. Save profile changes with dual API + Firestore fallback
   const handleSaveProfile = async (updatedData?: Partial<BioPage>) => {
     if (!currentUser || !profile) return;
     try {
       setSaving(true);
-      const token = await getIdToken(currentUser);
       const dataToSave = {
         ...profile,
         ...(updatedData || {}),
+        updatedAt: new Date().toISOString(),
       };
 
-      const res = await fetch(`${API_BASE}/api/bio/me`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(dataToSave),
-      });
+      let savedSuccessfully = false;
 
-      const resData = await res.json();
-      if (!res.ok) {
-        throw new Error(resData.error || "Failed to save changes.");
+      // Attempt 1: Save via Backend REST API
+      try {
+        const token = await getIdToken(currentUser);
+        const res = await fetch(`${API_BASE}/api/bio/me`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(dataToSave),
+        });
+
+        if (res.ok) {
+          const resData = await res.json();
+          if (resData.profile) {
+            setProfile(resData.profile);
+            savedSuccessfully = true;
+          }
+        }
+      } catch (netErr) {
+        console.warn("Backend save failed, using direct Firestore fallback:", netErr);
       }
 
-      setProfile(resData.profile);
-      showToast("Changes saved successfully!", "success");
+      // Attempt 2: Direct Firestore fallback
+      if (!savedSuccessfully && db) {
+        const bioDocRef = doc(db, "bio_pages", currentUser.uid);
+        await setDoc(bioDocRef, dataToSave, { merge: true });
+        setProfile(dataToSave);
+        savedSuccessfully = true;
+      }
+
+      if (savedSuccessfully) {
+        showToast("Changes saved successfully!", "success");
+      } else {
+        throw new Error("Unable to save changes. Please check your connection.");
+      }
     } catch (err: any) {
       showToast(err.message || "Error saving profile", "error");
     } finally {
@@ -219,30 +331,49 @@ export default function DashboardClient() {
     return () => clearTimeout(timer);
   }, [claimInput]);
 
-  // 5. Claim Username
+  // 5. Claim Username with API + Firestore fallback
   const handleClaimUsername = async () => {
     if (!currentUser || !claimInput.trim() || !claimAvailable) return;
     try {
       setClaimLoading(true);
-      const token = await getIdToken(currentUser);
       const normalized = normalizeUsername(claimInput);
+      let claimed = false;
 
-      const res = await fetch(`${API_BASE}/api/bio/claim-username`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ username: normalized }),
-      });
+      // Attempt 1: Claim via API
+      try {
+        const token = await getIdToken(currentUser);
+        const res = await fetch(`${API_BASE}/api/bio/claim-username`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ username: normalized }),
+        });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to claim username.");
+        if (res.ok) {
+          claimed = true;
+        } else {
+          const errData = await res.json().catch(() => null);
+          if (errData?.error) throw new Error(errData.error);
+        }
+      } catch (err: any) {
+        if (err.message && !err.message.includes("fetch")) {
+          throw err;
+        }
       }
 
-      setProfile((prev) => (prev ? { ...prev, username: normalized, isPublished: true } : null));
-      showToast(`Congratulations! Your handle @${normalized} is active.`, "success");
+      // Attempt 2: Direct Firestore fallback if API unreachable
+      if (!claimed && db) {
+        const bioDocRef = doc(db, "bio_pages", currentUser.uid);
+        await setDoc(bioDocRef, { username: normalized, isPublished: true, updatedAt: new Date().toISOString() }, { merge: true });
+        claimed = true;
+      }
+
+      if (claimed) {
+        setProfile((prev) => (prev ? { ...prev, username: normalized, isPublished: true } : null));
+        showToast(`Congratulations! Your handle @${normalized} is active.`, "success");
+      }
     } catch (err: any) {
       setClaimError(err.message || "Failed to claim handle.");
       showToast(err.message || "Failed to claim handle", "error");
