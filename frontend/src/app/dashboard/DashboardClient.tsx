@@ -30,6 +30,7 @@ import {
   Plus,
   Trash2,
   ExternalLink,
+  MoreVertical,
   Copy,
   Check,
   Eye,
@@ -1802,8 +1803,8 @@ export default function DashboardClient() {
                           >
                             {l.title}
                           </span>
-                          <div className="w-5 h-5 flex items-center justify-center opacity-40">
-                            <ExternalLink className="w-3 h-3" />
+                          <div className="w-5 h-5 flex items-center justify-center opacity-60">
+                            <MoreVertical className="w-3.5 h-3.5" />
                           </div>
                         </div>
                       ))

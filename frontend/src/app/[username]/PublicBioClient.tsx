@@ -9,9 +9,11 @@ import { doc, getDoc } from "firebase/firestore";
 import { API_BASE } from "@/lib/api";
 import {
   PublicBioProfile,
+  BioLink,
   BIO_THEMES,
   BUTTON_STYLES,
 } from "@/types/bio";
+import LinkShareModal, { ShareableLink } from "@/components/bio/LinkShareModal";
 import {
   ExternalLink,
   Share2,
@@ -23,6 +25,7 @@ import {
   MessageCircle,
   Mail,
   Sparkles,
+  MoreVertical,
 } from "lucide-react";
 import {
   renderBioIcon,
@@ -48,6 +51,7 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
   const [isOwner, setIsOwner] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareToast, setShareToast] = useState(false);
+  const [activeShareLink, setActiveShareLink] = useState<ShareableLink | null>(null);
 
   // 1. Observe auth state and resolve ownership by checking bio_pages collection
   useEffect(() => {
@@ -558,13 +562,21 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
                   {link.title}
                 </span>
 
-                {/* Right: Small arrow */}
-                <div
-                  className="w-6 h-6 flex items-center justify-center opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0"
+                {/* Right: Three Dots Share Button (Linktree style) */}
+                <button
+                  type="button"
+                  aria-label={`Share ${link.title}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setActiveShareLink(link);
+                  }}
+                  className="w-8 h-8 -mr-1.5 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-black/15 active:scale-90 transition-all cursor-pointer shrink-0 z-10"
                   style={customColors?.buttonTextColor ? { color: customColors.buttonTextColor } : undefined}
+                  title="Share this link"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </div>
+                  <MoreVertical className="w-4 h-4" />
+                </button>
               </a>
             ))
           )}
@@ -584,6 +596,14 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
           <span className="opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">&rarr;</span>
         </Link>
       </footer>
+
+      {/* Link Share Modal (Linktree-style) */}
+      {activeShareLink && (
+        <LinkShareModal
+          link={activeShareLink}
+          onClose={() => setActiveShareLink(null)}
+        />
+      )}
     </div>
   );
 }
