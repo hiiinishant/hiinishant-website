@@ -234,8 +234,8 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
         </div>
       )}
 
-      {/* Floating Top Header Controls */}
-      <div className="w-full max-w-lg mx-auto px-5 pt-6 pb-2 flex items-center justify-between z-30">
+      {/* Floating Top Header Controls (Linktree 580px container width) */}
+      <div className="w-full max-w-[580px] mx-auto px-4 sm:px-6 pt-6 pb-2 flex items-center justify-between z-30">
         {/* Left: Website Logo (Home Link) styled like the share button */}
         <Link
           href="/"
@@ -283,8 +283,8 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
         </div>
       </div>
 
-      {/* Center Bio Content Container */}
-      <div className="w-full max-w-md mx-auto px-5 py-6 flex-grow flex flex-col justify-start">
+      {/* Center Bio Content Container (Linktree 580px width) */}
+      <div className="w-full max-w-[580px] mx-auto px-4 sm:px-6 py-6 flex-grow flex flex-col justify-start">
         {/* Profile Card Header */}
         <div className="text-center mb-7">
           {/* Avatar Ring */}
@@ -537,32 +537,36 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
             </div>
           ) : (
             profile.links.map((link) => (
-              <a
+              <div
                 key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => handleLinkClick(link.id, link.url)}
-                className={`group w-full py-4 px-5 transition-all duration-300 flex items-center justify-between gap-3 ${buttonStyle.previewClass} ${!buttonCustomStyle ? theme.cardClass : "border hover:scale-[1.01] shadow-lg"}`}
+                className={`relative group w-full min-h-[58px] sm:min-h-[64px] transition-all duration-300 flex items-center justify-center ${buttonStyle.previewClass} ${!buttonCustomStyle ? theme.cardClass : "border hover:scale-[1.01] shadow-lg"}`}
                 style={buttonCustomStyle}
               >
-                {/* Left: Platform Icon */}
+                {/* Left: Platform Icon (Linktree absolute placement) */}
                 <div
-                  className="w-6 h-6 flex items-center justify-center opacity-85 group-hover:scale-110 group-hover:opacity-100 transition-all shrink-0"
+                  className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center opacity-90 group-hover:scale-110 transition-transform pointer-events-none"
                   style={customColors?.buttonTextColor ? { color: customColors.buttonTextColor } : undefined}
                 >
-                  {renderBioIcon(link.icon, "w-4 h-4")}
+                  {renderBioIcon(link.icon, "w-4 h-4 sm:w-5 sm:h-5")}
                 </div>
 
-                {/* Center: Title */}
-                <span
-                  className="text-sm sm:text-base font-bold truncate text-center flex-1 leading-snug"
-                  style={customColors?.buttonTextColor ? { color: customColors.buttonTextColor } : undefined}
+                {/* Center: Full-width Clickable Link Area */}
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => handleLinkClick(link.id, link.url)}
+                  className="w-full h-full min-h-[58px] sm:min-h-[64px] flex items-center justify-center px-14 sm:px-16 text-center cursor-pointer select-none"
                 >
-                  {link.title}
-                </span>
+                  <span
+                    className="text-sm sm:text-base font-bold line-clamp-2 leading-snug"
+                    style={customColors?.buttonTextColor ? { color: customColors.buttonTextColor } : undefined}
+                  >
+                    {link.title}
+                  </span>
+                </a>
 
-                {/* Right: Three Dots Share Button (Linktree style) */}
+                {/* Right: Three Dots Share Button (Linktree absolute placement) */}
                 <button
                   type="button"
                   aria-label={`Share ${link.title}`}
@@ -571,13 +575,13 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
                     e.stopPropagation();
                     setActiveShareLink(link);
                   }}
-                  className="w-8 h-8 -mr-1.5 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-black/15 active:scale-90 transition-all cursor-pointer shrink-0 z-10"
+                  className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-black/15 active:scale-90 transition-all cursor-pointer z-10"
                   style={customColors?.buttonTextColor ? { color: customColors.buttonTextColor } : undefined}
                   title="Share this link"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </button>
-              </a>
+              </div>
             ))
           )}
         </div>
