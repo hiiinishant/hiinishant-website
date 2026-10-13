@@ -12,6 +12,7 @@ import {
   BioPage,
   BioLink,
   BioThemeId,
+  CustomColorPalette,
   ButtonStyle,
   BIO_THEMES,
   BUTTON_STYLES,
@@ -21,6 +22,10 @@ import {
   isReservedUsername,
   normalizeUsername,
 } from "@/types/bio";
+import CustomColorCustomizer from "@/components/bio/CustomColorCustomizer";
+import SortableLinkList from "@/components/bio/SortableLinkList";
+import QRCodeModal from "@/components/bio/QRCodeModal";
+import AnalyticsChart from "@/components/bio/AnalyticsChart";
 import {
   Plus,
   Trash2,
@@ -54,6 +59,8 @@ import {
   X,
   Upload,
   Camera,
+  Edit3,
+  QrCode,
 } from "lucide-react";
 import {
   renderBioIcon,
@@ -65,6 +72,8 @@ import {
   TelegramIcon,
   SpotifyIcon,
   DiscordIcon,
+  FacebookIcon,
+  TikTokIcon,
 } from "@/components/bio/BioIcons";
 
 export default function DashboardClient() {
@@ -88,8 +97,17 @@ export default function DashboardClient() {
   const [newUrl, setNewUrl] = useState("");
   const [newIcon, setNewIcon] = useState("website");
 
+  // Link editing state
+  const [editingLink, setEditingLink] = useState<BioLink | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editUrl, setEditUrl] = useState("");
+  const [editIcon, setEditIcon] = useState("website");
+
   // Mobile preview drawer
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+
+  // QR code modal
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Toast / feedback alert
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -487,13 +505,12 @@ export default function DashboardClient() {
       }
 
       if (claimed) {
-        setProfile((prev) => {
-          if (!prev) return null;
-          const updated = { ...prev, username: normalized, isPublished: true };
-          // Persist isPublished: true via a full save (avoids future claim-then-save races)
-          handleSaveProfile(updated);
-          return updated;
-        });
+        if (profile) {
+          const updated: BioPage = { ...profile, username: normalized, isPublished: true };
+          setProfile(updated);
+        } else {
+          setProfile((prev) => (prev ? { ...prev, username: normalized, isPublished: true } : null));
+        }
         showToast(`Congratulations! Your handle @${normalized} is active.`, "success");
       }
     } catch (err: any) {
@@ -502,6 +519,52 @@ export default function DashboardClient() {
     } finally {
       setClaimLoading(false);
     }
+  };
+
+  // 5b. Open Edit Link
+  const handleOpenEditLink = (link: BioLink) => {
+    setEditingLink(link);
+    setEditTitle(link.title);
+    setEditUrl(link.url);
+    setEditIcon(link.icon || "website");
+  };
+
+  // 5c. Update existing Link in-place
+  const handleUpdateLink = () => {
+    if (!editingLink || !editTitle.trim() || !editUrl.trim() || !profile) return;
+    let url = editUrl.trim();
+    const wasAutoFixed = !url.includes("://") && !url.startsWith("mailto:") && !url.startsWith("tel:");
+    if (wasAutoFixed) {
+      url = `https://${url}`;
+    }
+
+    if (!isValidBioUrl(url)) {
+      showToast("Please enter a valid URL (https://, http://, mailto:, or tel:)", "error");
+      return;
+    }
+
+    const updatedLinks = profile.links.map((l) =>
+      l.id === editingLink.id
+        ? {
+            ...l,
+            title: editTitle.trim(),
+            url,
+            icon: editIcon,
+          }
+        : l
+    );
+
+    const updated: BioPage = { ...profile, links: updatedLinks };
+    setProfile(updated);
+    handleSaveProfile(updated);
+
+    if (wasAutoFixed) {
+      showToast(`URL updated as ${url}`, "info");
+    } else {
+      showToast("Link updated successfully!", "success");
+    }
+
+    setEditingLink(null);
   };
 
   // 6. Add new Link
@@ -562,7 +625,15 @@ export default function DashboardClient() {
     handleSaveProfile(updated);
   };
 
-  // 9. Move Link Up / Down
+  // 9b. Drag-and-drop reorder (from SortableLinkList)
+  const handleReorderLinks = (reorderedLinks: BioLink[]) => {
+    if (!profile) return;
+    const updated: BioPage = { ...profile, links: reorderedLinks };
+    setProfile(updated);
+    handleSaveProfile(updated);
+  };
+
+  // 9. Move Link Up / Down (keyboard fallback)
   const handleMoveLink = (index: number, direction: "up" | "down") => {
     if (!profile) return;
     const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -604,6 +675,51 @@ export default function DashboardClient() {
   const activeButtonStyle = useMemo(() => {
     return BUTTON_STYLES[profile?.buttonStyle || "rounded"];
   }, [profile?.buttonStyle]);
+
+  // Computed custom color styles for live preview
+  const previewCustomColors = profile?.useCustomColors ? profile?.customColors : undefined;
+
+  const previewCustomBg = useMemo(() => {
+    if (!previewCustomColors) return undefined;
+    if (previewCustomColors.backgroundGradient) {
+      return { background: previewCustomColors.backgroundGradient };
+    }
+    if (previewCustomColors.backgroundColor) {
+      return { backgroundColor: previewCustomColors.backgroundColor };
+    }
+    return undefined;
+  }, [previewCustomColors]);
+
+  const previewTextColor = useMemo(() => {
+    if (!previewCustomColors?.textColor) return undefined;
+    return { color: previewCustomColors.textColor };
+  }, [previewCustomColors]);
+
+  const previewAccentColor = useMemo(() => {
+    if (!previewCustomColors?.accentColor) return undefined;
+    return { color: previewCustomColors.accentColor };
+  }, [previewCustomColors]);
+
+  const previewAvatarBorder = useMemo(() => {
+    if (!previewCustomColors?.accentColor) return undefined;
+    return {
+      borderColor: previewCustomColors.accentColor,
+      boxShadow: `0 0 20px ${previewCustomColors.accentColor}40`,
+    };
+  }, [previewCustomColors]);
+
+  const previewButtonCustomStyle = useMemo(() => {
+    if (!previewCustomColors) return undefined;
+    const style: React.CSSProperties = {};
+    if (previewCustomColors.buttonColor) {
+      style.backgroundColor = previewCustomColors.buttonColor;
+      style.borderColor = `${previewCustomColors.buttonColor}40`;
+    }
+    if (previewCustomColors.buttonTextColor) {
+      style.color = previewCustomColors.buttonTextColor;
+    }
+    return style;
+  }, [previewCustomColors]);
 
   // Loading state
   if (authChecking || loadingProfile) {
@@ -796,6 +912,17 @@ export default function DashboardClient() {
               <span>Preview Live</span>
             </Link>
 
+            {/* QR Code button */}
+            <button
+              onClick={() => setShowQRModal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Generate QR code for your profile"
+              aria-label="Open QR code"
+            >
+              <QrCode className="w-3.5 h-3.5 text-accent" />
+              <span className="hidden sm:inline">QR Code</span>
+            </button>
+
             {/* Mobile preview toggle */}
             <button
               onClick={() => setShowMobilePreview(true)}
@@ -964,7 +1091,95 @@ export default function DashboardClient() {
                   </div>
                 )}
 
-                {/* List of existing links */}
+                {/* Inline Edit Link Form Modal */}
+                {editingLink && (
+                  <div className="rounded-2xl bg-zinc-900 border border-accent/40 p-5 shadow-2xl animate-fadeIn space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Edit3 className="w-4 h-4 text-accent" />
+                        <span>Edit Link</span>
+                      </h3>
+                      <button
+                        onClick={() => setEditingLink(null)}
+                        className="p-1 rounded-lg hover:bg-white/10 text-brand-400 hover:text-white cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-brand-300 mb-1">
+                          Link Title
+                        </label>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          placeholder="e.g. My YouTube Channel, Portfolio, Book notes..."
+                          maxLength={100}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-sm focus:outline-none focus:border-accent"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-brand-300 mb-1">
+                          Destination URL
+                        </label>
+                        <input
+                          type="url"
+                          value={editUrl}
+                          onChange={(e) => setEditUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-sm focus:outline-none focus:border-accent font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-brand-300 mb-1">
+                          Link Icon
+                        </label>
+                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-36 overflow-y-auto p-1">
+                          {SUPPORTED_LINK_ICONS.map((icon) => (
+                            <button
+                              key={icon.id}
+                              type="button"
+                              onClick={() => setEditIcon(icon.id)}
+                              className={`p-2 rounded-xl border flex flex-col items-center gap-1 text-[11px] transition-all cursor-pointer ${
+                                editIcon === icon.id
+                                  ? "bg-accent/20 border-accent text-accent"
+                                  : "bg-white/5 border-white/10 text-brand-400 hover:text-white hover:bg-white/10"
+                              }`}
+                            >
+                              {renderBioIcon(icon.id, "w-4 h-4")}
+                              <span className="truncate max-w-[50px]">{icon.id}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingLink(null)}
+                          className="px-4 py-2 rounded-xl text-xs font-semibold text-brand-300 hover:text-white cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleUpdateLink}
+                          disabled={!editTitle.trim() || !editUrl.trim()}
+                          className="px-5 py-2 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-50 text-black font-bold text-xs shadow-md cursor-pointer"
+                        >
+                          Update Link
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* List of existing links — drag-and-drop + keyboard arrows */}
                 {profile.links.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-white/15 p-12 text-center">
                     <LinkIcon className="w-8 h-8 text-brand-500 mx-auto mb-3" />
@@ -974,83 +1189,14 @@ export default function DashboardClient() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {profile.links.map((link, idx) => (
-                      <div
-                        key={link.id}
-                        className={`rounded-2xl border transition-all p-4 bg-zinc-900/70 border-white/10 hover:border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                          !link.isActive ? "opacity-60 bg-zinc-950/40" : ""
-                        }`}
-                      >
-                        {/* Left: Reorder & Info */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* Reorder Up/Down arrows */}
-                          <div className="flex flex-col gap-0.5">
-                            <button
-                              onClick={() => handleMoveLink(idx, "up")}
-                              disabled={idx === 0}
-                              className="p-1 rounded text-brand-400 hover:text-white disabled:opacity-30 cursor-pointer"
-                              title="Move up"
-                            >
-                              <ArrowUp className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleMoveLink(idx, "down")}
-                              disabled={idx === profile.links.length - 1}
-                              className="p-1 rounded text-brand-400 hover:text-white disabled:opacity-30 cursor-pointer"
-                              title="Move down"
-                            >
-                              <ArrowDown className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          {/* Link Icon */}
-                          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-accent shrink-0">
-                            {renderBioIcon(link.icon, "w-5 h-5")}
-                          </div>
-
-                          {/* Titles */}
-                          <div className="min-w-0">
-                            <h4 className="text-sm font-semibold text-white truncate">{link.title}</h4>
-                            <p className="text-xs text-brand-400 font-mono truncate max-w-xs">{link.url}</p>
-                          </div>
-                        </div>
-
-                        {/* Right: Clicks, Toggle & Delete */}
-                        <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                          {/* Click counter pill */}
-                          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-[11px] font-mono text-brand-300">
-                            <MousePointerClick className="w-3 h-3 text-accent" />
-                            <span>{link.clicks || 0}</span>
-                          </div>
-
-                          {/* Enable / Disable Switch */}
-                          <button
-                            onClick={() => handleToggleLinkActive(link.id)}
-                            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${
-                              link.isActive ? "bg-emerald-500" : "bg-zinc-700"
-                            }`}
-                            title={link.isActive ? "Active (click to disable)" : "Disabled (click to activate)"}
-                          >
-                            <span
-                              className={`block w-5 h-5 rounded-full bg-white transition-transform ${
-                                link.isActive ? "translate-x-5" : "translate-x-0"
-                              }`}
-                            />
-                          </button>
-
-                          {/* Delete Link Button */}
-                          <button
-                            onClick={() => handleDeleteLink(link.id)}
-                            className="p-1.5 rounded-lg text-brand-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                            title="Delete link"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <SortableLinkList
+                    links={profile.links}
+                    onReorder={handleReorderLinks}
+                    onToggle={handleToggleLinkActive}
+                    onEdit={handleOpenEditLink}
+                    onDelete={handleDeleteLink}
+                    onMove={handleMoveLink}
+                  />
                 )}
               </div>
             )}
@@ -1369,6 +1515,34 @@ export default function DashboardClient() {
                     })}
                   </div>
                 </div>
+
+                {/* 4. Linktree-Style Custom Color Customizer */}
+                <CustomColorCustomizer
+                  currentTheme={profile.theme}
+                  customColors={profile.customColors}
+                  useCustomColors={profile.useCustomColors}
+                  saving={saving}
+                  onChange={(newColors, isCustom) => {
+                    setProfile((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            customColors: newColors,
+                            useCustomColors: isCustom,
+                          }
+                        : null
+                    );
+                  }}
+                  onSave={(newColors, isCustom) => {
+                    const updated: BioPage = {
+                      ...profile,
+                      customColors: newColors,
+                      useCustomColors: isCustom,
+                    };
+                    setProfile(updated);
+                    handleSaveProfile(updated);
+                  }}
+                />
               </div>
             )}
 
@@ -1396,6 +1570,8 @@ export default function DashboardClient() {
                     { key: "whatsapp", label: "WhatsApp", placeholder: "https://wa.me/phonenumber", icon: <MessageCircle className="w-4 h-4 text-[#25d366]" /> },
                     { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/...", icon: <SpotifyIcon className="w-4 h-4 text-[#1db954]" /> },
                     { key: "discord", label: "Discord", placeholder: "https://discord.gg/invite", icon: <DiscordIcon className="w-4 h-4 text-[#5865f2]" /> },
+                    { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/username or @username", icon: <FacebookIcon className="w-4 h-4 text-[#1877f2]" /> },
+                    { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@username or @username", icon: <TikTokIcon className="w-4 h-4 text-white" /> },
                     { key: "email", label: "Email", placeholder: "yourname@domain.com", icon: <Mail className="w-4 h-4 text-amber-400" /> },
                   ].map((item) => (
                     <div key={item.key}>
@@ -1426,42 +1602,12 @@ export default function DashboardClient() {
             {/* TAB 4: SETTINGS & ANALYTICS */}
             {activeTab === "settings" && (
               <div className="space-y-6 animate-fadeIn">
-                {/* Basic Analytics Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="rounded-2xl bg-zinc-900/70 border border-white/10 p-5">
-                    <div className="flex items-center justify-between text-brand-400 mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider">Page Views</span>
-                      <Eye className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    <div className="text-3xl font-extrabold text-white font-mono">
-                      {profile.views || 0}
-                    </div>
-                    <p className="text-[11px] text-brand-500 mt-1">Bot-filtered authentic visits</p>
-                  </div>
-
-                  <div className="rounded-2xl bg-zinc-900/70 border border-white/10 p-5">
-                    <div className="flex items-center justify-between text-brand-400 mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider">Link Clicks</span>
-                      <MousePointerClick className="w-4 h-4 text-accent" />
-                    </div>
-                    <div className="text-3xl font-extrabold text-white font-mono">
-                      {profile.totalClicks || 0}
-                    </div>
-                    <p className="text-[11px] text-brand-500 mt-1">Total external link visits</p>
-                  </div>
-
-                  <div className="rounded-2xl bg-zinc-900/70 border border-white/10 p-5">
-                    <div className="flex items-center justify-between text-brand-400 mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider">CTR</span>
-                      <Sparkles className="w-4 h-4 text-cyan-400" />
-                    </div>
-                    <div className="text-3xl font-extrabold text-white font-mono">
-                      {profile.views > 0
-                        ? `${Math.round(((profile.totalClicks || 0) / profile.views) * 100)}%`
-                        : "0%"}
-                    </div>
-                    <p className="text-[11px] text-brand-500 mt-1">Click-through rate</p>
-                  </div>
+                {/* Time-series Analytics Chart */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6">
+                  <AnalyticsChart
+                    currentViews={profile.views || 0}
+                    currentClicks={profile.totalClicks || 0}
+                  />
                 </div>
 
                 {/* Publish / Unpublish Toggle */}
@@ -1493,7 +1639,7 @@ export default function DashboardClient() {
                   </button>
                 </div>
 
-                {/* Account info */}
+                {/* Share + QR code */}
                 <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-3">
                   <h4 className="text-base font-bold text-white">Share Your Profile</h4>
                   <p className="text-xs text-brand-400">
@@ -1508,6 +1654,15 @@ export default function DashboardClient() {
                       {copiedLink ? "Copied!" : "Copy"}
                     </button>
                   </div>
+
+                  {/* QR Code trigger */}
+                  <button
+                    onClick={() => setShowQRModal(true)}
+                    className="w-full py-2.5 px-4 rounded-xl border border-white/10 hover:bg-white/5 text-sm font-semibold text-brand-300 hover:text-white transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <QrCode className="w-4 h-4 text-accent" />
+                    <span>Generate QR Code for this Profile</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -1532,14 +1687,14 @@ export default function DashboardClient() {
 
               {/* Screen Content inside phone frame */}
               <div
-                className={`w-full h-full rounded-[34px] overflow-y-auto px-4 py-8 relative ${activeTheme.backgroundClass}`}
-                style={{ scrollbarWidth: "none" }}
+                className={`w-full h-full rounded-[34px] overflow-y-auto px-4 py-8 relative ${!previewCustomColors ? activeTheme.backgroundClass : ""}`}
+                style={{ scrollbarWidth: "none", ...(previewCustomColors?.backgroundGradient ? { background: previewCustomColors.backgroundGradient } : previewCustomColors?.backgroundColor ? { backgroundColor: previewCustomColors.backgroundColor } : {}) }}
               >
                 {/* Header profile */}
                 <div className="text-center mb-6 pt-3">
                   <div
-                    className={`w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl font-black overflow-hidden ${activeTheme.avatarBorder}`}
-                    style={{ backgroundColor: activeTheme.previewBg }}
+                    className={`w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl font-black overflow-hidden ${!previewCustomColors?.accentColor ? activeTheme.avatarBorder : "border-2 shadow-lg"}`}
+                    style={{ backgroundColor: previewCustomColors?.backgroundColor || activeTheme.previewBg, ...(previewCustomColors?.accentColor ? { borderColor: previewCustomColors.accentColor, boxShadow: `0 0 20px ${previewCustomColors.accentColor}40` } : {}) }}
                   >
                     {profile.avatarType === "girl" ? (
                       "👧"
@@ -1555,25 +1710,34 @@ export default function DashboardClient() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className={activeTheme.accentClass}>
+                      <span className={!previewCustomColors?.accentColor ? activeTheme.accentClass : ""} style={previewCustomColors?.accentColor ? { color: previewCustomColors.accentColor } : undefined}>
                         {profile.displayName.charAt(0) || "U"}
                       </span>
                     )}
                   </div>
 
-                  <h3 className={`text-base font-extrabold tracking-tight ${activeTheme.textPrimary}`}>
+                  <h3
+                    className={`text-base font-extrabold tracking-tight ${!previewCustomColors?.textColor ? activeTheme.textPrimary : ""}`}
+                    style={previewCustomColors?.textColor ? { color: previewCustomColors.textColor } : undefined}
+                  >
                     {profile.displayName || "Your Name"}
                   </h3>
-                  <p className={`text-xs font-mono mt-0.5 opacity-80 ${activeTheme.accentClass}`}>
-                    @{profile.username}
+                  <p
+                    className={`text-xs font-mono mt-0.5 opacity-80 ${!previewCustomColors?.accentColor ? activeTheme.accentClass : ""}`}
+                    style={previewCustomColors?.accentColor ? { color: previewCustomColors.accentColor } : undefined}
+                  >
+                    {profile.username}
                   </p>
                   {profile.bio && (
-                    <p className={`text-xs mt-2 leading-relaxed px-2 ${activeTheme.textSecondary}`}>
+                    <p
+                      className={`text-xs mt-2 leading-relaxed px-2 ${!previewCustomColors?.textColor ? activeTheme.textSecondary : ""}`}
+                      style={previewCustomColors?.textColor ? { color: previewCustomColors.textColor, opacity: 0.85 } : undefined}
+                    >
                       {profile.bio}
                     </p>
                   )}
 
-                  {/* Social icons row preview */}
+                  {/* Social icons row preview — all 12 platforms */}
                   {profile.socials && Object.values(profile.socials).some(Boolean) && (
                     <div className="flex flex-wrap items-center justify-center gap-2 mt-3.5">
                       {profile.socials.instagram && <InstagramIcon className="w-3.5 h-3.5 opacity-80" />}
@@ -1582,6 +1746,12 @@ export default function DashboardClient() {
                       {profile.socials.linkedin && <LinkedInIcon className="w-3.5 h-3.5 opacity-80" />}
                       {profile.socials.github && <GitHubIcon className="w-3.5 h-3.5 opacity-80" />}
                       {profile.socials.telegram && <TelegramIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.whatsapp && <MessageCircle className="w-3.5 h-3.5 text-[#25d366] opacity-80" />}
+                      {profile.socials.spotify && <SpotifyIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.discord && <DiscordIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.facebook && <FacebookIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.tiktok && <TikTokIcon className="w-3.5 h-3.5 opacity-80" />}
+                      {profile.socials.email && <Mail className="w-3.5 h-3.5 text-amber-400 opacity-80" />}
                     </div>
                   )}
                 </div>
@@ -1598,12 +1768,21 @@ export default function DashboardClient() {
                       .map((l) => (
                         <div
                           key={l.id}
-                          className={`w-full py-3 px-3.5 text-center transition-all flex items-center justify-between gap-2 ${activeButtonStyle.previewClass} ${activeTheme.cardClass}`}
+                          className={`w-full py-3 px-3.5 text-center transition-all flex items-center justify-between gap-2 ${activeButtonStyle.previewClass} ${!previewCustomColors ? activeTheme.cardClass : "border hover:scale-[1.01] shadow-lg"}`}
+                          style={previewCustomColors ? { backgroundColor: previewCustomColors.buttonColor, borderColor: previewCustomColors.buttonColor ? `${previewCustomColors.buttonColor}40` : undefined } : undefined}
                         >
-                          <div className="w-5 h-5 flex items-center justify-center opacity-80">
+                          <div
+                            className="w-5 h-5 flex items-center justify-center opacity-80"
+                            style={previewCustomColors?.buttonTextColor ? { color: previewCustomColors.buttonTextColor } : undefined}
+                          >
                             {renderBioIcon(l.icon, "w-3.5 h-3.5")}
                           </div>
-                          <span className="text-xs font-bold truncate flex-1 text-center">{l.title}</span>
+                          <span
+                            className="text-xs font-bold truncate flex-1 text-center"
+                            style={previewCustomColors?.buttonTextColor ? { color: previewCustomColors.buttonTextColor } : undefined}
+                          >
+                            {l.title}
+                          </span>
                           <div className="w-5 h-5 flex items-center justify-center opacity-40">
                             <ExternalLink className="w-3 h-3" />
                           </div>
@@ -1638,21 +1817,59 @@ export default function DashboardClient() {
             </button>
             <div className="w-[310px] h-[580px] rounded-[40px] p-2.5 bg-zinc-900 border-4 border-zinc-700 shadow-2xl overflow-hidden">
               <div
-                className={`w-full h-full rounded-[32px] overflow-y-auto px-4 py-8 relative ${activeTheme.backgroundClass}`}
+                className={`w-full h-full rounded-[32px] overflow-y-auto px-4 py-8 relative ${!previewCustomColors ? activeTheme.backgroundClass : ""}`}
+                style={previewCustomColors?.backgroundGradient ? { background: previewCustomColors.backgroundGradient } : previewCustomColors?.backgroundColor ? { backgroundColor: previewCustomColors.backgroundColor } : undefined}
               >
                 <div className="text-center mb-6 pt-2">
                   <div
-                    className={`w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-xl font-bold overflow-hidden ${activeTheme.avatarBorder}`}
-                    style={{ backgroundColor: activeTheme.previewBg }}
+                    className={`w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-xl font-bold overflow-hidden ${!previewCustomColors?.accentColor ? activeTheme.avatarBorder : "border-2 shadow-lg"}`}
+                    style={{ backgroundColor: previewCustomColors?.backgroundColor || activeTheme.previewBg, ...(previewCustomColors?.accentColor ? { borderColor: previewCustomColors.accentColor, boxShadow: `0 0 16px ${previewCustomColors.accentColor}40` } : {}) }}
                   >
                     {profile.avatarType === "girl"
                       ? "👧"
                       : profile.avatarType === "boy"
                       ? "👦"
+                      : profile.avatarType === "custom" && profile.avatarUrl ? (
+                        <Image
+                          src={profile.avatarUrl}
+                          alt={profile.displayName}
+                          width={64}
+                          height={64}
+                          unoptimized
+                          className="w-full h-full object-cover"
+                        />
+                      )
                       : profile.displayName.charAt(0) || "U"}
                   </div>
-                  <h3 className={`text-sm font-bold ${activeTheme.textPrimary}`}>{profile.displayName}</h3>
-                  <p className={`text-[11px] font-mono opacity-80 ${activeTheme.accentClass}`}>@{profile.username}</p>
+                  <h3
+                    className={`text-sm font-bold ${!previewCustomColors?.textColor ? activeTheme.textPrimary : ""}`}
+                    style={previewCustomColors?.textColor ? { color: previewCustomColors.textColor } : undefined}
+                  >
+                    {profile.displayName}
+                  </h3>
+                  <p
+                    className={`text-[11px] font-mono opacity-80 ${!previewCustomColors?.accentColor ? activeTheme.accentClass : ""}`}
+                    style={previewCustomColors?.accentColor ? { color: previewCustomColors.accentColor } : undefined}
+                  >
+                    {profile.username}
+                  </p>
+                  {/* Social icons row in mobile preview */}
+                  {profile.socials && Object.values(profile.socials).some(Boolean) && (
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2.5">
+                      {profile.socials.instagram && <InstagramIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.youtube && <YouTubeIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.twitter && <TwitterIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.linkedin && <LinkedInIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.github && <GitHubIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.telegram && <TelegramIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.whatsapp && <MessageCircle className="w-3 h-3 text-[#25d366] opacity-80" />}
+                      {profile.socials.spotify && <SpotifyIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.discord && <DiscordIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.facebook && <FacebookIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.tiktok && <TikTokIcon className="w-3 h-3 opacity-80" />}
+                      {profile.socials.email && <Mail className="w-3 h-3 text-amber-400 opacity-80" />}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   {profile.links
@@ -1660,7 +1877,8 @@ export default function DashboardClient() {
                     .map((l) => (
                       <div
                         key={l.id}
-                        className={`w-full py-2.5 px-3 text-center flex items-center justify-between text-xs font-semibold ${activeButtonStyle.previewClass} ${activeTheme.cardClass}`}
+                        className={`w-full py-2.5 px-3 text-center flex items-center justify-between text-xs font-semibold ${activeButtonStyle.previewClass} ${!previewCustomColors ? activeTheme.cardClass : "border shadow"}`}
+                        style={previewCustomColors ? { backgroundColor: previewCustomColors.buttonColor, color: previewCustomColors.buttonTextColor, borderColor: previewCustomColors.buttonColor ? `${previewCustomColors.buttonColor}40` : undefined } : undefined}
                       >
                         <span className="truncate flex-1">{l.title}</span>
                       </div>
@@ -1670,6 +1888,15 @@ export default function DashboardClient() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && profile && (
+        <QRCodeModal
+          username={profile.username}
+          displayName={profile.displayName}
+          onClose={() => setShowQRModal(false)}
+        />
       )}
     </div>
   );

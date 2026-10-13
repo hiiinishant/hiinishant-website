@@ -33,6 +33,9 @@ import {
   GitHubIcon,
   TelegramIcon,
   SpotifyIcon,
+  DiscordIcon,
+  FacebookIcon,
+  TikTokIcon,
 } from "@/components/bio/BioIcons";
 
 interface PublicBioClientProps {
@@ -137,6 +140,50 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
     return BUTTON_STYLES[profile.buttonStyle] || BUTTON_STYLES["rounded"];
   }, [profile.buttonStyle]);
 
+  const customColors = profile.useCustomColors ? profile.customColors : undefined;
+
+  const bgStyle = useMemo(() => {
+    if (!customColors) return undefined;
+    if (customColors.backgroundGradient) {
+      return { background: customColors.backgroundGradient };
+    }
+    if (customColors.backgroundColor) {
+      return { backgroundColor: customColors.backgroundColor };
+    }
+    return undefined;
+  }, [customColors]);
+
+  const textColorStyle = useMemo(() => {
+    if (!customColors?.textColor) return undefined;
+    return { color: customColors.textColor };
+  }, [customColors]);
+
+  const accentColorStyle = useMemo(() => {
+    if (!customColors?.accentColor) return undefined;
+    return { color: customColors.accentColor };
+  }, [customColors]);
+
+  const avatarBorderStyle = useMemo(() => {
+    if (!customColors?.accentColor) return undefined;
+    return {
+      borderColor: customColors.accentColor,
+      boxShadow: `0 0 25px ${customColors.accentColor}40`,
+    };
+  }, [customColors]);
+
+  const buttonCustomStyle = useMemo(() => {
+    if (!customColors) return undefined;
+    const style: React.CSSProperties = {};
+    if (customColors.buttonColor) {
+      style.backgroundColor = customColors.buttonColor;
+      style.borderColor = `${customColors.buttonColor}40`;
+    }
+    if (customColors.buttonTextColor) {
+      style.color = customColors.buttonTextColor;
+    }
+    return style;
+  }, [customColors]);
+
   // Case: Unpublished Profile
   if (!profile.isPublished) {
     return (
@@ -147,7 +194,7 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight mb-2">Page Currently Unpublished</h1>
           <p className="text-sm text-brand-300 leading-relaxed mb-6">
-            The profile for <span className="text-accent font-semibold">@{profile.username}</span> is in draft mode or being updated by the owner.
+            The profile for <span className="text-accent font-semibold">{profile.username}</span> is in draft mode or being updated by the owner.
           </p>
           <div className="space-y-3">
             <Link
@@ -169,7 +216,10 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
   }
 
   return (
-    <div className={`min-h-screen flex flex-col justify-between relative selection:bg-accent/30 selection:text-white ${theme.backgroundClass}`}>
+    <div
+      className={`min-h-screen flex flex-col justify-between relative selection:bg-accent/30 selection:text-white ${!bgStyle ? theme.backgroundClass : ""}`}
+      style={bgStyle}
+    >
       {/* Toast popup */}
       {shareToast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-fadeIn">
@@ -181,35 +231,32 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
       )}
 
       {/* Floating Top Header Controls */}
-      <div className="w-full max-w-lg mx-auto px-5 pt-6 pb-2 flex items-center justify-between z-30">
-        {/* Left: Quick Back / Brand link */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/20 hover:bg-black/40 border border-white/10 text-[11px] font-semibold text-white/70 hover:text-white backdrop-blur-md transition-all"
-        >
-          <span>HN</span>
-          <span className="opacity-50">/</span>
-          <span>hiiinishant.com</span>
-        </Link>
-
-        {/* Right: Share Button */}
+      <div className="w-full max-w-lg mx-auto px-5 pt-6 pb-2 flex items-center justify-end z-30">
         <div className="flex items-center gap-2">
           {isOwner && (
             <Link
               href="/dashboard"
-              className="p-2 rounded-full bg-black/20 hover:bg-black/40 border border-white/10 text-white/80 hover:text-white backdrop-blur-md transition-all"
-              title="Edit your Bio Studio"
+              className="h-10 px-3.5 rounded-full bg-black/20 hover:bg-black/40 border border-white/15 text-white/90 hover:text-white backdrop-blur-md transition-all flex items-center gap-1.5 text-xs font-semibold shadow-sm active:scale-95"
+              title="Edit in Bio Studio"
             >
-              <Edit3 className="w-4 h-4" />
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Edit Studio</span>
             </Link>
           )}
 
           <button
             onClick={handleShare}
-            className="p-2 rounded-full bg-black/20 hover:bg-black/40 border border-white/10 text-white/80 hover:text-white backdrop-blur-md transition-all cursor-pointer"
+            aria-label="Share profile"
+            className="h-10 w-10 rounded-full bg-black/20 hover:bg-black/40 border border-white/15 text-white/90 hover:text-white backdrop-blur-md transition-all flex items-center justify-center cursor-pointer shadow-sm active:scale-95"
             title="Share Profile"
           >
-            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+            {copied ? (
+              <Check className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
+                <path d="M216,112v96a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V112A16,16,0,0,1,56,96H80a8,8,0,0,1,0,16H56v96H200V112H176a8,8,0,0,1,0-16h24A16,16,0,0,1,216,112ZM93.66,69.66,120,43.31V136a8,8,0,0,0,16,0V43.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,69.66Z" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
@@ -220,8 +267,11 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
         <div className="text-center mb-7">
           {/* Avatar Ring */}
           <div
-            className={`w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-black overflow-hidden transition-transform duration-300 hover:scale-105 ${theme.avatarBorder}`}
-            style={{ backgroundColor: theme.previewBg }}
+            className={`w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-black overflow-hidden transition-transform duration-300 hover:scale-105 ${!avatarBorderStyle ? theme.avatarBorder : "border-2 shadow-lg"}`}
+            style={{
+              backgroundColor: customColors?.backgroundColor || theme.previewBg,
+              ...avatarBorderStyle,
+            }}
           >
             {profile.avatarType === "girl" ? (
               <span>👧</span>
@@ -237,25 +287,34 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className={theme.accentClass}>
+              <span className={!accentColorStyle ? theme.accentClass : ""} style={accentColorStyle}>
                 {profile.displayName.charAt(0).toUpperCase() || "U"}
               </span>
             )}
           </div>
 
           {/* Display Name */}
-          <h1 className={`text-2xl font-extrabold tracking-tight ${theme.textPrimary}`}>
+          <h1
+            className={`text-2xl font-extrabold tracking-tight ${!textColorStyle ? theme.textPrimary : ""}`}
+            style={textColorStyle}
+          >
             {profile.displayName}
           </h1>
 
           {/* Handle */}
-          <p className={`text-xs font-mono font-semibold mt-1 opacity-80 ${theme.accentClass}`}>
-            @{profile.username}
+          <p
+            className={`text-xs font-mono font-semibold mt-1 opacity-80 ${!accentColorStyle ? theme.accentClass : ""}`}
+            style={accentColorStyle}
+          >
+            {profile.username}
           </p>
 
           {/* Bio Headline */}
           {profile.bio && (
-            <p className={`text-sm mt-3 leading-relaxed max-w-sm mx-auto font-normal ${theme.textSecondary}`}>
+            <p
+              className={`text-sm mt-3 leading-relaxed max-w-sm mx-auto font-normal ${!textColorStyle ? theme.textSecondary : ""}`}
+              style={textColorStyle ? { color: customColors?.textColor, opacity: 0.85 } : undefined}
+            >
               {profile.bio}
             </p>
           )}
@@ -387,6 +446,54 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
                 </a>
               )}
 
+              {profile.socials.discord && (
+                <a
+                  href={
+                    profile.socials.discord.startsWith("http")
+                      ? profile.socials.discord
+                      : `https://discord.gg/${profile.socials.discord.replace(/^https?:\/\/discord\.gg\//, "")}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all hover:scale-110"
+                  aria-label="Discord"
+                >
+                  <DiscordIcon className="w-4 h-4 text-[#5865f2]" />
+                </a>
+              )}
+
+              {profile.socials.facebook && (
+                <a
+                  href={
+                    profile.socials.facebook.startsWith("http")
+                      ? profile.socials.facebook
+                      : `https://facebook.com/${profile.socials.facebook.replace("@", "")}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all hover:scale-110"
+                  aria-label="Facebook"
+                >
+                  <FacebookIcon className="w-4 h-4 text-[#1877f2]" />
+                </a>
+              )}
+
+              {profile.socials.tiktok && (
+                <a
+                  href={
+                    profile.socials.tiktok.startsWith("http")
+                      ? profile.socials.tiktok
+                      : `https://tiktok.com/@${profile.socials.tiktok.replace("@", "")}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all hover:scale-110"
+                  aria-label="TikTok"
+                >
+                  <TikTokIcon className="w-4 h-4 text-white" />
+                </a>
+              )}
+
               {profile.socials.email && (
                 <a
                   href={`mailto:${profile.socials.email}`}
@@ -414,20 +521,30 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => handleLinkClick(link.id, link.url)}
-                className={`group w-full py-4 px-5 transition-all duration-300 flex items-center justify-between gap-3 ${buttonStyle.previewClass} ${theme.cardClass}`}
+                className={`group w-full py-4 px-5 transition-all duration-300 flex items-center justify-between gap-3 ${buttonStyle.previewClass} ${!buttonCustomStyle ? theme.cardClass : "border hover:scale-[1.01] shadow-lg"}`}
+                style={buttonCustomStyle}
               >
                 {/* Left: Platform Icon */}
-                <div className="w-6 h-6 flex items-center justify-center opacity-85 group-hover:scale-110 group-hover:opacity-100 transition-all shrink-0">
+                <div
+                  className="w-6 h-6 flex items-center justify-center opacity-85 group-hover:scale-110 group-hover:opacity-100 transition-all shrink-0"
+                  style={customColors?.buttonTextColor ? { color: customColors.buttonTextColor } : undefined}
+                >
                   {renderBioIcon(link.icon, "w-4 h-4")}
                 </div>
 
                 {/* Center: Title */}
-                <span className="text-sm sm:text-base font-bold truncate text-center flex-1 leading-snug">
+                <span
+                  className="text-sm sm:text-base font-bold truncate text-center flex-1 leading-snug"
+                  style={customColors?.buttonTextColor ? { color: customColors.buttonTextColor } : undefined}
+                >
                   {link.title}
                 </span>
 
                 {/* Right: Small arrow */}
-                <div className="w-6 h-6 flex items-center justify-center opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0">
+                <div
+                  className="w-6 h-6 flex items-center justify-center opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0"
+                  style={customColors?.buttonTextColor ? { color: customColors.buttonTextColor } : undefined}
+                >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </div>
               </a>
@@ -436,16 +553,17 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
         </div>
       </div>
 
-      {/* Bottom Viral Branding Pill */}
-      <footer className="w-full text-center py-6 px-4 z-30">
+      {/* Bottom Viral Branding Pill (Linktree-style) */}
+      <footer className="w-full text-center py-8 px-4 z-30">
         <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/30 hover:bg-black/50 border border-white/10 text-xs font-semibold text-white/70 hover:text-white backdrop-blur-md transition-all shadow-lg hover:scale-105"
+          href="/signup?redirect=/dashboard"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black/30 hover:bg-black/50 border border-white/15 text-xs sm:text-sm font-semibold text-white/90 hover:text-white backdrop-blur-md transition-all shadow-xl hover:scale-105 active:scale-95 group"
         >
           <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <span>Made on Hiii Nishant</span>
-          <span className="opacity-50">·</span>
-          <span className="text-accent font-bold">Create Your Free Bio Link &rarr;</span>
+          <span>
+            Join <span className="font-bold text-white">{profile.username}</span> on <span className="font-bold">Hiii Nishant</span>
+          </span>
+          <span className="opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">&rarr;</span>
         </Link>
       </footer>
     </div>

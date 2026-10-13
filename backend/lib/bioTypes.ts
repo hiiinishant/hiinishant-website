@@ -42,6 +42,15 @@ export type ButtonStyle =
   | 'outline'
   | 'glass';
 
+export interface CustomColorPalette {
+  backgroundColor?: string;
+  backgroundGradient?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
+  textColor?: string;
+  accentColor?: string;
+}
+
 export interface BioPage {
   uid: string;
   username: string; // normalized lowercase
@@ -53,6 +62,8 @@ export interface BioPage {
   buttonStyle: ButtonStyle;
   customBackgroundColor?: string;
   customAccentColor?: string;
+  customColors?: CustomColorPalette;
+  useCustomColors?: boolean;
   isPublished: boolean;
   links: BioLink[];
   socials: SocialLinks;

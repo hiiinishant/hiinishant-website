@@ -71,6 +71,41 @@ function getClientIp(req: Request): string {
   return req.socket.remoteAddress || 'unknown-ip';
 }
 
+/**
+ * Returns today's date in UTC as 'YYYY-MM-DD'.
+ * All daily stats documents use this key so they sort chronologically.
+ */
+function getTodayDateKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Atomically increments a field in the daily_stats sub-collection for a
+ * bio_pages document. Non-blocking — errors are swallowed to never affect
+ * the primary response.
+ */
+async function incrementDailyStat(
+  bioDocRef: admin.firestore.DocumentReference,
+  field: 'views' | 'clicks'
+): Promise<void> {
+  if (!firestore) return;
+  try {
+    const dateKey = getTodayDateKey();
+    const statRef = bioDocRef.collection('daily_stats').doc(dateKey);
+    await statRef.set(
+      {
+        date: dateKey,
+        [field]: admin.firestore.FieldValue.increment(1),
+        // Ensure both fields exist on first write
+        ...(field === 'views' ? { clicks: admin.firestore.FieldValue.increment(0) } : { views: admin.firestore.FieldValue.increment(0) }),
+      },
+      { merge: true }
+    );
+  } catch (err: any) {
+    console.warn('[Bio API] Daily stat increment error (non-blocking):', err.message);
+  }
+}
+
 // ─── 1. Public Endpoint: Check Username Availability ─────────────────────────
 // GET /api/bio/check-username?username=<username>
 router.get('/check-username', async (req: Request, res: Response) => {
@@ -132,6 +167,88 @@ router.get('/check-username', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[Bio API] Check username error:', error);
     res.status(500).json({ available: false, error: 'Failed to verify username availability.' });
+  }
+});
+
+// ─── 1b. Authenticated Endpoint: Get Analytics Time-Series ──────────────────
+// GET /api/bio/me/analytics?range=7d|30d|90d
+// Must be declared BEFORE the wildcard GET /:username route.
+router.get('/me/analytics', requireFirebaseAuth, async (req: Request, res: Response) => {
+  try {
+    const uid = (req as any).firebaseUid as string;
+
+    if (!firestore) {
+      res.status(503).json({ error: 'Database service unavailable.' });
+      return;
+    }
+
+    // Parse range — default 30 days, max 90 days
+    const rawRange = typeof req.query.range === 'string' ? req.query.range : '30d';
+    const allowedRanges: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
+    const days = allowedRanges[rawRange] || 30;
+
+    // Build the cutoff date string (inclusive lower bound)
+    const cutoffDate = new Date();
+    cutoffDate.setUTCDate(cutoffDate.getUTCDate() - (days - 1));
+    const cutoffDateKey = cutoffDate.toISOString().slice(0, 10);
+
+    const bioDocRef = firestore.collection('bio_pages').doc(uid);
+
+    // Verify the profile exists and belongs to this user
+    const bioSnap = await bioDocRef.get();
+    if (!bioSnap.exists) {
+      res.status(404).json({ error: 'Bio profile not found.' });
+      return;
+    }
+
+    // Fetch daily_stats sub-collection filtered to requested range
+    const statsSnap = await bioDocRef
+      .collection('daily_stats')
+      .where('date', '>=', cutoffDateKey)
+      .orderBy('date', 'asc')
+      .get();
+
+    // Build a full date-indexed map so gaps become zeros
+    const dataMap: Record<string, { views: number; clicks: number }> = {};
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      dataMap[key] = { views: 0, clicks: 0 };
+    }
+
+    statsSnap.docs.forEach((doc) => {
+      const d = doc.data();
+      if (dataMap[d.date] !== undefined) {
+        dataMap[d.date] = {
+          views: d.views || 0,
+          clicks: d.clicks || 0,
+        };
+      }
+    });
+
+    const series = Object.entries(dataMap).map(([date, stats]) => ({
+      date,
+      views: stats.views,
+      clicks: stats.clicks,
+    }));
+
+    // Aggregate totals from the bio_pages document (always accurate)
+    const profileData = bioSnap.data() as BioPage;
+
+    res.status(200).json({
+      success: true,
+      range: rawRange,
+      days,
+      series,
+      totals: {
+        views: profileData.views || 0,
+        totalClicks: profileData.totalClicks || 0,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Bio API] Analytics error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch analytics.' });
   }
 });
 
@@ -346,6 +463,41 @@ router.put('/me', requireFirebaseAuth, async (req: Request, res: Response) => {
       }
     }
 
+    // ── Sanitize Custom Color Palette (Linktree-style) ──
+    const isValidHex = (hex: any): boolean => {
+      if (typeof hex !== 'string') return false;
+      return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hex.trim());
+    };
+
+    const isValidGradient = (grad: any): boolean => {
+      if (typeof grad !== 'string') return false;
+      const trimmed = grad.trim();
+      if (trimmed.length > 250) return false;
+      const isGrad =
+        /^linear-gradient\([^;{}]+\)$/.test(trimmed) ||
+        /^radial-gradient\([^;{}]+\)$/.test(trimmed);
+      const isSafe = !/[;{}<>]|url|expression|javascript/i.test(trimmed);
+      return isGrad && isSafe;
+    };
+
+    const useCustomColors =
+      typeof body.useCustomColors === 'boolean'
+        ? body.useCustomColors
+        : existingData.useCustomColors || false;
+
+    let customColors = existingData.customColors || {};
+    if (body.customColors && typeof body.customColors === 'object') {
+      const bColors = body.customColors;
+      const sanitized: any = {};
+      if (isValidHex(bColors.backgroundColor)) sanitized.backgroundColor = bColors.backgroundColor.trim();
+      if (isValidGradient(bColors.backgroundGradient)) sanitized.backgroundGradient = bColors.backgroundGradient.trim();
+      if (isValidHex(bColors.buttonColor)) sanitized.buttonColor = bColors.buttonColor.trim();
+      if (isValidHex(bColors.buttonTextColor)) sanitized.buttonTextColor = bColors.buttonTextColor.trim();
+      if (isValidHex(bColors.textColor)) sanitized.textColor = bColors.textColor.trim();
+      if (isValidHex(bColors.accentColor)) sanitized.accentColor = bColors.accentColor.trim();
+      customColors = sanitized;
+    }
+
     const updatedData: Partial<BioPage> = {
       displayName,
       bio,
@@ -356,6 +508,8 @@ router.put('/me', requireFirebaseAuth, async (req: Request, res: Response) => {
       isPublished,
       links,
       socials,
+      customColors,
+      useCustomColors,
       updatedAt: now,
     };
 
@@ -558,6 +712,8 @@ router.get('/:username', async (req: Request, res: Response) => {
       buttonStyle: data.buttonStyle || 'rounded',
       customBackgroundColor: data.customBackgroundColor,
       customAccentColor: data.customAccentColor,
+      customColors: data.customColors,
+      useCustomColors: data.useCustomColors || false,
       links: activeLinks,
       socials: data.socials || {},
     });
@@ -612,9 +768,11 @@ router.post('/:username/view', async (req: Request, res: Response) => {
 
     if (!snap.empty) {
       const docRef = snap.docs[0].ref;
-      await docRef.update({
-        views: admin.firestore.FieldValue.increment(1),
-      });
+      // Atomically update the running total AND the daily time-series bucket
+      await Promise.all([
+        docRef.update({ views: admin.firestore.FieldValue.increment(1) }),
+        incrementDailyStat(docRef, 'views'),
+      ]);
     }
 
     res.status(200).json({ success: true, counted: true });
@@ -684,10 +842,14 @@ router.post('/:username/click/:linkId', async (req: Request, res: Response) => {
       });
 
       if (found) {
-        await docRef.update({
-          links: updatedLinks,
-          totalClicks: admin.firestore.FieldValue.increment(1),
-        });
+        // Atomically update running totals AND the daily time-series bucket
+        await Promise.all([
+          docRef.update({
+            links: updatedLinks,
+            totalClicks: admin.firestore.FieldValue.increment(1),
+          }),
+          incrementDailyStat(docRef, 'clicks'),
+        ]);
       }
     }
 

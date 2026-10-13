@@ -58,13 +58,9 @@ service cloud.firestore {
 
     // ── Bio Pages (Link-in-bio profiles) ──────────────────────────────────────
     match /bio_pages/{userId} {
-      // Public can read if published; owner can always read their own page
-      allow read: if (resource.data.isPublished == true) || (isSignedIn() && isOwner(userId));
-
-      // Only the owner can create, update, or delete their bio page
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if isSignedIn() && isOwner(userId);
+      // Direct Firestore client access is strictly limited to the authenticated document owner.
+      // Public visitors are securely served through the sanitized backend/Next.js API (Firebase Admin SDK).
+      allow read, write: if isSignedIn() && isOwner(userId);
     }
   }
 }

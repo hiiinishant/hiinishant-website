@@ -42,6 +42,15 @@ export type ButtonStyle =
   | "outline"
   | "glass";
 
+export interface CustomColorPalette {
+  backgroundColor?: string;
+  backgroundGradient?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
+  textColor?: string;
+  accentColor?: string;
+}
+
 export interface BioPage {
   uid: string;
   username: string; // normalized lowercase
@@ -53,6 +62,8 @@ export interface BioPage {
   buttonStyle: ButtonStyle;
   customBackgroundColor?: string;
   customAccentColor?: string;
+  customColors?: CustomColorPalette;
+  useCustomColors?: boolean;
   isPublished: boolean;
   links: BioLink[];
   socials: SocialLinks;
@@ -72,6 +83,8 @@ export interface PublicBioProfile {
   buttonStyle: ButtonStyle;
   customBackgroundColor?: string;
   customAccentColor?: string;
+  customColors?: CustomColorPalette;
+  useCustomColors?: boolean;
   isPublished: boolean;
   links: Array<{
     id: string;
@@ -81,6 +94,150 @@ export interface PublicBioProfile {
     order: number;
   }>;
   socials: SocialLinks;
+}
+
+export interface ColorPalettePreset {
+  id: string;
+  name: string;
+  description: string;
+  palette: CustomColorPalette;
+}
+
+export const COLOR_PALETTE_PRESETS: ColorPalettePreset[] = [
+  {
+    id: "midnight-luxe",
+    name: "Midnight Luxe",
+    description: "Deep obsidian slate with electric cyan glow",
+    palette: {
+      backgroundColor: "#090d16",
+      backgroundGradient: "linear-gradient(135deg, #090d16 0%, #1e293b 100%)",
+      buttonColor: "#1e293b",
+      buttonTextColor: "#ffffff",
+      textColor: "#f8fafc",
+      accentColor: "#38bdf8",
+    },
+  },
+  {
+    id: "cyber-neon",
+    name: "Cyber Neon",
+    description: "Deep violet with fluorescent purple & magenta accents",
+    palette: {
+      backgroundColor: "#0d0a1a",
+      backgroundGradient: "linear-gradient(135deg, #0d0a1a 0%, #2e1065 100%)",
+      buttonColor: "#2e1065",
+      buttonTextColor: "#fdf4ff",
+      textColor: "#f5d0fe",
+      accentColor: "#d946ef",
+    },
+  },
+  {
+    id: "emerald-forest",
+    name: "Emerald Forest",
+    description: "Lush botanical greens with bright mint highlights",
+    palette: {
+      backgroundColor: "#022c22",
+      backgroundGradient: "linear-gradient(135deg, #022c22 0%, #064e3b 100%)",
+      buttonColor: "#065f46",
+      buttonTextColor: "#ecfdf5",
+      textColor: "#d1fae5",
+      accentColor: "#10b981",
+    },
+  },
+  {
+    id: "sunset-ember",
+    name: "Sunset Ember",
+    description: "Warm crimson velvet with fiery amber tones",
+    palette: {
+      backgroundColor: "#1c1017",
+      backgroundGradient: "linear-gradient(135deg, #2a081e 0%, #7c2d12 100%)",
+      buttonColor: "#831843",
+      buttonTextColor: "#fff1f2",
+      textColor: "#ffe4e6",
+      accentColor: "#fb923c",
+    },
+  },
+  {
+    id: "obsidian-gold",
+    name: "Obsidian Gold",
+    description: "Pure rich black with premium golden accents",
+    palette: {
+      backgroundColor: "#0a0a0a",
+      backgroundGradient: "linear-gradient(135deg, #000000 0%, #1c1917 100%)",
+      buttonColor: "#1c1917",
+      buttonTextColor: "#fef08a",
+      textColor: "#fafaf9",
+      accentColor: "#eab308",
+    },
+  },
+  {
+    id: "pastel-lavender",
+    name: "Pastel Lavender",
+    description: "Gentle dusky twilight with soft lilac accents",
+    palette: {
+      backgroundColor: "#181424",
+      backgroundGradient: "linear-gradient(135deg, #181424 0%, #2e2648 100%)",
+      buttonColor: "#352b52",
+      buttonTextColor: "#ede9fe",
+      textColor: "#f5f3ff",
+      accentColor: "#c084fc",
+    },
+  },
+  {
+    id: "clean-monochrome",
+    name: "Clean Monochrome",
+    description: "Classic high-contrast dark aesthetic",
+    palette: {
+      backgroundColor: "#0f0f11",
+      backgroundGradient: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+      buttonColor: "#27272a",
+      buttonTextColor: "#ffffff",
+      textColor: "#f4f4f5",
+      accentColor: "#e4e4e7",
+    },
+  },
+];
+
+export function isValidHexColor(hex: string): boolean {
+  if (!hex || typeof hex !== "string") return false;
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hex.trim());
+}
+
+export function hexToRgb(hex: string): [number, number, number] | null {
+  if (!isValidHexColor(hex)) return null;
+  const clean = hex.trim().replace("#", "");
+  if (clean.length === 3) {
+    return [
+      parseInt(clean[0] + clean[0], 16),
+      parseInt(clean[1] + clean[1], 16),
+      parseInt(clean[2] + clean[2], 16),
+    ];
+  }
+  if (clean.length === 6) {
+    return [
+      parseInt(clean.slice(0, 2), 16),
+      parseInt(clean.slice(2, 4), 16),
+      parseInt(clean.slice(4, 6), 16),
+    ];
+  }
+  return null;
+}
+
+export function getContrastRatio(hex1: string, hex2: string): number {
+  const rgb1 = hexToRgb(hex1);
+  const rgb2 = hexToRgb(hex2);
+  if (!rgb1 || !rgb2) return 21;
+  const getLum = (r: number, g: number, b: number) => {
+    const a = [r, g, b].map((v) => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+  };
+  const lum1 = getLum(...rgb1);
+  const lum2 = getLum(...rgb2);
+  const brightest = Math.max(lum1, lum2);
+  const darkest = Math.min(lum1, lum2);
+  return (brightest + 0.05) / (darkest + 0.05);
 }
 
 export interface ThemeConfig {
@@ -244,6 +401,8 @@ export const SUPPORTED_LINK_ICONS = [
   { id: "whatsapp", label: "WhatsApp" },
   { id: "spotify", label: "Spotify" },
   { id: "discord", label: "Discord" },
+  { id: "facebook", label: "Facebook" },
+  { id: "tiktok", label: "TikTok" },
   { id: "mail", label: "Email" },
   { id: "store", label: "Store / Shop" },
   { id: "book", label: "Book / Study" },
