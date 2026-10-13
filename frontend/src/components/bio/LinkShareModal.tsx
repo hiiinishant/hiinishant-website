@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { X, Copy, Check, Share2, ExternalLink, Mail, MoreHorizontal, Flag } from "lucide-react";
 import {
@@ -26,6 +26,23 @@ interface LinkShareModalProps {
 export default function LinkShareModal({ link, username, onClose }: LinkShareModalProps) {
   const [copied, setCopied] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // Parse link domain and high-res favicon for preview pic
+  const { domain, faviconUrl } = useMemo(() => {
+    try {
+      const raw = link.url.startsWith("http://") || link.url.startsWith("https://")
+        ? link.url
+        : `https://${link.url}`;
+      const parsed = new URL(raw);
+      return {
+        domain: parsed.hostname.replace(/^www\./, ""),
+        faviconUrl: `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=128`,
+      };
+    } catch {
+      return { domain: link.url, faviconUrl: null };
+    }
+  }, [link.url]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -148,13 +165,15 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
         {/* Mobile drag handle */}
         <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-3 sm:hidden" />
 
-        {/* 1. Header: Share link + Close */}
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-bold text-white tracking-tight">Share link</h3>
+        {/* 1. Header: Share link (Centered) + Close Button */}
+        <div className="relative flex items-center justify-center mb-5 min-h-[36px]">
+          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight text-center">
+            Share link
+          </h3>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-colors cursor-pointer"
+            className="absolute right-0 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-colors cursor-pointer"
             autoFocus
           >
             <span>Close</span>
@@ -162,24 +181,45 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
           </button>
         </div>
 
-        {/* 2. Link Preview Card (Clickable to target) */}
+        {/* 2. Link Preview Card (Pic Thumbnail + Title + Domain & URL + External Link) */}
         <a
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="group block rounded-2xl bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 hover:border-white/20 p-4 mb-4 transition-all"
+          className="group block rounded-2xl bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 hover:border-white/20 p-3.5 sm:p-4 mb-4 transition-all"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              {renderBioIcon(link.icon, "w-5 h-5")}
+            {/* Picture / Thumbnail */}
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden group-hover:scale-105 transition-transform p-2">
+              {faviconUrl && !imgError ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={faviconUrl}
+                  alt={link.title}
+                  onError={() => setImgError(true)}
+                  className="w-8 h-8 sm:w-9 sm:h-9 object-contain"
+                />
+              ) : (
+                renderBioIcon(link.icon, "w-6 h-6 sm:w-7 sm:h-7")
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-bold text-white truncate group-hover:text-accent transition-colors">
+
+            {/* Link Information */}
+            <div className="flex-1 min-w-0 pr-1">
+              <h4 className="text-sm sm:text-base font-bold text-white truncate group-hover:text-accent transition-colors leading-snug">
                 {link.title}
               </h4>
-              <p className="text-xs text-brand-400 font-mono truncate mt-0.5">{link.url}</p>
+              <p className="text-xs text-brand-300 font-mono truncate mt-0.5">
+                {domain}
+              </p>
+              <p className="text-[11px] text-brand-500 font-mono truncate mt-0.5">
+                {link.url}
+              </p>
             </div>
-            <ExternalLink className="w-4 h-4 text-brand-400 group-hover:text-white transition-colors shrink-0" />
+
+            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors">
+              <ExternalLink className="w-4 h-4 text-brand-400 group-hover:text-white transition-colors" />
+            </div>
           </div>
         </a>
 
