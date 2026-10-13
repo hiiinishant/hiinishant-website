@@ -231,7 +231,20 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
       )}
 
       {/* Floating Top Header Controls */}
-      <div className="w-full max-w-lg mx-auto px-5 pt-6 pb-2 flex items-center justify-end z-30">
+      <div className="w-full max-w-lg mx-auto px-5 pt-6 pb-2 flex items-center justify-between z-30">
+        {/* Left: Website Logo (Home Link) styled like the share button */}
+        <Link
+          href="/"
+          aria-label="Hiii Nishant Home"
+          className="h-10 w-10 rounded-full bg-black/20 hover:bg-black/40 border border-white/15 text-white/90 hover:text-white backdrop-blur-md transition-all flex items-center justify-center cursor-pointer shadow-sm active:scale-95 group"
+          title="Hiii Nishant"
+        >
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-accent to-accent-light flex items-center justify-center font-black text-black text-[11px] leading-none transition-transform duration-300 group-hover:scale-105 shadow-sm">
+            NK
+          </div>
+        </Link>
+
+        {/* Right: Controls (Edit Studio + Share) */}
         <div className="flex items-center gap-2">
           {isOwner && (
             <Link

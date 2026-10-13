@@ -1687,11 +1687,25 @@ export default function DashboardClient() {
 
               {/* Screen Content inside phone frame */}
               <div
-                className={`w-full h-full rounded-[34px] overflow-y-auto px-4 py-8 relative ${!previewCustomColors ? activeTheme.backgroundClass : ""}`}
+                className={`w-full h-full rounded-[34px] overflow-y-auto px-4 py-6 relative ${!previewCustomColors ? activeTheme.backgroundClass : ""}`}
                 style={{ scrollbarWidth: "none", ...(previewCustomColors?.backgroundGradient ? { background: previewCustomColors.backgroundGradient } : previewCustomColors?.backgroundColor ? { backgroundColor: previewCustomColors.backgroundColor } : {}) }}
               >
+                {/* Top preview controls bar (website logo on left, share button on right) */}
+                <div className="flex items-center justify-between mb-3 pt-2">
+                  <div className="h-7 w-7 rounded-full bg-black/20 border border-white/15 backdrop-blur-md flex items-center justify-center shadow-sm">
+                    <div className="w-4 h-4 rounded-md bg-gradient-to-br from-accent to-accent-light flex items-center justify-center font-black text-black text-[8px] leading-none shadow-xs">
+                      NK
+                    </div>
+                  </div>
+                  <div className="h-7 w-7 rounded-full bg-black/20 border border-white/15 backdrop-blur-md flex items-center justify-center text-white/80 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 256 256">
+                      <path d="M216,112v96a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V112A16,16,0,0,1,56,96H80a8,8,0,0,1,0,16H56v96H200V112H176a8,8,0,0,1,0-16h24A16,16,0,0,1,216,112ZM93.66,69.66,120,43.31V136a8,8,0,0,0,16,0V43.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,69.66Z" />
+                    </svg>
+                  </div>
+                </div>
+
                 {/* Header profile */}
-                <div className="text-center mb-6 pt-3">
+                <div className="text-center mb-6">
                   <div
                     className={`w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl font-black overflow-hidden ${!previewCustomColors?.accentColor ? activeTheme.avatarBorder : "border-2 shadow-lg"}`}
                     style={{ backgroundColor: previewCustomColors?.backgroundColor || activeTheme.previewBg, ...(previewCustomColors?.accentColor ? { borderColor: previewCustomColors.accentColor, boxShadow: `0 0 20px ${previewCustomColors.accentColor}40` } : {}) }}
