@@ -1693,9 +1693,14 @@ export default function DashboardClient() {
                 {/* Top preview controls bar (website logo on left, share button on right) */}
                 <div className="flex items-center justify-between mb-3 pt-2">
                   <div className="h-7 w-7 rounded-full bg-black/20 border border-white/15 backdrop-blur-md flex items-center justify-center shadow-sm">
-                    <div className="w-4 h-4 rounded-md bg-gradient-to-br from-accent to-accent-light flex items-center justify-center font-black text-black text-[8px] leading-none shadow-xs">
-                      NK
-                    </div>
+                    <Image
+                      src="/favicon.ico"
+                      alt="Hiii Nishant"
+                      width={14}
+                      height={14}
+                      className="w-3.5 h-3.5 object-contain"
+                      unoptimized
+                    />
                   </div>
                   <div className="h-7 w-7 rounded-full bg-black/20 border border-white/15 backdrop-blur-md flex items-center justify-center text-white/80 shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 256 256">

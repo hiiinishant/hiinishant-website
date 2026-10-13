@@ -239,9 +239,14 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
           className="h-10 w-10 rounded-full bg-black/20 hover:bg-black/40 border border-white/15 text-white/90 hover:text-white backdrop-blur-md transition-all flex items-center justify-center cursor-pointer shadow-sm active:scale-95 group"
           title="Hiii Nishant"
         >
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-accent to-accent-light flex items-center justify-center font-black text-black text-[11px] leading-none transition-transform duration-300 group-hover:scale-105 shadow-sm">
-            NK
-          </div>
+          <Image
+            src="/favicon.ico"
+            alt="Hiii Nishant"
+            width={22}
+            height={22}
+            className="w-5.5 h-5.5 object-contain transition-transform duration-300 group-hover:scale-110"
+            unoptimized
+          />
         </Link>
 
         {/* Right: Controls (Edit Studio + Share) */}
