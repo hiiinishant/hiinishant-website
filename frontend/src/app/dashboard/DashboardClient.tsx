@@ -62,6 +62,7 @@ import {
   Camera,
   Edit3,
   QrCode,
+  BarChart3,
 } from "lucide-react";
 import {
   renderBioIcon,
@@ -84,7 +85,7 @@ export default function DashboardClient() {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<BioPage | null>(null);
-  const [activeTab, setActiveTab] = useState<"links" | "appearance" | "socials" | "settings">("links");
+  const [activeTab, setActiveTab] = useState<"links" | "appearance" | "socials" | "analytics" | "settings">("links");
 
   // Onboarding username claim state
   const [claimInput, setClaimInput] = useState("");
@@ -872,12 +873,13 @@ export default function DashboardClient() {
             { tab: "links" as const, icon: <LinkIcon className="w-4 h-4" />, label: `Links (${profile.links.length})` },
             { tab: "appearance" as const, icon: <Palette className="w-4 h-4" />, label: "Appearance" },
             { tab: "socials" as const, icon: <Share2 className="w-4 h-4" />, label: "Socials" },
-            { tab: "settings" as const, icon: <Settings className="w-4 h-4" />, label: "Stats & Settings" },
+            { tab: "analytics" as const, icon: <BarChart3 className="w-4 h-4" />, label: "Analytics" },
+            { tab: "settings" as const, icon: <Settings className="w-4 h-4" />, label: "Settings" },
           ]).map(({ tab, icon, label }) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 min-w-[90px] py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === tab
                   ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                   : "text-brand-400 hover:text-white hover:bg-white/5"
@@ -934,9 +936,15 @@ export default function DashboardClient() {
                     badge: Object.values(profile.socials || {}).filter(Boolean).length || null,
                   },
                   {
+                    tab: "analytics" as const,
+                    icon: <BarChart3 className="w-4 h-4" />,
+                    label: "Analytics",
+                    badge: null,
+                  },
+                  {
                     tab: "settings" as const,
                     icon: <Settings className="w-4 h-4" />,
-                    label: "Stats & Settings",
+                    label: "Settings",
                     badge: null,
                   },
                 ]).map(({ tab, icon, label, badge }) => (
@@ -967,26 +975,6 @@ export default function DashboardClient() {
                   </button>
                 ))}
               </nav>
-
-              {/* Sidebar Footer Actions */}
-              <div className="p-3 border-t border-white/8 space-y-1.5">
-                <Link
-                  href={`/${profile.username}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-brand-400 hover:text-white hover:bg-white/5 transition-all border border-transparent"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                  <span>View Live</span>
-                </Link>
-                <button
-                  onClick={handleCopyLink}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-brand-400 hover:text-white hover:bg-white/5 transition-all border border-transparent cursor-pointer"
-                >
-                  {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
-                  <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
-                </button>
-              </div>
             </div>
           </div>
 
@@ -999,13 +987,12 @@ export default function DashboardClient() {
 
                 {/* ── URL / Share Card ── */}
                 <div className="rounded-2xl bg-zinc-900/70 border border-white/10 p-4 space-y-3">
-                  {/* URL row */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 flex items-center gap-1 px-3 py-2.5 rounded-xl bg-black/50 border border-white/10 font-mono text-sm overflow-hidden">
+                  {/* Single clean row: URL + Inline Edit + Actions */}
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="flex-1 min-w-[200px] flex items-center gap-1 px-3 py-2 rounded-xl bg-black/50 border border-white/10 font-mono text-sm overflow-hidden">
                       <span className="text-brand-400 shrink-0 text-xs">hiiinishant.com/</span>
 
                       {editingUsername ? (
-                        // Editable username field
                         <div className="flex-1 flex items-center gap-1.5 min-w-0">
                           <input
                             autoFocus
@@ -1018,7 +1005,6 @@ export default function DashboardClient() {
                             maxLength={30}
                             className="flex-1 min-w-0 bg-transparent text-white placeholder-brand-500 text-sm focus:outline-none"
                           />
-                          {/* Availability indicator */}
                           <span className="shrink-0">
                             {claimLoading ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
@@ -1034,9 +1020,9 @@ export default function DashboardClient() {
                       )}
                     </div>
 
-                    {/* Edit / Save / Cancel username */}
+                    {/* Edit or Save actions */}
                     {editingUsername ? (
-                      <>
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
                           onClick={async () => {
@@ -1058,16 +1044,45 @@ export default function DashboardClient() {
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
-                      </>
+                      </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => { setEditingUsername(true); setClaimInput(profile.username); }}
-                        title="Edit your username"
-                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-brand-400 hover:text-white transition-all cursor-pointer shrink-0"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => { setEditingUsername(true); setClaimInput(profile.username); }}
+                          title="Edit your username"
+                          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-brand-400 hover:text-white transition-all cursor-pointer"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCopyLink}
+                          title="Copy Link"
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-all cursor-pointer"
+                        >
+                          {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span className="hidden sm:inline">{copiedLink ? "Copied!" : "Copy"}</span>
+                        </button>
+                        <Link
+                          href={`/${profile.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View Live"
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-all"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Preview</span>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setShowQRModal(true)}
+                          title="QR Code"
+                          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-brand-300 hover:text-white transition-all cursor-pointer"
+                        >
+                          <QrCode className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -1085,34 +1100,7 @@ export default function DashboardClient() {
                     </p>
                   )}
 
-                  {/* Action buttons row */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleCopyLink}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-all cursor-pointer"
-                    >
-                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
-                    </button>
-                    <Link
-                      href={`/${profile.username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-all"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>View Live</span>
-                    </Link>
-                    <button
-                      onClick={() => setShowQRModal(true)}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-all cursor-pointer"
-                      title="QR Code"
-                    >
-                      <QrCode className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Live / Draft badge */}
+                  {/* Status badge and metadata */}
                   <div className="flex items-center gap-2 px-1">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
                       profile.isPublished
@@ -1733,17 +1721,25 @@ export default function DashboardClient() {
               </div>
             )}
 
-            {/* TAB 4: SETTINGS & ANALYTICS */}
-            {activeTab === "settings" && (
+            {/* TAB 4: ANALYTICS */}
+            {activeTab === "analytics" && (
               <div className="space-y-6 animate-fadeIn">
-                {/* Time-series Analytics Chart */}
                 <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6">
+                  <div className="mb-4">
+                    <h4 className="text-base font-bold text-white">Profile Analytics</h4>
+                    <p className="text-xs text-brand-400">Track your link engagement, visitor views, and click-through rates.</p>
+                  </div>
                   <AnalyticsChart
                     currentViews={profile.views || 0}
                     currentClicks={profile.totalClicks || 0}
                   />
                 </div>
+              </div>
+            )}
 
+            {/* TAB 5: SETTINGS */}
+            {activeTab === "settings" && (
+              <div className="space-y-6 animate-fadeIn">
                 {/* Publish / Unpublish Toggle */}
                 <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
@@ -1773,30 +1769,19 @@ export default function DashboardClient() {
                   </button>
                 </div>
 
-                {/* Share + QR code */}
-                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-3">
-                  <h4 className="text-base font-bold text-white">Share Your Profile</h4>
-                  <p className="text-xs text-brand-400">
-                    Add this link to your Instagram bio, TikTok, Twitter/X, YouTube description, and WhatsApp status:
-                  </p>
-                  <div className="flex items-center gap-2 p-3 rounded-xl bg-black/60 border border-white/10 font-mono text-xs text-accent">
-                    <span className="truncate flex-1">{publicUrl}</span>
-                    <button
-                      onClick={handleCopyLink}
-                      className="px-3 py-1.5 rounded-lg bg-accent text-black font-bold text-[11px] hover:bg-accent-hover transition-colors shrink-0"
-                    >
-                      {copiedLink ? "Copied!" : "Copy"}
-                    </button>
+                {/* Account & Profile Details */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-4">
+                  <h4 className="text-base font-bold text-white">Profile Details</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="p-3.5 rounded-2xl bg-black/40 border border-white/8">
+                      <span className="text-brand-500 block mb-1">Display Name</span>
+                      <span className="text-white font-medium">{profile.displayName}</span>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-black/40 border border-white/8">
+                      <span className="text-brand-500 block mb-1">Public Handle</span>
+                      <span className="text-accent font-mono font-medium">@{profile.username}</span>
+                    </div>
                   </div>
-
-                  {/* QR Code trigger */}
-                  <button
-                    onClick={() => setShowQRModal(true)}
-                    className="w-full py-2.5 px-4 rounded-xl border border-white/10 hover:bg-white/5 text-sm font-semibold text-brand-300 hover:text-white transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <QrCode className="w-4 h-4 text-accent" />
-                    <span>Generate QR Code for this Profile</span>
-                  </button>
                 </div>
               </div>
             )}
