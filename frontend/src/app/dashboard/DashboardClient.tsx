@@ -936,61 +936,128 @@ export default function DashboardClient() {
         </div>
       </div>
 
-      {/* Main Workspace Layout: Two Columns on desktop */}
+      {/* Main Workspace Layout: Sidebar + Content + Phone Preview */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Management Tabs & Editor */}
-          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
-            {/* Tab Navigation Pill Bar */}
-            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-900/60 border border-white/10 backdrop-blur-md overflow-x-auto">
-              <button
-                onClick={() => setActiveTab("links")}
-                className={`flex-1 min-w-[100px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  activeTab === "links"
-                    ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-                    : "text-brand-300 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <LinkIcon className="w-4 h-4" />
-                <span>Links ({profile.links.length})</span>
-              </button>
+        {/* Mobile: horizontal tab bar */}
+        <div className="flex lg:hidden items-center gap-1 p-1 mb-4 rounded-2xl bg-zinc-900/60 border border-white/10 overflow-x-auto">
+          {([
+            { tab: "links" as const, icon: <LinkIcon className="w-4 h-4" />, label: `Links (${profile.links.length})` },
+            { tab: "appearance" as const, icon: <Palette className="w-4 h-4" />, label: "Appearance" },
+            { tab: "socials" as const, icon: <Share2 className="w-4 h-4" />, label: "Socials" },
+            { tab: "settings" as const, icon: <Settings className="w-4 h-4" />, label: "Stats & Settings" },
+          ]).map(({ tab, icon, label }) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 min-w-[90px] py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                activeTab === tab
+                  ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                  : "text-brand-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {icon}
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
 
-              <button
-                onClick={() => setActiveTab("appearance")}
-                className={`flex-1 min-w-[100px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  activeTab === "appearance"
-                    ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-                    : "text-brand-300 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Palette className="w-4 h-4" />
-                <span>Appearance</span>
-              </button>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT SIDEBAR: Navigation */}
+          <div className="hidden lg:flex lg:col-span-2 flex-col sticky top-28">
+            <div className="rounded-2xl bg-zinc-900/70 border border-white/8 backdrop-blur-md overflow-hidden">
+              {/* Sidebar User Mini-header */}
+              <div className="px-4 py-4 border-b border-white/8">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent/30 to-accent/10 border border-accent/20 flex items-center justify-center text-accent font-extrabold text-sm shrink-0">
+                    {profile.avatarType === "girl" ? "👧" : profile.avatarType === "boy" ? "👦" : profile.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{profile.displayName}</p>
+                    <p className="text-[10px] text-brand-400 font-mono truncate">@{profile.username}</p>
+                  </div>
+                </div>
+              </div>
 
-              <button
-                onClick={() => setActiveTab("socials")}
-                className={`flex-1 min-w-[100px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  activeTab === "socials"
-                    ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-                    : "text-brand-300 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Socials</span>
-              </button>
+              {/* Nav Items */}
+              <nav className="p-2 space-y-0.5">
+                {([
+                  {
+                    tab: "links" as const,
+                    icon: <LinkIcon className="w-4 h-4" />,
+                    label: "Links",
+                    badge: profile.links.length,
+                  },
+                  {
+                    tab: "appearance" as const,
+                    icon: <Palette className="w-4 h-4" />,
+                    label: "Appearance",
+                    badge: null,
+                  },
+                  {
+                    tab: "socials" as const,
+                    icon: <Share2 className="w-4 h-4" />,
+                    label: "Socials",
+                    badge: Object.values(profile.socials || {}).filter(Boolean).length || null,
+                  },
+                  {
+                    tab: "settings" as const,
+                    icon: <Settings className="w-4 h-4" />,
+                    label: "Stats & Settings",
+                    badge: null,
+                  },
+                ]).map(({ tab, icon, label, badge }) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer group ${
+                      activeTab === tab
+                        ? "bg-accent/15 text-accent border border-accent/25"
+                        : "text-brand-400 hover:text-white hover:bg-white/5 border border-transparent"
+                    }`}
+                  >
+                    <span className={`shrink-0 transition-colors ${
+                      activeTab === tab ? "text-accent" : "text-brand-500 group-hover:text-white"
+                    }`}>
+                      {icon}
+                    </span>
+                    <span className="truncate text-xs">{label}</span>
+                    {badge !== null && badge !== undefined && badge > 0 && (
+                      <span className={`ml-auto shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                        activeTab === tab
+                          ? "bg-accent/20 text-accent"
+                          : "bg-white/10 text-brand-400"
+                      }`}>
+                        {badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
 
-              <button
-                onClick={() => setActiveTab("settings")}
-                className={`flex-1 min-w-[100px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  activeTab === "settings"
-                    ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-                    : "text-brand-300 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Settings className="w-4 h-4" />
-                <span>Stats &amp; Settings</span>
-              </button>
+              {/* Sidebar Footer Actions */}
+              <div className="p-3 border-t border-white/8 space-y-1.5">
+                <Link
+                  href={`/${profile.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-brand-400 hover:text-white hover:bg-white/5 transition-all border border-transparent"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                  <span>View Live</span>
+                </Link>
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-brand-400 hover:text-white hover:bg-white/5 transition-all border border-transparent cursor-pointer"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
+                  <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* MIDDLE: Tab Content */}
+          <div className="lg:col-span-6 xl:col-span-6 space-y-5">
 
             {/* TAB 1: LINKS MANAGEMENT */}
             {activeTab === "links" && (
@@ -1669,8 +1736,8 @@ export default function DashboardClient() {
             )}
           </div>
 
-          {/* Right Column: Live Interactive Phone Preview Mockup (Sticky on Desktop) */}
-          <div className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-36">
+          {/* RIGHT: Phone Preview */}
+          <div className="hidden lg:block lg:col-span-4 xl:col-span-4 sticky top-28">
             <div className="flex items-center justify-between mb-3 px-2">
               <span className="text-xs font-semibold text-brand-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Smartphone className="w-3.5 h-3.5 text-accent" />
