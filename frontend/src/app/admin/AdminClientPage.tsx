@@ -289,7 +289,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "vlog-settings" | "vlog-videos" | "manage-resume" | "quiz-management" | "amazon-picks";
+type Tab = "overview" | "daily-status" | "add-update" | "manage-updates" | "add-plan" | "manage-plans" | "messages" | "write-blog" | "manage-blogs" | "gallery-management" | "music-settings" | "vlog-settings" | "vlog-videos" | "bio-settings" | "manage-resume" | "quiz-management" | "amazon-picks";
 
 interface ResumeItem {
   id: string;
@@ -384,6 +384,15 @@ export default function AdminClientPage() {
     playlistTitle?: string;
     playlistThumbnail?: string;
   } | null>(null);
+
+  // Nishant's Bio Link settings (Homepage Portal Card)
+  const [bioSettings, setBioSettings] = useState({
+    bioUrl: "/nishant",
+    bioHandle: "nishant",
+    bioTitle: "Nishant's Bio Link",
+    bioDescription: "Explore all of Nishant's official links, social channels, and featured projects in one clean personal hub.",
+    buttonText: "Visit Nishant's Bio",
+  });
 
   // Vlog Videos management
   interface VlogVideoItem {
@@ -642,6 +651,24 @@ export default function AdminClientPage() {
     }
   }, []);
 
+  const fetchBioSettings = useCallback(async () => {
+    try {
+      const res = await safeFetch("/api/bio/featured-link");
+      if (res.ok) {
+        const data = await res.json();
+        setBioSettings({
+          bioUrl: data.bioUrl || "/nishant",
+          bioHandle: data.bioHandle || "nishant",
+          bioTitle: data.bioTitle || "Nishant's Bio Link",
+          bioDescription: data.bioDescription || "Explore all of Nishant's official links, social channels, and featured projects in one clean personal hub.",
+          buttonText: data.buttonText || "Visit Nishant's Bio",
+        });
+      }
+    } catch {
+      // silent fail
+    }
+  }, []);
+
   // On Mount: Load public statuses and session
   useEffect(() => {
     fetchPublicLogs();
@@ -682,6 +709,7 @@ export default function AdminClientPage() {
         fetchMusicSettings(),
         fetchVlogSettings(),
         fetchVlogVideos(),
+        fetchBioSettings(),
         fetchResumeData(),
         fetchQuizData(),
       ]);
@@ -1235,6 +1263,36 @@ export default function AdminClientPage() {
     }
   };
 
+  // ── Submit Nishant Bio Link Settings ──
+  const handleBioSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const res = await safeFetch("/api/bio/featured-link", {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(bioSettings),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to update Nishant's bio link.");
+      }
+      const data = await res.json();
+      setBioSettings({
+        bioUrl: data.bioUrl,
+        bioHandle: data.bioHandle,
+        bioTitle: data.bioTitle,
+        bioDescription: data.bioDescription,
+        buttonText: data.buttonText,
+      });
+      showToast("Nishant's Bio Link updated successfully!", "success");
+    } catch (err) {
+      showToast(getErrorMessage(err), "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ── Submit Resume ──
   const handleResumeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1338,6 +1396,7 @@ export default function AdminClientPage() {
     { id: "music-settings", label: "Music Playlist", icon: "🎵" },
     { id: "vlog-settings", label: "Vlog Playlist", icon: "📹" },
     { id: "vlog-videos", label: "Vlog Videos", icon: "🎥" },
+    { id: "bio-settings", label: "Nishant Bio Link", icon: "🔗" },
     { id: "manage-resume", label: "Resume", icon: "📄" },
     { id: "quiz-management", label: "Quiz", icon: "❓" },
     { id: "amazon-picks", label: "Nishant's Picks", icon: "🛍️" },
@@ -2472,6 +2531,82 @@ export default function AdminClientPage() {
                         className="w-full py-3 rounded-xl bg-accent/10 border border-accent/20 text-accent text-xs font-semibold hover:bg-accent/20 transition-all disabled:opacity-50"
                       >
                         {submitting ? "Updating..." : "Update Vlog Playlist Settings"}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {/* Nishant's Bio Link Settings Tab */}
+                {activeTab === "bio-settings" && (
+                  <div>
+                    <h2 className="text-lg font-bold text-white mb-4">Nishant&apos;s Bio Link Settings</h2>
+                    <p className="text-xs text-brand-400 mb-6">
+                      Configure the featured link, card title, and description for Nishant&apos;s Bio portal card on the homepage.
+                    </p>
+                    <form onSubmit={handleBioSubmit} className="space-y-4">
+                      <InputField
+                        label="Bio Page URL or Handle"
+                        name="bioUrl"
+                        value={bioSettings.bioUrl}
+                        onChange={(e) => setBioSettings({ ...bioSettings, bioUrl: e.target.value })}
+                        placeholder="/nishant or https://hiiinishant.com/nishant"
+                        required
+                        hint="Relative path (e.g., /nishant) or full URL"
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <InputField
+                          label="Card Title"
+                          name="bioTitle"
+                          value={bioSettings.bioTitle}
+                          onChange={(e) => setBioSettings({ ...bioSettings, bioTitle: e.target.value })}
+                          placeholder="Nishant's Bio Link"
+                          required
+                        />
+
+                        <InputField
+                          label="Button CTA Text"
+                          name="buttonText"
+                          value={bioSettings.buttonText}
+                          onChange={(e) => setBioSettings({ ...bioSettings, buttonText: e.target.value })}
+                          placeholder="Visit Nishant's Bio"
+                          required
+                        />
+                      </div>
+
+                      <TextAreaField
+                        label="Card Description"
+                        name="bioDescription"
+                        value={bioSettings.bioDescription}
+                        onChange={(e) => setBioSettings({ ...bioSettings, bioDescription: e.target.value })}
+                        placeholder="Explore all of Nishant's official links, social channels, and featured projects..."
+                        required
+                        rows={3}
+                      />
+
+                      {/* Live Card Preview Box */}
+                      <div className="glass p-5 rounded-2xl border border-white/10 space-y-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-accent">Homepage Card Preview:</div>
+                        <div className="p-4 rounded-xl bg-zinc-950/60 border border-cyan-500/20 space-y-2">
+                          <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm">
+                            <span>🔗</span>
+                            <span>{bioSettings.bioTitle || "Nishant's Bio Link"}</span>
+                          </div>
+                          <p className="text-xs text-brand-400">
+                            {bioSettings.bioDescription || "Explore all of Nishant's official links..."}
+                          </p>
+                          <div className="text-[11px] text-cyan-300 font-semibold pt-1">
+                            {bioSettings.buttonText || "Visit Nishant's Bio"} → ({bioSettings.bioUrl})
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-3 rounded-xl bg-accent text-black text-xs font-bold hover:bg-accent-hover transition-all disabled:opacity-50 cursor-pointer shadow-lg"
+                      >
+                        {submitting ? "Updating Bio Link..." : "Save Nishant's Bio Link Settings"}
                       </button>
                     </form>
                   </div>
