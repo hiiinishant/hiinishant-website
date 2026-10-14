@@ -28,6 +28,8 @@ import {
   MousePointerClick,
   ArrowUp,
   ArrowDown,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { BioLink } from "@/types/bio";
 import { renderBioIcon } from "@/components/bio/BioIcons";
@@ -38,6 +40,7 @@ interface SortableLinkItemProps {
   index: number;
   total: number;
   isDragOverlay?: boolean;
+  isReorderLocked: boolean;
   onToggle: (id: string) => void;
   onEdit: (link: BioLink) => void;
   onDelete: (id: string) => void;
@@ -49,6 +52,7 @@ function SortableLinkItem({
   index,
   total,
   isDragOverlay = false,
+  isReorderLocked,
   onToggle,
   onEdit,
   onDelete,
@@ -61,13 +65,14 @@ function SortableLinkItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: link.id });
+  } = useSortable({ id: link.id, disabled: isReorderLocked });
 
+  // ✅ NO touchAction:"none" on the card — only on the grip handle.
+  // This lets the browser handle native scroll freely across the whole card.
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
-    touchAction: "none",
   };
 
   const content = (
@@ -82,12 +87,17 @@ function SortableLinkItem({
     >
       {/* Left: Drag handle + Keyboard arrows + Info */}
       <div className="flex items-center gap-2 min-w-0">
-        {/* Drag handle */}
+        {/* Drag handle — touchAction:none ONLY here so scroll works everywhere else */}
         <div
-          {...listeners}
-          {...attributes}
-          className="flex-shrink-0 p-1.5 rounded-lg text-brand-500 hover:text-brand-200 hover:bg-white/10 cursor-grab active:cursor-grabbing transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
-          title="Drag to reorder"
+          {...(!isReorderLocked ? listeners : {})}
+          {...(!isReorderLocked ? attributes : {})}
+          style={{ touchAction: isReorderLocked ? "auto" : "none" }}
+          className={`flex-shrink-0 p-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
+            isReorderLocked
+              ? "text-zinc-600 cursor-not-allowed opacity-40"
+              : "text-brand-500 hover:text-brand-200 hover:bg-white/10 cursor-grab active:cursor-grabbing"
+          }`}
+          title={isReorderLocked ? "Unlock reorder to drag" : "Drag to reorder"}
           aria-label={`Drag to reorder: ${link.title}`}
         >
           <GripVertical className="w-4 h-4" />
@@ -203,18 +213,21 @@ export default function SortableLinkList({
   onMove,
 }: SortableLinkListProps) {
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  // 🔒 Lock/Unlock reorder — when locked, drag is fully disabled so scroll is always smooth
+  const [isReorderLocked, setIsReorderLocked] = React.useState(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        // Require 8px movement to avoid accidental drags when clicking controls
-        distance: 8,
+        // Require 10px movement before drag starts — prevents accidental reorder on click
+        distance: 10,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        // 350ms hold + 8px tolerance — aggressive enough to never fire during normal scroll
+        delay: 350,
+        tolerance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -250,53 +263,83 @@ export default function SortableLinkList({
   const activeLink = activeId ? links.find((l) => l.id === activeId) : null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <SortableContext
-        items={links.map((l) => l.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <div
-          className="space-y-3"
-          role="list"
-          aria-label="Links — drag handles or arrows to reorder"
+    <div>
+      {/* 🔒 Lock / Unlock reorder toggle */}
+      <div className="flex items-center justify-end mb-3">
+        <button
+          onClick={() => setIsReorderLocked((prev) => !prev)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+            isReorderLocked
+              ? "bg-zinc-900 border-white/10 text-brand-400 hover:text-white hover:border-white/20"
+              : "bg-amber-500/10 border-amber-500/40 text-amber-400 hover:bg-amber-500/20"
+          }`}
+          title={isReorderLocked ? "Click to enable drag reorder" : "Click to lock and enable smooth scroll"}
+          aria-label={isReorderLocked ? "Unlock reorder" : "Lock reorder"}
         >
-          {links.map((link, idx) => (
-            <div key={link.id} role="listitem">
-              <SortableLinkItem
-                link={link}
-                index={idx}
-                total={links.length}
-                onToggle={onToggle}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onMove={onMove}
-              />
-            </div>
-          ))}
-        </div>
-      </SortableContext>
+          {isReorderLocked ? (
+            <>
+              <Lock className="w-3 h-3" />
+              <span>Reorder Locked</span>
+            </>
+          ) : (
+            <>
+              <Unlock className="w-3 h-3" />
+              <span>Reorder Active</span>
+            </>
+          )}
+        </button>
+      </div>
 
-      {/* DragOverlay — ghost card while dragging */}
-      <DragOverlay>
-        {activeLink ? (
-          <SortableLinkItem
-            link={activeLink}
-            index={0}
-            total={links.length}
-            isDragOverlay
-            onToggle={() => {}}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            onMove={() => {}}
-          />
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <SortableContext
+          items={links.map((l) => l.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div
+            className="space-y-3"
+            role="list"
+            aria-label="Links — drag handles or arrows to reorder"
+          >
+            {links.map((link, idx) => (
+              <div key={link.id} role="listitem">
+                <SortableLinkItem
+                  link={link}
+                  index={idx}
+                  total={links.length}
+                  isReorderLocked={isReorderLocked}
+                  onToggle={onToggle}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onMove={onMove}
+                />
+              </div>
+            ))}
+          </div>
+        </SortableContext>
+
+        {/* DragOverlay — ghost card while dragging */}
+        <DragOverlay>
+          {activeLink ? (
+            <SortableLinkItem
+              link={activeLink}
+              index={0}
+              total={links.length}
+              isDragOverlay
+              isReorderLocked={false}
+              onToggle={() => {}}
+              onEdit={() => {}}
+              onDelete={() => {}}
+              onMove={() => {}}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
   );
 }
