@@ -3,6 +3,8 @@ export interface BioLink {
   title: string;
   url: string;
   icon?: string;
+  imageUrl?: string;
+  description?: string;
   isActive: boolean;
   order: number;
   clicks?: number;
@@ -91,6 +93,8 @@ export interface PublicBioProfile {
     title: string;
     url: string;
     icon?: string;
+    imageUrl?: string;
+    description?: string;
     order: number;
   }>;
   socials: SocialLinks;

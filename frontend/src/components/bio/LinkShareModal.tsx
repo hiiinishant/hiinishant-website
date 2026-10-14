@@ -15,6 +15,8 @@ export interface ShareableLink {
   title: string;
   url: string;
   icon?: string;
+  imageUrl?: string;
+  description?: string;
 }
 
 interface LinkShareModalProps {
@@ -27,8 +29,45 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
   const [copied, setCopied] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [previewData, setPreviewData] = useState<{
+    image?: string | null;
+    title?: string | null;
+    description?: string | null;
+  } | null>(() => {
+    if (link.imageUrl || link.description) {
+      return {
+        image: link.imageUrl || null,
+        title: link.title,
+        description: link.description || null,
+      };
+    }
+    return null;
+  });
 
-  // Parse link domain and high-res favicon for preview pic
+  // Automatically fetch rich OpenGraph preview (image, title, description) like Linktree
+  useEffect(() => {
+    let active = true;
+    if (!link.imageUrl) {
+      fetch(`/api/link-preview?url=${encodeURIComponent(link.url)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (active && data) {
+            setPreviewData((prev) => ({
+              ...prev,
+              image: data.image || prev?.image || null,
+              title: data.title || prev?.title || link.title,
+              description: data.description || prev?.description || null,
+            }));
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [link.url, link.imageUrl, link.title]);
+
+  // Parse link domain and high-res favicon for fallback preview pic
   const { domain, faviconUrl } = useMemo(() => {
     try {
       const raw = link.url.startsWith("http://") || link.url.startsWith("https://")
@@ -150,6 +189,10 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
     },
   ];
 
+  const activeImage = previewData?.image || link.imageUrl || faviconUrl;
+  const activeTitle = previewData?.title || link.title;
+  const activeDescription = previewData?.description || link.description;
+
   return (
     <div
       role="dialog"
@@ -181,43 +224,51 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
           </button>
         </div>
 
-        {/* 2. Link Preview Card (Pic Thumbnail + Title + Domain & URL + External Link) */}
+        {/* 2. Link Preview Card (Pic Thumbnail + Title + Domain & Description + External Link) */}
         <a
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
           className="group block rounded-2xl bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 hover:border-white/20 p-3.5 sm:p-4 mb-4 transition-all"
         >
-          <div className="flex items-center gap-3.5">
-            {/* Picture / Thumbnail */}
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden group-hover:scale-105 transition-transform p-2">
-              {faviconUrl && !imgError ? (
+          <div className="flex items-start sm:items-center gap-3.5">
+            {/* Picture / Thumbnail (Linktree rich preview) */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-zinc-800/90 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden group-hover:scale-105 transition-transform relative">
+              {activeImage && !imgError ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={faviconUrl}
-                  alt={link.title}
+                  src={activeImage}
+                  alt={activeTitle}
                   onError={() => setImgError(true)}
-                  className="w-8 h-8 sm:w-9 sm:h-9 object-contain"
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                renderBioIcon(link.icon, "w-6 h-6 sm:w-7 sm:h-7")
+                <div className="p-2 flex items-center justify-center text-white/80">
+                  {renderBioIcon(link.icon, "w-7 h-7 sm:w-8 sm:h-8")}
+                </div>
               )}
             </div>
 
             {/* Link Information */}
             <div className="flex-1 min-w-0 pr-1">
               <h4 className="text-sm sm:text-base font-bold text-white truncate group-hover:text-accent transition-colors leading-snug">
-                {link.title}
+                {activeTitle}
               </h4>
               <p className="text-xs text-brand-300 font-mono truncate mt-0.5">
                 {domain}
               </p>
-              <p className="text-[11px] text-brand-500 font-mono truncate mt-0.5">
-                {link.url}
-              </p>
+              {activeDescription ? (
+                <p className="text-xs text-brand-400 line-clamp-2 mt-1 leading-relaxed">
+                  {activeDescription}
+                </p>
+              ) : (
+                <p className="text-[11px] text-brand-500 font-mono truncate mt-0.5">
+                  {link.url}
+                </p>
+              )}
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors">
+            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors self-center">
               <ExternalLink className="w-4 h-4 text-brand-400 group-hover:text-white transition-colors" />
             </div>
           </div>
