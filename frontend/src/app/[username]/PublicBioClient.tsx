@@ -587,8 +587,8 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
         </div>
       </div>
 
-      {/* Bottom Viral Branding Pill (Linktree-style) */}
-      <footer className="w-full text-center pb-4 px-4 z-30">
+      {/* Footer */}
+      <footer className="w-full text-center pb-6 px-4 z-30">
         {/* Join CTA pill */}
         <div className="py-6">
           <Link
@@ -603,57 +603,22 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
           </Link>
         </div>
 
-        {/* Linktree-style branding wordmark strip */}
-        <div className="border-t border-white/10 pt-5 pb-2 flex flex-col items-center gap-3">
-          {/* Logo + brand name */}
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 group"
-            aria-label="Hiii Nishant — Create your free link-in-bio page"
-          >
-            <div className="w-7 h-7 rounded-lg bg-black/30 border border-white/15 flex items-center justify-center backdrop-blur-md shadow-sm group-hover:border-accent/40 transition-all">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/favicon.ico"
-                alt="Hiii Nishant"
-                width={14}
-                height={14}
-                className="w-3.5 h-3.5 object-contain"
-              />
-            </div>
-            <span className="text-sm font-bold text-white/70 group-hover:text-white transition-colors tracking-tight">
-              Hiii<span className="text-accent">Nishant</span>
-            </span>
+        {/* Legal links */}
+        <div className="flex items-center justify-center gap-3 flex-wrap">
+          <Link href="/privacy" className="text-[11px] text-white/35 hover:text-white/70 transition-colors">
+            Privacy Policy
           </Link>
-
-          {/* Tagline + CTA */}
-          <p className="text-[11px] text-white/40 leading-relaxed">
-            Get your own free page.{" "}
-            <Link
-              href="/signup?redirect=/dashboard"
-              className="text-white/60 hover:text-white underline underline-offset-2 transition-colors"
-            >
-              Sign up free
-            </Link>
-          </p>
-
-          {/* Footer legal links */}
-          <div className="flex items-center gap-4 flex-wrap justify-center">
-            <Link href="/privacy" className="text-[10px] text-white/30 hover:text-white/60 transition-colors">
-              Privacy Policy
-            </Link>
-            <span className="text-[10px] text-white/15">•</span>
-            <Link href="/terms" className="text-[10px] text-white/30 hover:text-white/60 transition-colors">
-              Terms
-            </Link>
-            <span className="text-[10px] text-white/15">•</span>
-            <Link
-              href={`/report?user=${profile.username}`}
-              className="text-[10px] text-white/30 hover:text-white/60 transition-colors"
-            >
-              Report
-            </Link>
-          </div>
+          <span className="text-[11px] text-white/20">•</span>
+          <Link href="/terms" className="text-[11px] text-white/35 hover:text-white/70 transition-colors">
+            Terms
+          </Link>
+          <span className="text-[11px] text-white/20">•</span>
+          <Link
+            href={`/report?user=${profile.username}`}
+            className="text-[11px] text-white/35 hover:text-white/70 transition-colors"
+          >
+            Report
+          </Link>
         </div>
       </footer>
 

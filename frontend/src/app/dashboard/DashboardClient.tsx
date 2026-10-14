@@ -860,85 +860,10 @@ export default function DashboardClient() {
         </div>
       )}
 
-      {/* Top Header Bar */}
-      <div className="border-b border-white/8 bg-zinc-950/70 backdrop-blur-xl sticky top-16 lg:top-20 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
-          {/* Left: Handle & Live link */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center text-accent font-extrabold text-sm shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-              {profile.avatarType === "girl"
-                ? "👧"
-                : profile.avatarType === "boy"
-                ? "👦"
-                : profile.displayName.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-white text-base">
-                  hiiinishant.com/<span className="text-accent">{profile.username}</span>
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                    profile.isPublished
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                  }`}
-                >
-                  {profile.isPublished ? "Live" : "Draft"}
-                </span>
-              </div>
-              <p className="text-xs text-brand-400">
-                {profile.links.filter((l) => l.isActive).length} active links · {profile.views || 0} views
-              </p>
-            </div>
-          </div>
-
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={handleCopyLink}
-              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedLink ? "Copied" : "Copy Link"}</span>
-            </button>
-
-            <Link
-              href={`/${profile.username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition-all flex items-center gap-1.5"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Preview Live</span>
-            </Link>
-
-            {/* QR Code button */}
-            <button
-              onClick={() => setShowQRModal(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white transition-all flex items-center gap-1.5 cursor-pointer"
-              title="Generate QR code for your profile"
-              aria-label="Open QR code"
-            >
-              <QrCode className="w-3.5 h-3.5 text-accent" />
-              <span className="hidden sm:inline">QR Code</span>
-            </button>
-
-            {/* Mobile preview toggle */}
-            <button
-              onClick={() => setShowMobilePreview(true)}
-              className="lg:hidden px-3.5 py-1.5 rounded-xl bg-accent text-black text-xs font-bold transition-all flex items-center gap-1.5"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Phone</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Main Workspace Layout: Sidebar + Content + Phone Preview */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {/* Mobile: horizontal tab bar */}
+        {/* Mobile: horizontal tab bar + preview toggle */}
         <div className="flex lg:hidden items-center gap-1 p-1 mb-4 rounded-2xl bg-zinc-900/60 border border-white/10 overflow-x-auto">
           {([
             { tab: "links" as const, icon: <LinkIcon className="w-4 h-4" />, label: `Links (${profile.links.length})` },
@@ -959,11 +884,17 @@ export default function DashboardClient() {
               <span>{label}</span>
             </button>
           ))}
+          <button
+            onClick={() => setShowMobilePreview(true)}
+            className="shrink-0 py-2 px-3 rounded-xl bg-accent text-black text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+          >
+            <Smartphone className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT SIDEBAR: Navigation */}
-          <div className="hidden lg:flex lg:col-span-2 flex-col sticky top-28">
+          <div className="hidden lg:flex lg:col-span-2 flex-col sticky top-20">
             <div className="rounded-2xl bg-zinc-900/70 border border-white/8 backdrop-blur-md overflow-hidden">
               {/* Sidebar User Mini-header */}
               <div className="px-4 py-4 border-b border-white/8">
