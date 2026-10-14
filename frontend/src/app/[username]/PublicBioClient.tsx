@@ -588,17 +588,73 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
       </div>
 
       {/* Bottom Viral Branding Pill (Linktree-style) */}
-      <footer className="w-full text-center py-8 px-4 z-30">
-        <Link
-          href="/signup?redirect=/dashboard"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black/30 hover:bg-black/50 border border-white/15 text-xs sm:text-sm font-semibold text-white/90 hover:text-white backdrop-blur-md transition-all shadow-xl hover:scale-105 active:scale-95 group"
-        >
-          <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <span>
-            Join <span className="font-bold text-white">{profile.username}</span> on <span className="font-bold">Hiii Nishant</span>
-          </span>
-          <span className="opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">&rarr;</span>
-        </Link>
+      <footer className="w-full text-center pb-4 px-4 z-30">
+        {/* Join CTA pill */}
+        <div className="py-6">
+          <Link
+            href="/signup?redirect=/dashboard"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black/30 hover:bg-black/50 border border-white/15 text-xs sm:text-sm font-semibold text-white/90 hover:text-white backdrop-blur-md transition-all shadow-xl hover:scale-105 active:scale-95 group"
+          >
+            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+            <span>
+              Join <span className="font-bold text-white">{profile.username}</span> on <span className="font-bold">Hiii Nishant</span>
+            </span>
+            <span className="opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">&rarr;</span>
+          </Link>
+        </div>
+
+        {/* Linktree-style branding wordmark strip */}
+        <div className="border-t border-white/10 pt-5 pb-2 flex flex-col items-center gap-3">
+          {/* Logo + brand name */}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 group"
+            aria-label="Hiii Nishant — Create your free link-in-bio page"
+          >
+            <div className="w-7 h-7 rounded-lg bg-black/30 border border-white/15 flex items-center justify-center backdrop-blur-md shadow-sm group-hover:border-accent/40 transition-all">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/favicon.ico"
+                alt="Hiii Nishant"
+                width={14}
+                height={14}
+                className="w-3.5 h-3.5 object-contain"
+              />
+            </div>
+            <span className="text-sm font-bold text-white/70 group-hover:text-white transition-colors tracking-tight">
+              Hiii<span className="text-accent">Nishant</span>
+            </span>
+          </Link>
+
+          {/* Tagline + CTA */}
+          <p className="text-[11px] text-white/40 leading-relaxed">
+            Get your own free page.{" "}
+            <Link
+              href="/signup?redirect=/dashboard"
+              className="text-white/60 hover:text-white underline underline-offset-2 transition-colors"
+            >
+              Sign up free
+            </Link>
+          </p>
+
+          {/* Footer legal links */}
+          <div className="flex items-center gap-4 flex-wrap justify-center">
+            <Link href="/privacy" className="text-[10px] text-white/30 hover:text-white/60 transition-colors">
+              Privacy Policy
+            </Link>
+            <span className="text-[10px] text-white/15">•</span>
+            <Link href="/terms" className="text-[10px] text-white/30 hover:text-white/60 transition-colors">
+              Terms
+            </Link>
+            <span className="text-[10px] text-white/15">•</span>
+            <Link
+              href={`/report?user=${profile.username}`}
+              className="text-[10px] text-white/30 hover:text-white/60 transition-colors"
+            >
+              Report
+            </Link>
+          </div>
+        </div>
       </footer>
 
       {/* Link Share Modal (Linktree-style) */}
