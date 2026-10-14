@@ -606,6 +606,9 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
         <LinkShareModal
           link={activeShareLink}
           username={profile.username}
+          displayName={profile.displayName}
+          avatarUrl={profile.avatarUrl}
+          avatarType={profile.avatarType}
           onClose={() => setActiveShareLink(null)}
         />
       )}

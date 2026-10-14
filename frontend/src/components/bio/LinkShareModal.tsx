@@ -22,66 +22,58 @@ export interface ShareableLink {
 interface LinkShareModalProps {
   link: ShareableLink;
   username: string;
+  displayName?: string;
+  avatarUrl?: string;
+  avatarType?: "custom" | "boy" | "girl" | "initials";
   onClose: () => void;
 }
 
-export default function LinkShareModal({ link, username, onClose }: LinkShareModalProps) {
+export default function LinkShareModal({
+  link,
+  username,
+  displayName,
+  avatarUrl,
+  avatarType = "initials",
+  onClose,
+}: LinkShareModalProps) {
   const [copied, setCopied] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
-  const [imgError, setImgError] = useState(false);
-  const [previewData, setPreviewData] = useState<{
-    image?: string | null;
-    title?: string | null;
-    description?: string | null;
-  } | null>(() => {
-    if (link.imageUrl || link.description) {
-      return {
-        image: link.imageUrl || null,
-        title: link.title,
-        description: link.description || null,
-      };
-    }
-    return null;
-  });
 
-  // Automatically fetch rich OpenGraph preview (image, title, description) like Linktree
-  useEffect(() => {
-    let active = true;
-    if (!link.imageUrl) {
-      fetch(`/api/link-preview?url=${encodeURIComponent(link.url)}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (active && data) {
-            setPreviewData((prev) => ({
-              ...prev,
-              image: data.image || prev?.image || null,
-              title: data.title || prev?.title || link.title,
-              description: data.description || prev?.description || null,
-            }));
-          }
-        })
-        .catch(() => {});
-    }
-    return () => {
-      active = false;
-    };
-  }, [link.url, link.imageUrl, link.title]);
+  const ownerName = displayName || username;
+  const displayImage = link.imageUrl || avatarUrl;
 
-  // Parse link domain and high-res favicon for fallback preview pic
-  const { domain, faviconUrl } = useMemo(() => {
+  // Title on the share card (e.g., "Mia Yilin's Amazon Page - Book Recommendations")
+  const shareCardTitle = useMemo(() => {
+    if (!ownerName) return link.title;
+    if (link.title.toLowerCase().includes(ownerName.toLowerCase())) {
+      return link.title;
+    }
+    return `${ownerName}'s ${link.title}`;
+  }, [ownerName, link.title]);
+
+  // Clean URL & Domain for display
+  const { domain, cleanDisplayUrl } = useMemo(() => {
     try {
       const raw = link.url.startsWith("http://") || link.url.startsWith("https://")
         ? link.url
         : `https://${link.url}`;
       const parsed = new URL(raw);
+      const host = parsed.hostname;
+      const path = parsed.pathname !== "/" ? parsed.pathname : "";
       return {
-        domain: parsed.hostname.replace(/^www\./, ""),
-        faviconUrl: `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=128`,
+        domain: host.replace(/^www\./, ""),
+        cleanDisplayUrl: `${host}${path}${parsed.search}`,
       };
     } catch {
-      return { domain: link.url, faviconUrl: null };
+      return { domain: link.url, cleanDisplayUrl: link.url };
     }
   }, [link.url]);
+
+  // Subtitle / context description
+  const linkDescription = useMemo(() => {
+    if (link.description) return link.description;
+    return `Shop recommended products and discover favorite links from ${ownerName} on ${domain}.`;
+  }, [link.description, ownerName, domain]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -117,7 +109,7 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: link.title,
+          title: shareCardTitle,
           url: link.url,
         });
       } catch {
@@ -126,11 +118,11 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
     } else {
       handleCopy();
     }
-  }, [link.title, link.url, handleCopy]);
+  }, [shareCardTitle, link.url, handleCopy]);
 
   // Social share URLs
   const encodedUrl = encodeURIComponent(link.url);
-  const encodedTitle = encodeURIComponent(link.title);
+  const encodedTitle = encodeURIComponent(shareCardTitle);
 
   const socialChannels = [
     {
@@ -183,21 +175,17 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
     },
     {
       name: "Email",
-      href: `mailto:?subject=${encodeURIComponent("Check out this link on Hiii Nishant!")}&body=${encodeURIComponent(link.title + " - " + link.url)}`,
+      href: `mailto:?subject=${encodeURIComponent(`Check out this link: ${shareCardTitle}`)}&body=${encodeURIComponent(shareCardTitle + " - " + link.url)}`,
       bg: "bg-amber-400/10 hover:bg-amber-400/20 border-amber-400/30",
       icon: <Mail className="w-5 h-5 text-amber-400" />,
     },
   ];
 
-  const activeImage = previewData?.image || link.imageUrl || faviconUrl;
-  const activeTitle = previewData?.title || link.title;
-  const activeDescription = previewData?.description || link.description;
-
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Share link - ${link.title}`}
+      aria-label={`Share link - ${shareCardTitle}`}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn"
       onClick={onClose}
     >
@@ -224,51 +212,56 @@ export default function LinkShareModal({ link, username, onClose }: LinkShareMod
           </button>
         </div>
 
-        {/* 2. Link Preview Card (Pic Thumbnail + Title + Domain & Description + External Link) */}
+        {/* 2. Link Preview Card (User Uploaded Pic + Best Design with formatted text) */}
         <a
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="group block rounded-2xl bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 hover:border-white/20 p-3.5 sm:p-4 mb-4 transition-all"
+          className="group block rounded-2xl bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 hover:border-white/25 p-3.5 sm:p-4 mb-4 transition-all duration-300 shadow-xl"
         >
-          <div className="flex items-start sm:items-center gap-3.5">
-            {/* Picture / Thumbnail (Linktree rich preview) */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-zinc-800/90 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden group-hover:scale-105 transition-transform relative">
-              {activeImage && !imgError ? (
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            {/* User Uploaded Pic Thumbnail */}
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-zinc-800/90 border border-white/15 flex items-center justify-center shrink-0 overflow-hidden shadow-md group-hover:scale-105 transition-transform duration-300">
+              {displayImage ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={activeImage}
-                  alt={activeTitle}
-                  onError={() => setImgError(true)}
+                  src={displayImage}
+                  alt={ownerName}
                   className="w-full h-full object-cover"
                 />
+              ) : avatarType === "girl" ? (
+                <span className="text-3xl select-none">👧</span>
+              ) : avatarType === "boy" ? (
+                <span className="text-3xl select-none">👦</span>
               ) : (
-                <div className="p-2 flex items-center justify-center text-white/80">
-                  {renderBioIcon(link.icon, "w-7 h-7 sm:w-8 sm:h-8")}
+                <span className="text-2xl font-black text-accent select-none">
+                  {ownerName.charAt(0).toUpperCase()}
+                </span>
+              )}
+
+              {/* Small platform/link icon badge on the corner */}
+              {link.icon && (
+                <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-black/80 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg">
+                  {renderBioIcon(link.icon, "w-3.5 h-3.5 text-white")}
                 </div>
               )}
             </div>
 
-            {/* Link Information */}
+            {/* Rich Text Details */}
             <div className="flex-1 min-w-0 pr-1">
-              <h4 className="text-sm sm:text-base font-bold text-white truncate group-hover:text-accent transition-colors leading-snug">
-                {activeTitle}
+              <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-accent transition-colors leading-snug line-clamp-2">
+                {shareCardTitle}
               </h4>
-              <p className="text-xs text-brand-300 font-mono truncate mt-0.5">
-                {domain}
+              <p className="text-xs text-brand-300 font-mono truncate mt-1">
+                {cleanDisplayUrl}
               </p>
-              {activeDescription ? (
-                <p className="text-xs text-brand-400 line-clamp-2 mt-1 leading-relaxed">
-                  {activeDescription}
-                </p>
-              ) : (
-                <p className="text-[11px] text-brand-500 font-mono truncate mt-0.5">
-                  {link.url}
-                </p>
-              )}
+              <p className="text-[11px] text-brand-400 line-clamp-2 mt-1 leading-relaxed">
+                {linkDescription}
+              </p>
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors self-center">
+            {/* External link action icon */}
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-white/15 transition-colors">
               <ExternalLink className="w-4 h-4 text-brand-400 group-hover:text-white transition-colors" />
             </div>
           </div>
