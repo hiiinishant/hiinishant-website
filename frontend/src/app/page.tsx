@@ -4,6 +4,7 @@ import Image from "next/image";
 import AuroraBackground from "@/components/AuroraBackground";
 import DailyQuizCard from "@/components/sections/DailyQuizCard";
 import LinkInBioCard from "@/components/sections/LinkInBioCard";
+import NishantBioCard from "@/components/sections/NishantBioCard";
 import PortalCard from "@/components/sections/PortalCard";
 
 export const metadata: Metadata = {
@@ -572,8 +573,8 @@ export default function Home() {
               </div>
             </PortalCard>
 
-            {/* Card: Link in Bio */}
-            <LinkInBioCard />
+            {/* Card: Nishant's Bio Link */}
+            <NishantBioCard />
 
             {/* Card 4: Updates */}
             <PortalCard

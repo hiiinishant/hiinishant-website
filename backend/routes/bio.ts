@@ -1,8 +1,9 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { firestore } from '../lib/firebaseAdmin';
 import admin from '../lib/firebaseAdmin';
 import { uploadBuffer } from '../lib/cloudinary';
+import { isAuthenticated } from '../lib/auth';
 import {
   BioPage,
   BioLink,
@@ -13,7 +14,6 @@ import {
   isReservedUsername,
   isValidBioUrl,
 } from '../lib/bioTypes';
-import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 const upload = multer({
@@ -641,6 +641,78 @@ router.post('/claim-username', requireFirebaseAuth, async (req: Request, res: Re
   }
 });
 
+// ─── 4b. Featured / Nishant Bio Link Settings ────────────────────────────────
+// GET /api/bio/featured
+router.get('/featured', async (_req: Request, res: Response) => {
+  try {
+    const defaultData = {
+      username: 'nishant',
+      url: '/nishant',
+      title: "Nishant's Bio Link",
+      description: "Explore Nishant's curated digital identity, verified projects, and quick links all in one place.",
+      buttonText: "Visit Nishant's Bio",
+    };
+
+    if (!firestore) {
+      res.status(200).json(defaultData);
+      return;
+    }
+
+    const docSnap = await firestore.collection('bioSettings').doc('nishant').get();
+    if (docSnap.exists) {
+      const data = docSnap.data() || {};
+      res.status(200).json({
+        username: data.username || defaultData.username,
+        url: data.url || defaultData.url,
+        title: data.title || defaultData.title,
+        description: data.description || defaultData.description,
+        buttonText: data.buttonText || defaultData.buttonText,
+      });
+      return;
+    }
+
+    res.status(200).json(defaultData);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch featured bio settings.' });
+  }
+});
+
+// PUT /api/bio/featured
+router.put('/featured', (req: Request, res: Response, next: NextFunction) => {
+  if (isAuthenticated(req)) {
+    return next();
+  }
+  return requireFirebaseAuth(req, res, next);
+}, async (req: Request, res: Response) => {
+  try {
+    if (!firestore) {
+      res.status(503).json({ error: 'Database service unavailable.' });
+      return;
+    }
+
+    const { username, url, title, description, buttonText } = req.body;
+    const cleanUsername = (username || 'nishant').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    let cleanUrl = (url || '').trim();
+    if (!cleanUrl) {
+      cleanUrl = `/${cleanUsername}`;
+    }
+
+    const payload = {
+      username: cleanUsername,
+      url: cleanUrl,
+      title: (title || "Nishant's Bio Link").trim(),
+      description: (description || "Explore Nishant's curated digital identity, verified projects, and quick links all in one place.").trim(),
+      buttonText: (buttonText || "Visit Nishant's Bio").trim(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await firestore.collection('bioSettings').doc('nishant').set(payload, { merge: true });
+    res.status(200).json({ success: true, ...payload });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to save featured bio settings.' });
+  }
+});
+
 // ─── 5. Public Endpoint: Get Public Profile by Username ──────────────────────
 // GET /api/bio/:username
 router.get('/:username', async (req: Request, res: Response) => {
@@ -858,86 +930,6 @@ router.post('/:username/click/:linkId', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.warn('[Bio API] Track click warning:', error.message);
     res.status(200).json({ success: false });
-  }
-});
-
-/**
- * GET /api/bio/featured-link
- * Public endpoint: Returns Nishant's bio link settings for the homepage portal card.
- */
-router.get('/featured-link', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const DEFAULT_FEATURED = {
-      bioUrl: '/nishant',
-      bioHandle: 'nishant',
-      bioTitle: "Nishant's Bio Link",
-      bioDescription: "Explore all of Nishant's official links, social channels, and featured projects in one clean personal hub.",
-      buttonText: "Visit Nishant's Bio",
-    };
-
-    if (!firestore) {
-      res.status(200).json(DEFAULT_FEATURED);
-      return;
-    }
-
-    const doc = await firestore.collection('siteSettings').doc('featured_bio').get();
-    if (doc.exists && doc.data()?.bioUrl) {
-      const data = doc.data()!;
-      res.status(200).json({
-        bioUrl: data.bioUrl || DEFAULT_FEATURED.bioUrl,
-        bioHandle: data.bioHandle || DEFAULT_FEATURED.bioHandle,
-        bioTitle: data.bioTitle || DEFAULT_FEATURED.bioTitle,
-        bioDescription: data.bioDescription || DEFAULT_FEATURED.bioDescription,
-        buttonText: data.buttonText || DEFAULT_FEATURED.buttonText,
-      });
-      return;
-    }
-
-    res.status(200).json(DEFAULT_FEATURED);
-  } catch (error: any) {
-    res.status(200).json({
-      bioUrl: '/nishant',
-      bioHandle: 'nishant',
-      bioTitle: "Nishant's Bio Link",
-      bioDescription: "Explore all of Nishant's official links, social channels, and featured projects in one clean personal hub.",
-      buttonText: "Visit Nishant's Bio",
-    });
-  }
-});
-
-/**
- * POST /api/bio/featured-link
- * Admin endpoint: Updates Nishant's bio link settings from the Admin Console.
- */
-router.post('/featured-link', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!firestore) {
-      res.status(503).json({ error: 'Database not available.' });
-      return;
-    }
-
-    const { bioUrl, bioHandle, bioTitle, bioDescription, buttonText } = req.body;
-    let url = (bioUrl || '').trim();
-    if (url && !url.startsWith('/') && !url.startsWith('http://') && !url.startsWith('https://')) {
-      url = `/${url}`;
-    }
-
-    const updateData = {
-      bioUrl: url || '/nishant',
-      bioHandle: (bioHandle || '').trim().replace(/^@/, '') || 'nishant',
-      bioTitle: (bioTitle || '').trim() || "Nishant's Bio Link",
-      bioDescription:
-        (bioDescription || '').trim() ||
-        "Explore all of Nishant's official links, social channels, and featured projects in one clean personal hub.",
-      buttonText: (buttonText || '').trim() || "Visit Nishant's Bio",
-      updatedAt: new Date().toISOString(),
-    };
-
-    await firestore.collection('siteSettings').doc('featured_bio').set(updateData, { merge: true });
-
-    res.status(200).json({ success: true, ...updateData });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to save bio link settings' });
   }
 });
 
