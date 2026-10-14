@@ -26,6 +26,7 @@ import {
   Mail,
   Sparkles,
   MoreVertical,
+  Heart,
 } from "lucide-react";
 import {
   renderBioIcon,
@@ -52,6 +53,7 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
   const [copied, setCopied] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [activeShareLink, setActiveShareLink] = useState<ShareableLink | null>(null);
+  const [copiedUpi, setCopiedUpi] = useState(false);
 
   // 1. Observe auth state and resolve ownership by checking bio_pages collection
   useEffect(() => {
@@ -585,6 +587,114 @@ export default function PublicBioClient({ initialProfile }: PublicBioClientProps
             ))
           )}
         </div>
+
+        {/* Tip Jar / Support Section */}
+        {profile.tipJar?.enabled && (
+          <div className="mb-6 p-5 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md space-y-3 text-center animate-fadeIn">
+            <div className="flex items-center justify-center gap-2">
+              <Heart className="w-4 h-4 text-amber-400 fill-amber-400" />
+              <h3 className="text-sm font-bold text-white">
+                {profile.tipJar.title || "Support My Work"}
+              </h3>
+            </div>
+            {profile.tipJar.description && (
+              <p className="text-xs text-white/70 max-w-sm mx-auto">
+                {profile.tipJar.description}
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              {profile.tipJar.upiId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (profile.tipJar?.upiId) {
+                      navigator.clipboard.writeText(profile.tipJar.upiId);
+                      setCopiedUpi(true);
+                      setTimeout(() => setCopiedUpi(false), 2000);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent text-black text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                >
+                  <span>₹</span>
+                  <span>{copiedUpi ? "UPI Copied!" : `UPI: ${profile.tipJar.upiId}`}</span>
+                </button>
+              )}
+
+              {profile.tipJar.buyMeACoffeeUsername && (
+                <a
+                  href={`https://buymeacoffee.com/${profile.tipJar.buyMeACoffeeUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FFDD00] text-black text-xs font-bold transition-all hover:scale-105 active:scale-95 shadow-md"
+                >
+                  <span>☕</span>
+                  <span>Buy Me a Coffee</span>
+                </a>
+              )}
+
+              {profile.tipJar.paypalUsername && (
+                <a
+                  href={`https://paypal.me/${profile.tipJar.paypalUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0070BA] text-white text-xs font-bold transition-all hover:scale-105 active:scale-95 shadow-md"
+                >
+                  <span>PayPal</span>
+                </a>
+              )}
+
+              {profile.tipJar.kofiUsername && (
+                <a
+                  href={`https://ko-fi.com/${profile.tipJar.kofiUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FF5E5B] text-white text-xs font-bold transition-all hover:scale-105 active:scale-95 shadow-md"
+                >
+                  <span>Ko-fi</span>
+                </a>
+              )}
+
+              {profile.tipJar.customUrl && (
+                <a
+                  href={profile.tipJar.customUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-bold transition-all hover:scale-105 active:scale-95 shadow-md"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Support Link</span>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Contact / Inquire Section */}
+        {profile.contactConfig?.enabled && (
+          <div className="mb-8 p-5 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md space-y-3 text-center animate-fadeIn">
+            <div className="flex items-center justify-center gap-2">
+              <Mail className="w-4 h-4 text-blue-400" />
+              <h3 className="text-sm font-bold text-white">
+                {profile.contactConfig.title || "Get in Touch"}
+              </h3>
+            </div>
+            {profile.contactConfig.description && (
+              <p className="text-xs text-white/70 max-w-sm mx-auto">
+                {profile.contactConfig.description}
+              </p>
+            )}
+            <div>
+              <a
+                href={`mailto:${profile.contactConfig.emailDestination || profile.socials?.email || "hello@hiiinishant.com"}?subject=${encodeURIComponent(`Inquiry from ${profile.displayName}'s bio page`)}`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-xs transition-all hover:scale-105 active:scale-95 shadow-lg"
+              >
+                <Mail className="w-4 h-4" />
+                <span>{profile.contactConfig.buttonText || "Send Message"}</span>
+              </a>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

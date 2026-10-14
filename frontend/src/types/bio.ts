@@ -53,6 +53,25 @@ export interface CustomColorPalette {
   accentColor?: string;
 }
 
+export interface TipJarConfig {
+  enabled: boolean;
+  title?: string;
+  description?: string;
+  upiId?: string;
+  paypalUsername?: string;
+  buyMeACoffeeUsername?: string;
+  kofiUsername?: string;
+  customUrl?: string;
+}
+
+export interface ContactConfig {
+  enabled: boolean;
+  title?: string;
+  description?: string;
+  emailDestination?: string;
+  buttonText?: string;
+}
+
 export interface BioPage {
   uid: string;
   username: string; // normalized lowercase
@@ -69,6 +88,8 @@ export interface BioPage {
   isPublished: boolean;
   links: BioLink[];
   socials: SocialLinks;
+  tipJar?: TipJarConfig;
+  contactConfig?: ContactConfig;
   views: number;
   totalClicks: number;
   createdAt: string;
@@ -98,6 +119,8 @@ export interface PublicBioProfile {
     order: number;
   }>;
   socials: SocialLinks;
+  tipJar?: TipJarConfig;
+  contactConfig?: ContactConfig;
 }
 
 export interface ColorPalettePreset {

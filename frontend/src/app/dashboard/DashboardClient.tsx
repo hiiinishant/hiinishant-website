@@ -63,6 +63,7 @@ import {
   Edit3,
   QrCode,
   BarChart3,
+  User,
 } from "lucide-react";
 import {
   renderBioIcon,
@@ -85,7 +86,9 @@ export default function DashboardClient() {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<BioPage | null>(null);
-  const [activeTab, setActiveTab] = useState<"links" | "appearance" | "socials" | "analytics" | "settings">("links");
+  const [activeTab, setActiveTab] = useState<
+    "links" | "profile" | "appearance" | "socials" | "support" | "contact" | "analytics" | "settings"
+  >("links");
 
   // Onboarding username claim state
   const [claimInput, setClaimInput] = useState("");
@@ -871,15 +874,18 @@ export default function DashboardClient() {
         <div className="flex lg:hidden items-center gap-1 p-1 mb-4 rounded-2xl bg-zinc-900/60 border border-white/10 overflow-x-auto">
           {([
             { tab: "links" as const, icon: <LinkIcon className="w-4 h-4" />, label: `Links (${profile.links.length})` },
+            { tab: "profile" as const, icon: <User className="w-4 h-4" />, label: "Profile" },
             { tab: "appearance" as const, icon: <Palette className="w-4 h-4" />, label: "Appearance" },
             { tab: "socials" as const, icon: <Share2 className="w-4 h-4" />, label: "Socials" },
+            { tab: "support" as const, icon: <Heart className="w-4 h-4" />, label: "Tip Jar" },
+            { tab: "contact" as const, icon: <Mail className="w-4 h-4" />, label: "Contact" },
             { tab: "analytics" as const, icon: <BarChart3 className="w-4 h-4" />, label: "Analytics" },
             { tab: "settings" as const, icon: <Settings className="w-4 h-4" />, label: "Settings" },
           ]).map(({ tab, icon, label }) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 min-w-[75px] py-2 px-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 activeTab === tab
                   ? "bg-accent text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]"
                   : "text-brand-400 hover:text-white hover:bg-white/5"
@@ -924,6 +930,12 @@ export default function DashboardClient() {
                     badge: profile.links.length,
                   },
                   {
+                    tab: "profile" as const,
+                    icon: <User className="w-4 h-4" />,
+                    label: "Profile",
+                    badge: null,
+                  },
+                  {
                     tab: "appearance" as const,
                     icon: <Palette className="w-4 h-4" />,
                     label: "Appearance",
@@ -934,6 +946,18 @@ export default function DashboardClient() {
                     icon: <Share2 className="w-4 h-4" />,
                     label: "Socials",
                     badge: Object.values(profile.socials || {}).filter(Boolean).length || null,
+                  },
+                  {
+                    tab: "support" as const,
+                    icon: <Heart className="w-4 h-4" />,
+                    label: "Tip Jar & Support",
+                    badge: profile.tipJar?.enabled ? "On" : null,
+                  },
+                  {
+                    tab: "contact" as const,
+                    icon: <Mail className="w-4 h-4" />,
+                    label: "Contact & Leads",
+                    badge: profile.contactConfig?.enabled ? "On" : null,
                   },
                   {
                     tab: "analytics" as const,
@@ -963,10 +987,12 @@ export default function DashboardClient() {
                       {icon}
                     </span>
                     <span className="truncate text-xs">{label}</span>
-                    {badge !== null && badge !== undefined && badge > 0 && (
+                    {badge !== null && badge !== undefined && (
                       <span className={`ml-auto shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center ${
                         activeTab === tab
                           ? "bg-accent/20 text-accent"
+                          : badge === "On"
+                          ? "bg-emerald-500/20 text-emerald-400"
                           : "bg-white/10 text-brand-400"
                       }`}>
                         {badge}
@@ -1323,13 +1349,12 @@ export default function DashboardClient() {
               </div>
             )}
 
-            {/* TAB 2: APPEARANCE & THEMES */}
-            {activeTab === "appearance" && (
+            {/* TAB 2: PROFILE DETAILS */}
+            {activeTab === "profile" && (
               <div className="space-y-6 animate-fadeIn">
-                {/* 1. Profile Picture & Names */}
                 <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-5">
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-accent" />
+                    <User className="w-4 h-4 text-accent" />
                     <span>Profile Details</span>
                   </h3>
 
@@ -1552,8 +1577,13 @@ export default function DashboardClient() {
                     />
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* 2. Theme Selection Grid */}
+            {/* TAB 3: APPEARANCE & THEMES */}
+            {activeTab === "appearance" && (
+              <div className="space-y-6 animate-fadeIn">
+                {/* 1. Theme Selection Grid */}
                 <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-4">
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <Palette className="w-4 h-4 text-accent" />
@@ -1717,6 +1747,313 @@ export default function DashboardClient() {
                       />
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: TIP JAR & SUPPORT */}
+            {activeTab === "support" && (
+              <div className="space-y-6 animate-fadeIn">
+                {/* Enable Tip Jar Toggle */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-amber-400 fill-amber-400" />
+                      <h3 className="text-base font-bold text-white">Tip Jar &amp; Support</h3>
+                    </div>
+                    <p className="text-xs text-brand-400 mt-1">
+                      Receive tips, donations, and appreciation from your audience via UPI, Buy Me a Coffee, PayPal, or custom link.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = profile.tipJar || { enabled: false };
+                      const next = !current.enabled;
+                      const updated: BioPage = {
+                        ...profile,
+                        tipJar: { ...current, enabled: next },
+                      };
+                      setProfile(updated);
+                      handleSaveProfile(updated);
+                      showToast(next ? "Tip Jar enabled!" : "Tip Jar disabled", "info");
+                    }}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                      profile.tipJar?.enabled
+                        ? "bg-emerald-500/20 border border-emerald-500 text-emerald-300 hover:bg-emerald-500/30"
+                        : "bg-white/10 hover:bg-white/15 text-white border border-white/10"
+                    }`}
+                  >
+                    {profile.tipJar?.enabled ? "● Enabled (Active)" : "○ Disabled — Click to Turn On"}
+                  </button>
+                </div>
+
+                {/* Tip Jar Configuration Form */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-5">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider text-brand-300">
+                    Tip Jar Settings
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-brand-300 mb-1.5">
+                        Title / Call to Action
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.tipJar?.title || ""}
+                        onChange={(e) => {
+                          const tipJar = { ...(profile.tipJar || { enabled: true }), title: e.target.value };
+                          setProfile({ ...profile, tipJar });
+                        }}
+                        onBlur={() => handleSaveProfile({ ...profile, tipJar: profile.tipJar })}
+                        placeholder="Support My Work / Buy Me a Coffee"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-brand-300 mb-1.5">
+                        Short Description / Note
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.tipJar?.description || ""}
+                        onChange={(e) => {
+                          const tipJar = { ...(profile.tipJar || { enabled: true }), description: e.target.value };
+                          setProfile({ ...profile, tipJar });
+                        }}
+                        onBlur={() => handleSaveProfile({ ...profile, tipJar: profile.tipJar })}
+                        placeholder="Thank you for supporting my content & projects!"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/10 pt-4 space-y-4">
+                    <h5 className="text-xs font-bold text-white flex items-center gap-2">
+                      <span>Payment &amp; Tip Methods</span>
+                      <span className="text-[10px] text-brand-500 font-normal">(Fill in any that apply)</span>
+                    </h5>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* UPI ID */}
+                      <div>
+                        <label className="text-xs font-semibold text-brand-300 flex items-center gap-1.5 mb-1.5">
+                          <span className="text-accent font-bold">₹</span>
+                          <span>UPI ID (GPay, PhonePe, Paytm)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.tipJar?.upiId || ""}
+                          onChange={(e) => {
+                            const tipJar = { ...(profile.tipJar || { enabled: true }), upiId: e.target.value };
+                            setProfile({ ...profile, tipJar });
+                          }}
+                          onBlur={() => handleSaveProfile({ ...profile, tipJar: profile.tipJar })}
+                          placeholder="username@okaxis or 9876543210@paytm"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent font-mono"
+                        />
+                      </div>
+
+                      {/* Buy Me a Coffee */}
+                      <div>
+                        <label className="text-xs font-semibold text-brand-300 flex items-center gap-1.5 mb-1.5">
+                          <span>☕</span>
+                          <span>Buy Me A Coffee Username</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.tipJar?.buyMeACoffeeUsername || ""}
+                          onChange={(e) => {
+                            const tipJar = { ...(profile.tipJar || { enabled: true }), buyMeACoffeeUsername: e.target.value.replace(/https?:\/\/buymeacoffee\.com\//, "") };
+                            setProfile({ ...profile, tipJar });
+                          }}
+                          onBlur={() => handleSaveProfile({ ...profile, tipJar: profile.tipJar })}
+                          placeholder="e.g. aditya or miayilin"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
+                        />
+                      </div>
+
+                      {/* PayPal.me */}
+                      <div>
+                        <label className="text-xs font-semibold text-brand-300 flex items-center gap-1.5 mb-1.5">
+                          <span className="text-[#0079C1] font-bold">P</span>
+                          <span>PayPal.me Username</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.tipJar?.paypalUsername || ""}
+                          onChange={(e) => {
+                            const tipJar = { ...(profile.tipJar || { enabled: true }), paypalUsername: e.target.value.replace(/https?:\/\/paypal\.me\//, "") };
+                            setProfile({ ...profile, tipJar });
+                          }}
+                          onBlur={() => handleSaveProfile({ ...profile, tipJar: profile.tipJar })}
+                          placeholder="e.g. adityakumar"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
+                        />
+                      </div>
+
+                      {/* Ko-fi */}
+                      <div>
+                        <label className="text-xs font-semibold text-brand-300 flex items-center gap-1.5 mb-1.5">
+                          <span>❤️</span>
+                          <span>Ko-fi Username</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profile.tipJar?.kofiUsername || ""}
+                          onChange={(e) => {
+                            const tipJar = { ...(profile.tipJar || { enabled: true }), kofiUsername: e.target.value.replace(/https?:\/\/ko-fi\.com\//, "") };
+                            setProfile({ ...profile, tipJar });
+                          }}
+                          onBlur={() => handleSaveProfile({ ...profile, tipJar: profile.tipJar })}
+                          placeholder="e.g. adityakofi"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
+                        />
+                      </div>
+
+                      {/* Custom Link */}
+                      <div className="sm:col-span-2">
+                        <label className="text-xs font-semibold text-brand-300 flex items-center gap-1.5 mb-1.5">
+                          <Globe className="w-3.5 h-3.5 text-accent" />
+                          <span>Or Custom Support / Donation URL</span>
+                        </label>
+                        <input
+                          type="url"
+                          value={profile.tipJar?.customUrl || ""}
+                          onChange={(e) => {
+                            const tipJar = { ...(profile.tipJar || { enabled: true }), customUrl: e.target.value };
+                            setProfile({ ...profile, tipJar });
+                          }}
+                          onBlur={() => handleSaveProfile({ ...profile, tipJar: profile.tipJar })}
+                          placeholder="https://patreon.com/yourname or your donation link"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: CONTACT & LEADS */}
+            {activeTab === "contact" && (
+              <div className="space-y-6 animate-fadeIn">
+                {/* Toggle Contact Form */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-accent" />
+                      <h3 className="text-base font-bold text-white">Contact &amp; Leads</h3>
+                    </div>
+                    <p className="text-xs text-brand-400 mt-1">
+                      Allow visitors, clients, or sponsors to send direct inquiries and messages from your bio page.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = profile.contactConfig || { enabled: false };
+                      const next = !current.enabled;
+                      const updated: BioPage = {
+                        ...profile,
+                        contactConfig: { ...current, enabled: next },
+                      };
+                      setProfile(updated);
+                      handleSaveProfile(updated);
+                      showToast(next ? "Contact form enabled!" : "Contact form disabled", "info");
+                    }}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                      profile.contactConfig?.enabled
+                        ? "bg-emerald-500/20 border border-emerald-500 text-emerald-300 hover:bg-emerald-500/30"
+                        : "bg-white/10 hover:bg-white/15 text-white border border-white/10"
+                    }`}
+                  >
+                    {profile.contactConfig?.enabled ? "● Enabled (Active)" : "○ Disabled — Click to Turn On"}
+                  </button>
+                </div>
+
+                {/* Contact Settings */}
+                <div className="rounded-3xl bg-zinc-900/60 border border-white/10 p-6 space-y-4">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider text-brand-300">
+                    Contact Form Configuration
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-brand-300 mb-1.5">
+                        Form Title
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.contactConfig?.title || ""}
+                        onChange={(e) => {
+                          const contactConfig = { ...(profile.contactConfig || { enabled: true }), title: e.target.value };
+                          setProfile({ ...profile, contactConfig });
+                        }}
+                        onBlur={() => handleSaveProfile({ ...profile, contactConfig: profile.contactConfig })}
+                        placeholder="Get in Touch / Work With Me"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-brand-300 mb-1.5">
+                        Button Label
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.contactConfig?.buttonText || ""}
+                        onChange={(e) => {
+                          const contactConfig = { ...(profile.contactConfig || { enabled: true }), buttonText: e.target.value };
+                          setProfile({ ...profile, contactConfig });
+                        }}
+                        onBlur={() => handleSaveProfile({ ...profile, contactConfig: profile.contactConfig })}
+                        placeholder="Send Message / Inquire Now"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-brand-300 mb-1.5">
+                        Destination Email (for receiving visitor messages)
+                      </label>
+                      <input
+                        type="email"
+                        value={profile.contactConfig?.emailDestination || ""}
+                        onChange={(e) => {
+                          const contactConfig = { ...(profile.contactConfig || { enabled: true }), emailDestination: e.target.value };
+                          setProfile({ ...profile, contactConfig });
+                        }}
+                        onBlur={() => handleSaveProfile({ ...profile, contactConfig: profile.contactConfig })}
+                        placeholder="your-email@example.com"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent font-mono"
+                      />
+                      <p className="text-[11px] text-brand-500 mt-1">
+                        Inquiries sent from your public bio page will be forwarded directly to this email address.
+                      </p>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-brand-300 mb-1.5">
+                        Instructions / Subtitle
+                      </label>
+                      <textarea
+                        value={profile.contactConfig?.description || ""}
+                        onChange={(e) => {
+                          const contactConfig = { ...(profile.contactConfig || { enabled: true }), description: e.target.value };
+                          setProfile({ ...profile, contactConfig });
+                        }}
+                        onBlur={() => handleSaveProfile({ ...profile, contactConfig: profile.contactConfig })}
+                        rows={2}
+                        placeholder="Feel free to drop a message regarding sponsorships, collaborations, or questions."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white placeholder-brand-500 text-xs focus:outline-none focus:border-accent resize-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1928,6 +2265,22 @@ export default function DashboardClient() {
                       ))
                   )}
                 </div>
+
+                {/* Tip Jar Preview inside phone */}
+                {profile.tipJar?.enabled && (
+                  <div className="mb-2.5 py-2.5 px-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-2">
+                    <Heart className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span className="truncate">{profile.tipJar.title || "Support / Tip Jar"}</span>
+                  </div>
+                )}
+
+                {/* Contact Preview inside phone */}
+                {profile.contactConfig?.enabled && (
+                  <div className="mb-2.5 py-2.5 px-3 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold flex items-center justify-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="truncate">{profile.contactConfig.buttonText || profile.contactConfig.title || "Contact Me"}</span>
+                  </div>
+                )}
 
                 {/* Footer branding pill inside phone */}
                 <div className="text-center pt-2 pb-4">
