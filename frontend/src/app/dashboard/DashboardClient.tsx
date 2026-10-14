@@ -110,6 +110,9 @@ export default function DashboardClient() {
   // QR code modal
   const [showQRModal, setShowQRModal] = useState(false);
 
+  // Inline username edit toggle (in Links tab URL card)
+  const [editingUsername, setEditingUsername] = useState(false);
+
   // Toast / feedback alert
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -993,6 +996,138 @@ export default function DashboardClient() {
             {/* TAB 1: LINKS MANAGEMENT */}
             {activeTab === "links" && (
               <div className="space-y-4 animate-fadeIn">
+
+                {/* ── URL / Share Card ── */}
+                <div className="rounded-2xl bg-zinc-900/70 border border-white/10 p-4 space-y-3">
+                  {/* URL row */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center gap-1 px-3 py-2.5 rounded-xl bg-black/50 border border-white/10 font-mono text-sm overflow-hidden">
+                      <span className="text-brand-400 shrink-0 text-xs">hiiinishant.com/</span>
+
+                      {editingUsername ? (
+                        // Editable username field
+                        <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                          <input
+                            autoFocus
+                            type="text"
+                            value={claimInput}
+                            onChange={(e) => {
+                              setClaimInput(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""));
+                            }}
+                            placeholder={profile.username}
+                            maxLength={30}
+                            className="flex-1 min-w-0 bg-transparent text-white placeholder-brand-500 text-sm focus:outline-none"
+                          />
+                          {/* Availability indicator */}
+                          <span className="shrink-0">
+                            {claimLoading ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+                            ) : claimInput && claimAvailable === true ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : claimInput && claimAvailable === false ? (
+                              <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                            ) : null}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-white font-semibold text-sm truncate flex-1">{profile.username}</span>
+                      )}
+                    </div>
+
+                    {/* Edit / Save / Cancel username */}
+                    {editingUsername ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (claimAvailable && claimInput.trim()) {
+                              await handleClaimUsername();
+                            }
+                            setEditingUsername(false);
+                            setClaimInput("");
+                          }}
+                          disabled={!claimAvailable || !claimInput.trim() || claimLoading}
+                          className="px-3 py-2 rounded-xl bg-accent disabled:opacity-40 text-black text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setEditingUsername(false); setClaimInput(""); }}
+                          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-brand-400 hover:text-white transition-all cursor-pointer shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setEditingUsername(true); setClaimInput(profile.username); }}
+                        title="Edit your username"
+                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-brand-400 hover:text-white transition-all cursor-pointer shrink-0"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Availability error message */}
+                  {editingUsername && claimError && (
+                    <p className="text-xs text-red-400 flex items-center gap-1 px-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      {claimError}
+                    </p>
+                  )}
+                  {editingUsername && claimInput && claimAvailable && (
+                    <p className="text-xs text-emerald-400 flex items-center gap-1 px-1">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                      Username available!
+                    </p>
+                  )}
+
+                  {/* Action buttons row */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleCopyLink}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-all cursor-pointer"
+                    >
+                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
+                    </button>
+                    <Link
+                      href={`/${profile.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-all"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>View Live</span>
+                    </Link>
+                    <button
+                      onClick={() => setShowQRModal(true)}
+                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/8 border border-white/10 text-xs font-semibold text-brand-300 hover:text-white transition-all cursor-pointer"
+                      title="QR Code"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Live / Draft badge */}
+                  <div className="flex items-center gap-2 px-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                      profile.isPublished
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                        : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${profile.isPublished ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+                      {profile.isPublished ? "Live" : "Draft"}
+                    </span>
+                    <span className="text-[11px] text-brand-500">
+                      {profile.links.filter((l) => l.isActive).length} active links · {profile.views || 0} views
+                    </span>
+                  </div>
+                </div>
+
                 {/* Add Link Trigger */}
                 <button
                   onClick={() => setShowAddModal(true)}
